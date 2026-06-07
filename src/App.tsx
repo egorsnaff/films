@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
 import { MoviePlayers } from "./components/MoviePlayers";
@@ -29,16 +29,25 @@ const playerTemplates =
     : getDefaultPlayerTemplates({ includeAlloha: enableAlloha });
 
 type LoadState = "idle" | "loading" | "success" | "error";
+type ViewState = "home" | "watch";
+type CatalogMode = "premieres" | "search";
 
-const quickPicks = ["Матрица", "Интерстеллар", "Зелёная миля", "Две крепости"];
+const menuItems = ["Главная", "Фильмы", "Сериалы", "Подборки", "Профиль"];
 
 export function App() {
-  const [query, setQuery] = useState("матрица");
+  const [query, setQuery] = useState("");
   const [films, setFilms] = useState<KinopoiskFilm[]>([]);
   const [selectedFilm, setSelectedFilm] = useState<KinopoiskFilmDetails | null>(null);
   const [status, setStatus] = useState<LoadState>("idle");
   const [detailsStatus, setDetailsStatus] = useState<LoadState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [view, setView] = useState<ViewState>("home");
+  const [catalogMode, setCatalogMode] = useState<CatalogMode>("premieres");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const client = useMemo(
     () => createKinopoiskClient({ apiKey, baseUrl: apiBaseUrl }),
@@ -49,30 +58,100 @@ export function App() {
     ? ({ "--poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
     : undefined;
 
-  async function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+  }, []);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+
+    if (!target || !hasMore || status === "loading" || isLoadingMore || view !== "home") {
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadNextPage();
+        }
+      },
+      { rootMargin: "480px" }
+    );
+
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [catalogMode, hasMore, isLoadingMore, page, query, status, view]);
+
+  async function loadCatalogPage({
+    mode,
+    nextPage,
+    replace
+  }: {
+    mode: CatalogMode;
+    nextPage: number;
+    replace: boolean;
+  }) {
+    if (replace) {
+      setStatus("loading");
+    } else {
+      setIsLoadingMore(true);
+    }
+
     setError(null);
-    setSelectedFilm(null);
-    setStatus("loading");
 
     try {
-      const results = await client.searchFilms(query);
-      setFilms(results);
+      const results =
+        mode === "search"
+          ? await client.searchFilms(query, nextPage)
+          : await client.getRecentFilms(nextPage);
+      setFilms((current) => (replace ? results : mergeFilms(current, results)));
+      setPage(nextPage);
+      setCatalogMode(mode);
+      setHasMore(results.length > 0);
       setStatus("success");
-    } catch (searchError) {
-      setError(getErrorMessage(searchError));
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
       setStatus("error");
+    } finally {
+      setIsLoadingMore(false);
     }
   }
 
-  function handleQuickPick(nextQuery: string) {
-    setQuery(nextQuery);
+  async function loadNextPage() {
+    if (!hasMore || status === "loading" || isLoadingMore) {
+      return;
+    }
+
+    await loadCatalogPage({
+      mode: catalogMode,
+      nextPage: page + 1,
+      replace: false
+    });
+  }
+
+  async function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!query.trim()) {
+      return;
+    }
+
+    setSelectedFilm(null);
+    setView("home");
+    setIsSearchOpen(false);
+    await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
   }
 
   async function handleSelectFilm(film: KinopoiskFilm) {
     setError(null);
     setSelectedFilm(null);
     setDetailsStatus("loading");
+    setView("watch");
 
     try {
       const details = await client.getFilm(film.kinopoiskId);
@@ -84,113 +163,80 @@ export function App() {
     }
   }
 
+  function handleHomeClick() {
+    setView("home");
+    setSelectedFilm(null);
+    setDetailsStatus("idle");
+  }
+
   return (
     <main className="app-shell">
       <div className="ambient ambient-left" aria-hidden="true" />
       <div className="ambient ambient-right" aria-hidden="true" />
 
       <header className="topbar" aria-label="Навигация">
-        <a className="brand-mark" href="#search">
+        <button className="brand-mark" type="button" onClick={handleHomeClick}>
           <span className="brand-mark__glyph">F</span>
           <span>
             <strong>films</strong>
             <small>Кинотеатр в браузере</small>
           </span>
-        </a>
+        </button>
         <nav className="topbar__nav" aria-label="Разделы">
-          <a href="#search">поиск</a>
-          <a href="#results">каталог</a>
-          <a href="#watch">плееры</a>
+          {menuItems.map((item) => (
+            <a key={item} href="#main" aria-current={item === "Главная" ? "page" : undefined}>
+              {item}
+            </a>
+          ))}
         </nav>
-        <p className="topbar__status">поиск, детали и плееры в одном экране</p>
+        <button
+          type="button"
+          className="search-toggle"
+          aria-expanded={isSearchOpen}
+          aria-controls="top-search"
+          aria-label={isSearchOpen ? "Закрыть поиск" : "Открыть поиск"}
+          onClick={() => setIsSearchOpen((current) => !current)}
+        >
+          <span aria-hidden="true" />
+        </button>
       </header>
 
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero__copy">
-          <p className="eyebrow">Kinopoisk API / player hub</p>
-          <h1 id="hero-title">
-            Найди фильм.
-            <span> Выбери плеер.</span>
-            <em> Смотри без лишних переходов.</em>
-          </h1>
-          <p>
-            Быстрый экран для поиска, проверки рейтинга и запуска доступных
-            embed-плееров. Интерфейс собран как компактная витрина онлайн-кинотеатра.
-          </p>
-        </div>
-
-        <form className="search-form" id="search" onSubmit={handleSearch}>
-          <div className="search-form__header">
-            <label htmlFor="search-input">Название фильма</label>
-            <span>{status === "loading" ? "ищем в базе" : "Kinopoisk unofficial"}</span>
-          </div>
+      {isSearchOpen ? (
+        <form className="top-search" id="top-search" role="search" onSubmit={handleSearch}>
           <div className="search-form__control">
             <input
               id="search-input"
+              aria-label="Поиск фильма"
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Например: Интерстеллар"
+              placeholder="Фильм, сериал, мультфильм"
+              autoFocus
             />
             <button type="submit" disabled={status === "loading"}>
               {status === "loading" ? "Ищем..." : "Найти"}
             </button>
           </div>
-          <div className="quick-picks" aria-label="Быстрые запросы">
-            {quickPicks.map((pick) => (
-              <button
-                key={pick}
-                type="button"
-                className="quick-pick"
-                onClick={() => handleQuickPick(pick)}
-              >
-                {pick}
-              </button>
-            ))}
-          </div>
         </form>
-
-        <div className="hero__poster-stage" aria-hidden="true">
-          <div className="poster-orbit poster-orbit--one" />
-          <div className="poster-orbit poster-orbit--two" />
-          <div className="poster-stack">
-            {(films.length > 0 ? films.slice(0, 3) : []).map((film, index) =>
-              film.posterUrl ? (
-                <img
-                  key={film.kinopoiskId}
-                  className={`poster-stack__item poster-stack__item--${index + 1}`}
-                  src={film.posterUrl}
-                  alt=""
-                />
-              ) : null
-            )}
-            {films.length === 0 ? (
-              <>
-                <span className="poster-stack__placeholder poster-stack__item--1" />
-                <span className="poster-stack__placeholder poster-stack__item--2" />
-                <span className="poster-stack__placeholder poster-stack__item--3" />
-              </>
-            ) : null}
-          </div>
-          <p className="stage-caption">
-            <span>{films.length || "0"}</span>
-            найдено
-          </p>
-        </div>
-      </section>
+      ) : null}
 
       {error ? <p className="error-message">{error}</p> : null}
 
-      <section className="content-grid" id="results">
-        <section className="film-list" aria-live="polite" aria-label="Результаты поиска">
-          <div className="section-heading">
-            <p className="eyebrow">poster rail</p>
-            <h2>Результаты поиска</h2>
-            <span>{films.length > 0 ? `${films.length} тайтлов` : "ожидает запрос"}</span>
+      {view === "home" ? (
+        <section className="home-view" id="main">
+          <div className="section-heading section-heading--home">
+            <p className="eyebrow">{catalogMode === "search" ? "search results" : "premieres"}</p>
+            <h1>{catalogMode === "search" ? "Результаты поиска" : "Новинки для вечера"}</h1>
+            <p>
+              {catalogMode === "search"
+                ? "Подборка по вашему запросу. Откройте карточку, чтобы перейти к плеерам."
+                : "Свежая подборка фильмов с хорошим рейтингом. Лента сама подгружает следующую пачку при скролле."}
+            </p>
           </div>
 
           {status === "loading" ? (
             <div className="skeleton-grid" aria-label="Загрузка результатов">
-              {Array.from({ length: 6 }).map((_, index) => (
+              {Array.from({ length: 10 }).map((_, index) => (
                 <span key={index} className="film-skeleton" />
               ))}
             </div>
@@ -199,8 +245,8 @@ export function App() {
           {films.length === 0 && status !== "loading" ? (
             <div className="empty-state empty-state--composed">
               <span className="empty-state__marker">01</span>
-              <strong>Введите название и запустите поиск.</strong>
-              <p>Начните с классики или выберите один из быстрых запросов выше.</p>
+              <strong>Пока ничего не найдено.</strong>
+              <p>Откройте поиск сверху и попробуйте другой запрос.</p>
             </div>
           ) : null}
 
@@ -210,12 +256,7 @@ export function App() {
                 <button
                   key={film.kinopoiskId}
                   type="button"
-                  className={`film-card ${
-                    selectedFilm?.kinopoiskId === film.kinopoiskId
-                      ? "film-card--active"
-                      : ""
-                  }`}
-                  aria-pressed={selectedFilm?.kinopoiskId === film.kinopoiskId}
+                  className="film-card"
                   onClick={() => void handleSelectFilm(film)}
                 >
                   <span className="film-card__poster">
@@ -237,13 +278,21 @@ export function App() {
               ))}
             </div>
           ) : null}
-        </section>
 
-        <aside
-          className={`details-panel ${selectedFilm ? "details-panel--active" : ""}`}
-          id="watch"
-          style={detailsStyle}
-        >
+          <div ref={loadMoreRef} className="load-more-sentinel" aria-live="polite">
+            {isLoadingMore
+              ? "Загружаем следующую подборку..."
+              : hasMore
+                ? "Листайте дальше"
+                : "Это всё на сейчас"}
+          </div>
+        </section>
+      ) : (
+        <section className="watch-page" id="main">
+          <button className="back-button" type="button" onClick={handleHomeClick}>
+            Вернуться на главную
+          </button>
+          <p className="eyebrow">Страница просмотра</p>
           {detailsStatus === "loading" ? (
             <div className="details-loading">
               <span />
@@ -251,53 +300,68 @@ export function App() {
             </div>
           ) : null}
           {selectedFilm ? (
-            <>
-              <div className="details-hero">
-                {selectedFilm.posterUrl ? (
-                  <img src={selectedFilm.posterUrl} alt={`Постер ${selectedFilm.title}`} />
-                ) : null}
-                <div>
-                  <p className="eyebrow">now selected</p>
-                  <h2>{selectedFilm.title}</h2>
-                  <p className="meta">
-                    {[
-                      selectedFilm.originalTitle,
-                      selectedFilm.year,
-                      selectedFilm.rating && `КП ${selectedFilm.rating}`,
-                      selectedFilm.genres?.join(", ")
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
+            <article className="watch-card details-panel--active" style={detailsStyle}>
+              <div className="watch-card__info">
+                <div className="details-hero">
+                  {selectedFilm.posterUrl ? (
+                    <img src={selectedFilm.posterUrl} alt={`Постер ${selectedFilm.title}`} />
+                  ) : null}
+                  <div>
+                    <h1>{selectedFilm.title}</h1>
+                    <p className="meta">
+                      {[
+                        selectedFilm.originalTitle,
+                        selectedFilm.year,
+                        selectedFilm.rating && `КП ${selectedFilm.rating}`,
+                        selectedFilm.genres?.join(", ")
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
                 </div>
+                {selectedFilm.description ? (
+                  <p className="description">{selectedFilm.description}</p>
+                ) : null}
               </div>
-              {selectedFilm.description ? (
-                <p className="description">{selectedFilm.description}</p>
-              ) : null}
-              <MoviePlayers
-                players={players}
-                resolveOptions={{ allohaToken, hdvbToken }}
-              />
-              {players.length === 0 ? (
-                <p className="hint">
-                  Добавьте <code>VITE_PLAYER_TEMPLATES</code>, чтобы подключить свои
-                  embed-плееры или будущий сервер.
-                </p>
-              ) : null}
-            </>
-          ) : (
+
+              <div className="watch-card__player">
+                <MoviePlayers
+                  players={players}
+                  resolveOptions={{ allohaToken, hdvbToken }}
+                />
+                {players.length === 0 ? (
+                  <p className="hint">
+                    Добавьте <code>VITE_PLAYER_TEMPLATES</code>, чтобы подключить свои
+                    embed-плееры или будущий сервер.
+                  </p>
+                ) : null}
+              </div>
+            </article>
+          ) : detailsStatus !== "loading" ? (
             <div className="empty-state empty-state--watch">
-              <span className="empty-state__marker">02</span>
-              <strong>Выберите фильм, чтобы открыть плееры.</strong>
-              <p>
-                Здесь появится постер, описание, рейтинг и вкладки доступных источников.
-              </p>
+              <strong>Фильм не выбран.</strong>
+              <p>Вернитесь на главную и откройте карточку из подборки.</p>
             </div>
-          )}
-        </aside>
-      </section>
+          ) : null}
+        </section>
+      )}
     </main>
   );
+}
+
+function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {
+  const seen = new Set(current.map((film) => film.kinopoiskId));
+  const uniqueNext = next.filter((film) => {
+    if (seen.has(film.kinopoiskId)) {
+      return false;
+    }
+
+    seen.add(film.kinopoiskId);
+    return true;
+  });
+
+  return [...current, ...uniqueNext];
 }
 
 function getErrorMessage(error: unknown): string {

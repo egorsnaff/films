@@ -84,4 +84,47 @@ describe("createKinopoiskClient", () => {
       description: "История блока смертников."
     });
   });
+
+  it("loads a paginated default collection of recent films", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            kinopoiskId: 123,
+            nameRu: "Новый фильм",
+            nameOriginal: "New Film",
+            year: 2026,
+            posterUrlPreview: "https://example.test/new-film.jpg",
+            ratingKinopoisk: 7.4
+          }
+        ]
+      })
+    });
+    const client = createKinopoiskClient({
+      apiKey: "test-key",
+      fetchImpl: fetchMock
+    });
+
+    const films = await client.getRecentFilms(3);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://kinopoiskapiunofficial.tech/api/v2.2/films?order=YEAR&type=FILM&ratingFrom=6&ratingTo=10&yearFrom=2024&yearTo=2026&page=3",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-API-KEY": "test-key"
+        })
+      })
+    );
+    expect(films).toEqual([
+      {
+        kinopoiskId: 123,
+        title: "Новый фильм",
+        originalTitle: "New Film",
+        year: "2026",
+        posterUrl: "https://example.test/new-film.jpg",
+        rating: "7.4"
+      }
+    ]);
+  });
 });
