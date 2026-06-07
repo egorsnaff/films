@@ -65,9 +65,7 @@ describe("createPlayerSources", () => {
     expect(sources).toMatchObject([
       {
         id: "alloha",
-        title: "Alloha",
-        embedUrl:
-          "https://harald-as.newplayjj.com/?kp=312&token=e7b61f129f4a392ac4bf6726a9dd6a"
+        title: "Alloha"
       },
       {
         id: "collaps",
@@ -104,6 +102,7 @@ describe("createPlayerSources", () => {
       }
     ]);
     expect(sources).toHaveLength(8);
+    expect(sources[0].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[3].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[4].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[5].resolveEmbedUrl).toEqual(expect.any(Function));
@@ -112,6 +111,12 @@ describe("createPlayerSources", () => {
   it("resolves async player URLs with hardcoded tokens from hometv", async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          status: "success",
+          data: { iframe: "https://alloha.example.test/embed" }
+        })
+      })
       .mockResolvedValueOnce({
         json: async () => ({
           results: [{ iframe_url: "https://coll.example.test/embed" }]
@@ -127,6 +132,9 @@ describe("createPlayerSources", () => {
       });
 
     await expect(
+      resolvePlayerEmbedUrl(players.Alloha, 312, { fetchImpl: fetchMock })
+    ).resolves.toBe("https://alloha.example.test/embed");
+    await expect(
       resolvePlayerEmbedUrl(players.Coll, 312, { fetchImpl: fetchMock })
     ).resolves.toBe("https://coll.example.test/embed");
     await expect(
@@ -141,14 +149,18 @@ describe("createPlayerSources", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "https://api.bhcesh.me/list?token=4c250f7ac0a8c8a658c789186b9a58a5&kinopoisk_id=312"
+      "https://api.apbugall.org/?token=e7b61f129f4a392ac4bf6726a9dd6a&kp=312"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "https://kodikapi.com/search?token=41dd95f84c21719b09d6c71182237a25&kinopoisk_id=312"
+      "https://api.bhcesh.me/list?token=4c250f7ac0a8c8a658c789186b9a58a5&kinopoisk_id=312"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
+      "https://kodikapi.com/search?token=41dd95f84c21719b09d6c71182237a25&kinopoisk_id=312"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
       "https://apivb.com/api/videos.json?id_kp=312&token=hdvb-token"
     );
   });

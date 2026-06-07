@@ -48,7 +48,8 @@ placeholders.
 
 By default, the app enables:
 
-- `Alloha` through `https://harald-as.newplayjj.com/?kp={kinopoiskId}&token=...`
+- `Alloha` through `https://api.apbugall.org/?token=...&kp={kinopoiskId}`,
+  resolved lazily from `data.iframe`
 - `Collaps` through `https://api.atomics.ws/embed/kp/{kinopoiskId}`
 - `VideoCDN` through `https://p.lumex.space/...&kp_id={kinopoiskId}`
 - `Coll` through the hometv hardcoded `api.bhcesh.me` token, resolved lazily
@@ -61,8 +62,9 @@ Lazy players load only when their tab is selected, matching the `hometv`
 approach and avoiding unnecessary balancer API calls.
 
 ```env
-VITE_PLAYER_TEMPLATES='[{"id":"alloha","title":"Alloha","embedUrlTemplate":"https://harald-as.newplayjj.com/?kp={kinopoiskId}&token=e7b61f129f4a392ac4bf6726a9dd6a"},{"id":"server","title":"Server","embedUrlTemplate":"https://watch.example.test/embed?kp={kinopoiskId}&title={title}"}]'
+VITE_ALLOHA_TOKEN=e7b61f129f4a392ac4bf6726a9dd6a
 VITE_HDVB_TOKEN=optional-hdvb-token
+VITE_PLAYER_TEMPLATES='[{"id":"server","title":"Server","embedUrlTemplate":"https://watch.example.test/embed?kp={kinopoiskId}&title={title}"}]'
 ```
 
 When your server is ready, add it as another template without changing the
