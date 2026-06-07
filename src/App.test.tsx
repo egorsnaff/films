@@ -23,6 +23,8 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    const header = screen.getByRole("banner", { name: "Навигация" });
+
     expect(screen.getByRole("link", { name: "Главная" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Фильмы" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Сериалы" })).toBeInTheDocument();
@@ -34,7 +36,9 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
 
-    expect(screen.getByRole("searchbox", { name: "Поиск фильма" })).toBeInTheDocument();
+    expect(header).toContainElement(screen.getByRole("searchbox", { name: "Поиск фильма" }));
+    expect(screen.queryByRole("link", { name: "Фильмы" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Сериалы" })).not.toBeInTheDocument();
   });
 
   it("renders a default premieres collection on the home page", async () => {
@@ -60,6 +64,36 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.getByText("Новинки для вечера")).toBeInTheDocument();
+  });
+
+  it("hides premieres without posters on the home page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              kinopoiskId: 11,
+              nameRu: "С постером",
+              year: 2026,
+              posterUrlPreview: "https://example.test/with-poster.jpg"
+            },
+            {
+              kinopoiskId: 12,
+              nameRu: "Без постера",
+              year: 2026
+            }
+          ]
+        })
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("С постером")).toBeInTheDocument();
+    expect(screen.queryByText("Без постера")).not.toBeInTheDocument();
+    expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
   it("clears stale film details when a later detail request fails", async () => {
