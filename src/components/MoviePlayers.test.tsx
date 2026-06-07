@@ -55,7 +55,10 @@ describe("MoviePlayers", () => {
   it("shows a helpful empty state when no safe players are available", () => {
     render(
       <MoviePlayers
-        players={[{ id: "bad", title: "Bad", embedUrl: "ftp://example.test/movie" }]}
+        players={[
+          { id: "bad", title: "Bad", embedUrl: "ftp://example.test/movie" },
+          { id: "http", title: "HTTP", embedUrl: "http://example.test/embed" }
+        ]}
       />
     );
 

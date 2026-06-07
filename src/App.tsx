@@ -50,6 +50,7 @@ export function App() {
 
   async function handleSelectFilm(film: KinopoiskFilm) {
     setError(null);
+    setSelectedFilm(null);
     setDetailsStatus("loading");
 
     try {

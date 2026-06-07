@@ -52,7 +52,7 @@ function hasSafeEmbedUrl(player: PlayerSource): boolean {
   try {
     const url = new URL(player.embedUrl);
 
-    return url.protocol === "https:" || url.protocol === "http:";
+    return url.protocol === "https:";
   } catch {
     return false;
   }
