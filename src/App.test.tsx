@@ -9,6 +9,13 @@ describe("App", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders the cinematic command center shell", () => {
+    render(<App />);
+
+    expect(screen.getByText("Кинотеатр в браузере")).toBeInTheDocument();
+    expect(screen.getByText("поиск, детали и плееры в одном экране")).toBeInTheDocument();
+  });
+
   it("clears stale film details when a later detail request fails", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
