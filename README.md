@@ -48,8 +48,6 @@ placeholders.
 
 By default, the app enables:
 
-- `Alloha` through `https://api.apbugall.org/?token=...&kp={kinopoiskId}`,
-  resolved lazily from `data.iframe`
 - `Collaps` through `https://api.atomics.ws/embed/kp/{kinopoiskId}`
 - `VideoCDN` through `https://p.lumex.space/...&kp_id={kinopoiskId}`
 - `Coll` through the hometv hardcoded `api.bhcesh.me` token, resolved lazily
@@ -58,11 +56,18 @@ By default, the app enables:
 - `Kodik` through `https://kodik.cc/find-player?kinopoiskID={kinopoiskId}`
 - `Трейлер` through `https://api.atomics.ws/embed/trailer-kp/{kinopoiskId}`
 
+`Alloha` remains available through `https://api.apbugall.org/?token=...&kp={kinopoiskId}`,
+resolved lazily from `data.iframe`, but it is disabled by default because the
+returned iframe can respond with a geo-restricted 404 page. Set
+`VITE_ENABLE_ALLOHA=true` only when your token/region combination opens the
+returned iframe directly.
+
 Lazy players load only when their tab is selected, matching the `hometv`
 approach and avoiding unnecessary balancer API calls.
 
 ```env
 VITE_ALLOHA_TOKEN=e7b61f129f4a392ac4bf6726a9dd6a
+VITE_ENABLE_ALLOHA=false
 VITE_HDVB_TOKEN=optional-hdvb-token
 VITE_PLAYER_TEMPLATES='[{"id":"server","title":"Server","embedUrlTemplate":"https://watch.example.test/embed?kp={kinopoiskId}&title={title}"}]'
 ```
