@@ -35,6 +35,8 @@ export type PlayerRegistry = Record<string, PlayerTemplate>;
 const ALLOHA_TOKEN = "e7b61f129f4a392ac4bf6726a9dd6a";
 const COLL_TOKEN = "4c250f7ac0a8c8a658c789186b9a58a5";
 const KODI_TOKEN = "41dd95f84c21719b09d6c71182237a25";
+const KINOBOX_API_BASE_URL = "https://api.kinobox.tv/api";
+const KINOBOX_EMBED_BASE_URL = "https://kinohost.web.app/embed";
 
 export const players = {
   Alloha: {
@@ -63,6 +65,40 @@ export const players = {
     title: "VideoCDN",
     embedUrlTemplate:
       "https://p.lumex.space/j3mqebEPqCLB?domain=nayteruz.github.io&kp_id={kinopoiskId}"
+  },
+  Kinobox: {
+    id: "kinobox",
+    title: "Kinobox",
+    resolveEmbedUrl: async (kinopoiskId, options) => {
+      const fetchImpl = options?.fetchImpl ?? fetch;
+      const embedFallback = `${KINOBOX_EMBED_BASE_URL}/${kinopoiskId}`;
+
+      try {
+        const response = await fetchImpl(
+          `${KINOBOX_API_BASE_URL}/players?kinopoisk=${kinopoiskId}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Origin: "https://kinohost.web.app",
+              Referer: "https://kinohost.web.app/"
+            }
+          }
+        );
+
+        if (!response.ok) {
+          return embedFallback;
+        }
+
+        const payload = (await response.json()) as {
+          data?: Array<{ iframeUrl?: string }>;
+        };
+        const iframeUrl = payload.data?.find((player) => player.iframeUrl)?.iframeUrl;
+
+        return iframeUrl ?? embedFallback;
+      } catch {
+        return embedFallback;
+      }
+    }
   },
   Coll: {
     id: "coll",
