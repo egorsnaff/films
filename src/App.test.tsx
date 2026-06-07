@@ -42,12 +42,6 @@ describe("App", () => {
         })
       })
       .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: { iframe: "https://alloha.example.test/embed" }
-        })
-      })
-      .mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({})

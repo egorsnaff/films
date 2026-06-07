@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createPlayerSources,
   defaultPlayerTemplates,
+  getDefaultPlayerTemplates,
   players,
   resolvePlayerEmbedUrl
 } from "./playerSources";
@@ -64,10 +65,6 @@ describe("createPlayerSources", () => {
 
     expect(sources).toMatchObject([
       {
-        id: "alloha",
-        title: "Alloha"
-      },
-      {
         id: "collaps",
         title: "Collaps",
         embedUrl: "https://api.atomics.ws/embed/kp/312"
@@ -101,11 +98,21 @@ describe("createPlayerSources", () => {
         embedUrl: "https://api.atomics.ws/embed/trailer-kp/312"
       }
     ]);
-    expect(sources).toHaveLength(8);
-    expect(sources[0].resolveEmbedUrl).toEqual(expect.any(Function));
+    expect(sources).toHaveLength(7);
+    expect(sources.some((source) => source.id === "alloha")).toBe(false);
+    expect(sources[2].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[3].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[4].resolveEmbedUrl).toEqual(expect.any(Function));
-    expect(sources[5].resolveEmbedUrl).toEqual(expect.any(Function));
+  });
+
+  it("keeps Alloha opt-in because its iframe can be geo-blocked", () => {
+    expect(defaultPlayerTemplates.some((template) => template.id === "alloha")).toBe(
+      false
+    );
+    expect(getDefaultPlayerTemplates({ includeAlloha: true }).at(0)).toMatchObject({
+      id: "alloha",
+      title: "Alloha"
+    });
   });
 
   it("resolves async player URLs with hardcoded tokens from hometv", async () => {

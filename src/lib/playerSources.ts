@@ -123,7 +123,13 @@ export const players = {
   }
 } satisfies PlayerRegistry;
 
-export const defaultPlayerTemplates = Object.values(players);
+export function getDefaultPlayerTemplates({ includeAlloha = false } = {}): PlayerTemplate[] {
+  return Object.values(players).filter(
+    (template) => includeAlloha || template.id !== players.Alloha.id
+  );
+}
+
+export const defaultPlayerTemplates = getDefaultPlayerTemplates();
 
 export function createPlayerSources(
   film: KinopoiskFilm,
