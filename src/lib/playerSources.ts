@@ -9,6 +9,7 @@ export type PlayerSource = {
 
 export type PlayerResolveOptions = {
   fetchImpl?: typeof fetch;
+  allohaToken?: string;
   hdvbToken?: string;
 };
 
@@ -39,7 +40,18 @@ export const players = {
   Alloha: {
     id: "alloha",
     title: "Alloha",
-    embedUrlTemplate: `https://harald-as.newplayjj.com/?kp={kinopoiskId}&token=${ALLOHA_TOKEN}`
+    resolveEmbedUrl: async (kinopoiskId, options) => {
+      const fetchImpl = options?.fetchImpl ?? fetch;
+      const token = options?.allohaToken || ALLOHA_TOKEN;
+      const response = await fetchImpl(
+        `https://api.apbugall.org/?token=${token}&kp=${kinopoiskId}`
+      );
+      const data = (await response.json()) as {
+        data?: { iframe?: string };
+      };
+
+      return data.data?.iframe ?? null;
+    }
   },
   Collaps: {
     id: "collaps",
