@@ -5,7 +5,8 @@ import { MoviePlayers } from "./components/MoviePlayers";
 import {
   KinopoiskFilm,
   KinopoiskFilmDetails,
-  createKinopoiskClient
+  createKinopoiskClient,
+  hasValidPosterUrl
 } from "./lib/kinopoisk";
 import {
   createPlayerSources,
@@ -57,7 +58,7 @@ export function App() {
   const visibleFilms = useMemo(
     () =>
       catalogMode === "premieres"
-        ? films.filter((film) => Boolean(film.posterUrl?.trim()))
+        ? films.filter((film) => hasValidPosterUrl(film.posterUrl))
         : films,
     [catalogMode, films]
   );

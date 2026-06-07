@@ -1,6 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createKinopoiskClient } from "./kinopoisk";
+import { createKinopoiskClient, hasValidPosterUrl } from "./kinopoisk";
+
+describe("hasValidPosterUrl", () => {
+  it("rejects Kinopoisk placeholder poster urls", () => {
+    expect(
+      hasValidPosterUrl("https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png")
+    ).toBe(false);
+    expect(hasValidPosterUrl("https://example.test/no-poster.jpg")).toBe(false);
+    expect(hasValidPosterUrl(undefined)).toBe(false);
+    expect(hasValidPosterUrl("   ")).toBe(false);
+    expect(hasValidPosterUrl("https://example.test/real-poster.jpg")).toBe(true);
+  });
+});
 
 describe("createKinopoiskClient", () => {
   it("sends the API key header and normalizes keyword search results", async () => {
@@ -83,6 +95,36 @@ describe("createKinopoiskClient", () => {
       rating: "9.1",
       description: "История блока смертников."
     });
+  });
+
+  it("drops Kinopoisk no-poster placeholders during normalization", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            kinopoiskId: 501,
+            nameRu: "Без реального постера",
+            posterUrlPreview:
+              "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
+          }
+        ]
+      })
+    });
+    const client = createKinopoiskClient({
+      apiKey: "test-key",
+      fetchImpl: fetchMock
+    });
+
+    const films = await client.getRecentFilms();
+
+    expect(films).toEqual([
+      {
+        kinopoiskId: 501,
+        title: "Без реального постера",
+        posterUrl: undefined
+      }
+    ]);
   });
 
   it("loads a paginated default collection of recent films", async () => {
