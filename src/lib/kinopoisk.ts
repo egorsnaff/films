@@ -74,6 +74,22 @@ export function createKinopoiskClient({
       return films.map(mapFilmSummary).filter(isFilm);
     },
 
+    async getRecentFilms(page = 1): Promise<KinopoiskFilm[]> {
+      const params = new URLSearchParams({
+        order: "YEAR",
+        type: "FILM",
+        ratingFrom: "6",
+        ratingTo: "10",
+        yearFrom: "2024",
+        yearTo: "2026",
+        page: String(page)
+      });
+      const data = await request<SearchFilmResponse>(`/v2.2/films?${params.toString()}`);
+      const films = data.items ?? data.films ?? [];
+
+      return films.map(mapFilmSummary).filter(isFilm);
+    },
+
     async getFilm(kinopoiskId: number): Promise<KinopoiskFilmDetails> {
       const data = await request<Record<string, unknown>>(`/v2.2/films/${kinopoiskId}`);
 
