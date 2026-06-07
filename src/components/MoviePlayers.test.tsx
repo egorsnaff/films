@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { MoviePlayers } from "./MoviePlayers";
 
@@ -63,5 +63,42 @@ describe("MoviePlayers", () => {
     );
 
     expect(screen.getByText("Плееры пока недоступны")).toBeInTheDocument();
+  });
+
+  it("loads async player iframe when its tab is selected", async () => {
+    const user = userEvent.setup();
+    let resolvePlayer!: (value: string) => void;
+    const resolveEmbedUrl = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolvePlayer = resolve;
+        })
+    );
+
+    render(
+      <MoviePlayers
+        players={[
+          {
+            id: "alloha",
+            title: "Alloha",
+            embedUrl: "https://example.test/alloha"
+          },
+          {
+            id: "coll",
+            title: "Coll",
+            resolveEmbedUrl
+          }
+        ]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Coll" }));
+
+    expect(screen.getByText("Загрузка плеера...")).toBeInTheDocument();
+    resolvePlayer("https://async.example.test/embed");
+    expect(await screen.findByTitle("Coll")).toHaveAttribute(
+      "src",
+      "https://async.example.test/embed"
+    );
   });
 });

@@ -6,7 +6,11 @@ import {
   KinopoiskFilmDetails,
   createKinopoiskClient
 } from "./lib/kinopoisk";
-import { createPlayerSources, parsePlayerTemplates } from "./lib/playerSources";
+import {
+  createPlayerSources,
+  defaultPlayerTemplates,
+  parsePlayerTemplates
+} from "./lib/playerSources";
 import "./styles.css";
 
 const DEFAULT_API_KEY = "e99d6de0-9f14-42e9-b3c6-32172a36d434";
@@ -14,7 +18,10 @@ const DEFAULT_API_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
 
 const apiKey = import.meta.env.VITE_KINOPOISK_API_KEY || DEFAULT_API_KEY;
 const apiBaseUrl = import.meta.env.VITE_KINOPOISK_API_BASE_URL || DEFAULT_API_BASE_URL;
-const playerTemplates = parsePlayerTemplates(import.meta.env.VITE_PLAYER_TEMPLATES);
+const hdvbToken = import.meta.env.VITE_HDVB_TOKEN || import.meta.env.VITE_API_HDTV_KEY;
+const envPlayerTemplates = parsePlayerTemplates(import.meta.env.VITE_PLAYER_TEMPLATES);
+const playerTemplates =
+  envPlayerTemplates.length > 0 ? envPlayerTemplates : defaultPlayerTemplates;
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
@@ -137,7 +144,7 @@ export function App() {
                   .join(" · ")}
               </p>
               {selectedFilm.description ? <p>{selectedFilm.description}</p> : null}
-              <MoviePlayers players={players} />
+              <MoviePlayers players={players} resolveOptions={{ hdvbToken }} />
               {players.length === 0 ? (
                 <p className="hint">
                   Добавьте <code>VITE_PLAYER_TEMPLATES</code>, чтобы подключить свои
