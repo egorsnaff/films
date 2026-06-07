@@ -54,6 +54,13 @@ export function App() {
     []
   );
   const players = selectedFilm ? createPlayerSources(selectedFilm, playerTemplates) : [];
+  const visibleFilms = useMemo(
+    () =>
+      catalogMode === "premieres"
+        ? films.filter((film) => Boolean(film.posterUrl?.trim()))
+        : films,
+    [catalogMode, films]
+  );
   const detailsStyle = selectedFilm?.posterUrl
     ? ({ "--poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
     : undefined;
@@ -174,7 +181,10 @@ export function App() {
       <div className="ambient ambient-left" aria-hidden="true" />
       <div className="ambient ambient-right" aria-hidden="true" />
 
-      <header className="topbar" aria-label="Навигация">
+      <header
+        className={`topbar${isSearchOpen ? " topbar--search-active" : ""}`}
+        aria-label="Навигация"
+      >
         <button className="brand-mark" type="button" onClick={handleHomeClick}>
           <span className="brand-mark__glyph">F</span>
           <span>
@@ -182,28 +192,13 @@ export function App() {
             <small>Кинотеатр в браузере</small>
           </span>
         </button>
-        <nav className="topbar__nav" aria-label="Разделы">
-          {menuItems.map((item) => (
-            <a key={item} href="#main" aria-current={item === "Главная" ? "page" : undefined}>
-              {item}
-            </a>
-          ))}
-        </nav>
-        <button
-          type="button"
-          className="search-toggle"
-          aria-expanded={isSearchOpen}
-          aria-controls="top-search"
-          aria-label={isSearchOpen ? "Закрыть поиск" : "Открыть поиск"}
-          onClick={() => setIsSearchOpen((current) => !current)}
-        >
-          <span aria-hidden="true" />
-        </button>
-      </header>
-
-      {isSearchOpen ? (
-        <form className="top-search" id="top-search" role="search" onSubmit={handleSearch}>
-          <div className="search-form__control">
+        {isSearchOpen ? (
+          <form
+            className="topbar__search"
+            id="top-search"
+            role="search"
+            onSubmit={handleSearch}
+          >
             <input
               id="search-input"
               aria-label="Поиск фильма"
@@ -216,9 +211,27 @@ export function App() {
             <button type="submit" disabled={status === "loading"}>
               {status === "loading" ? "Ищем..." : "Найти"}
             </button>
-          </div>
-        </form>
-      ) : null}
+          </form>
+        ) : (
+          <nav className="topbar__nav" aria-label="Разделы">
+            {menuItems.map((item) => (
+              <a key={item} href="#main" aria-current={item === "Главная" ? "page" : undefined}>
+                {item}
+              </a>
+            ))}
+          </nav>
+        )}
+        <button
+          type="button"
+          className="search-toggle"
+          aria-expanded={isSearchOpen}
+          aria-controls="top-search"
+          aria-label={isSearchOpen ? "Закрыть поиск" : "Открыть поиск"}
+          onClick={() => setIsSearchOpen((current) => !current)}
+        >
+          <span aria-hidden="true" />
+        </button>
+      </header>
 
       {error ? <p className="error-message">{error}</p> : null}
 
@@ -242,7 +255,7 @@ export function App() {
             </div>
           ) : null}
 
-          {films.length === 0 && status !== "loading" ? (
+          {visibleFilms.length === 0 && status !== "loading" ? (
             <div className="empty-state empty-state--composed">
               <span className="empty-state__marker">01</span>
               <strong>Пока ничего не найдено.</strong>
@@ -250,9 +263,9 @@ export function App() {
             </div>
           ) : null}
 
-          {films.length > 0 ? (
+          {visibleFilms.length > 0 ? (
             <div className="film-grid">
-              {films.map((film) => (
+              {visibleFilms.map((film) => (
                 <button
                   key={film.kinopoiskId}
                   type="button"

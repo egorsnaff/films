@@ -973,47 +973,47 @@ h1 em {
   transform: rotate(90deg);
 }
 
-.top-search {
-  position: sticky;
-  top: 100px;
-  z-index: 19;
-  margin: -12px 0 30px auto;
-  width: min(760px, 100%);
-  border: 1px solid var(--line);
-  border-radius: 26px;
-  background: rgb(9 10 13 / 88%);
-  box-shadow: var(--shadow);
-  padding: 12px;
-  backdrop-filter: blur(24px);
+.topbar--search-active {
+  gap: 12px;
 }
 
-.top-search .search-form__control {
+.topbar__search {
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+  align-items: center;
+  min-width: 0;
 }
 
-.top-search input {
+.topbar__search input {
   width: 100%;
   min-width: 0;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 18px;
   background: rgb(255 255 255 / 7%);
   color: #fff;
-  padding: 16px 18px;
+  padding: 14px 18px;
 }
 
-.top-search input::placeholder {
+.topbar__search input::placeholder {
   color: #817b71;
 }
 
-.top-search button {
+.topbar__search input:focus {
+  outline: none;
+  border-color: rgb(240 183 91 / 46%);
+  box-shadow: 0 0 0 3px rgb(240 183 91 / 14%);
+}
+
+.topbar__search button {
   border: 0;
   border-radius: 16px;
   background: linear-gradient(135deg, #f5c66e, #f06b42);
   color: #170d08;
   font-weight: 800;
   padding: 0 22px;
+  min-height: 48px;
   box-shadow: 0 14px 32px rgb(240 107 66 / 24%);
 }
 
@@ -1150,17 +1150,17 @@ h1 em {
     grid-template-columns: 1fr;
   }
 
-  .top-search {
-    top: 100px;
-  }
 }
 
 @media (max-width: 720px) {
   .topbar {
     position: static;
+    flex-wrap: wrap;
   }
 
   .topbar__nav {
+    order: 3;
+    width: 100%;
     overflow-x: auto;
     justify-content: flex-start;
   }
@@ -1169,23 +1169,21 @@ h1 em {
     white-space: nowrap;
   }
 
-  .search-toggle {
-    position: absolute;
-    right: 26px;
-    top: 24px;
+  .topbar--search-active {
+    flex-wrap: nowrap;
   }
 
-  .top-search {
-    position: static;
-    margin-top: -10px;
-  }
-
-  .top-search .search-form__control {
+  .topbar__search {
+    order: 2;
     grid-template-columns: 1fr;
   }
 
-  .top-search button {
+  .topbar__search button {
     min-height: 52px;
+  }
+
+  .search-toggle {
+    flex-shrink: 0;
   }
 
   .section-heading--home h1 {
