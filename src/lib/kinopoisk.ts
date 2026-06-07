@@ -28,6 +28,16 @@ type SearchFilmResponse = {
 
 const DEFAULT_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
 
+export function hasValidPosterUrl(posterUrl?: string): boolean {
+  const trimmed = posterUrl?.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  return !trimmed.toLowerCase().includes("no-poster");
+}
+
 export function createKinopoiskClient({
   apiKey,
   baseUrl = DEFAULT_BASE_URL,
@@ -110,7 +120,7 @@ function mapFilmSummary(raw: Record<string, unknown>): KinopoiskFilm | null {
     title: toStringValue(raw.nameRu ?? raw.nameEn ?? raw.nameOriginal) ?? "Без названия",
     originalTitle: toStringValue(raw.nameEn ?? raw.nameOriginal),
     year: toStringValue(raw.year),
-    posterUrl: toStringValue(raw.posterUrlPreview ?? raw.posterUrl),
+    posterUrl: normalizePosterUrl(raw.posterUrlPreview ?? raw.posterUrl),
     rating: toStringValue(raw.rating ?? raw.ratingKinopoisk)
   };
 }
@@ -146,6 +156,12 @@ function mapNamedList(value: unknown): string[] | undefined {
 
 function isFilm(value: KinopoiskFilm | null): value is KinopoiskFilm {
   return value !== null;
+}
+
+function normalizePosterUrl(value: unknown): string | undefined {
+  const posterUrl = toStringValue(value);
+
+  return hasValidPosterUrl(posterUrl) ? posterUrl : undefined;
 }
 
 function toStringValue(value: unknown): string | undefined {

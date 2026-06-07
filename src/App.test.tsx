@@ -83,6 +83,13 @@ describe("App", () => {
               kinopoiskId: 12,
               nameRu: "Без постера",
               year: 2026
+            },
+            {
+              kinopoiskId: 13,
+              nameRu: "Заглушка постера",
+              year: 2026,
+              posterUrlPreview:
+                "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
             }
           ]
         })
@@ -93,6 +100,7 @@ describe("App", () => {
 
     expect(await screen.findByText("С постером")).toBeInTheDocument();
     expect(screen.queryByText("Без постера")).not.toBeInTheDocument();
+    expect(screen.queryByText("Заглушка постера")).not.toBeInTheDocument();
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
