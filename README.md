@@ -9,7 +9,7 @@ rendering configurable embedded players.
   `https://kinopoiskapiunofficial.tech/api`
 - Keyword search and film details loading
 - Configurable player tabs based on URL templates
-- Safe player rendering: only `http` and `https` iframe URLs are allowed
+- Safe player rendering: only `https` iframe URLs are allowed
 
 ## Setup
 
@@ -26,6 +26,18 @@ set:
 VITE_KINOPOISK_API_KEY=your-key
 VITE_KINOPOISK_API_BASE_URL=https://kinopoiskapiunofficial.tech/api
 ```
+
+## GitHub Pages
+
+After the Pages workflow is merged into `main` and GitHub Pages is enabled for
+GitHub Actions deployments, the app is available at:
+
+```text
+https://egorsnaff.github.io/films/
+```
+
+The Vite `base` option is set to `/films/`, so built assets resolve correctly
+under the repository Pages path.
 
 ## Player templates
 
