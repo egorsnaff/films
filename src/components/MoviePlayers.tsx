@@ -1,18 +1,78 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type { PlayerSource } from "../lib/playerSources";
+import type { PlayerResolveOptions, PlayerSource } from "../lib/playerSources";
 
 type MoviePlayersProps = {
   players: PlayerSource[];
+  resolveOptions?: PlayerResolveOptions;
 };
 
-export function MoviePlayers({ players }: MoviePlayersProps) {
+export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
   const safePlayers = useMemo(() => players.filter(hasSafeEmbedUrl), [players]);
   const [activePlayerId, setActivePlayerId] = useState<string | undefined>(
     safePlayers.at(0)?.id
   );
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
+  const [loadingPlayerId, setLoadingPlayerId] = useState<string | null>(null);
+  const [failedPlayerIds, setFailedPlayerIds] = useState<Record<string, true>>({});
   const activePlayer =
     safePlayers.find((player) => player.id === activePlayerId) ?? safePlayers.at(0);
+  const activeEmbedUrl = activePlayer
+    ? activePlayer.embedUrl ?? resolvedUrls[activePlayer.id]
+    : undefined;
+
+  useEffect(() => {
+    if (!safePlayers.some((player) => player.id === activePlayerId)) {
+      setActivePlayerId(safePlayers.at(0)?.id);
+    }
+  }, [activePlayerId, safePlayers]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveActivePlayer() {
+      if (!activePlayer || activePlayer.embedUrl || !activePlayer.resolveEmbedUrl) {
+        return;
+      }
+
+      if (resolvedUrls[activePlayer.id] || failedPlayerIds[activePlayer.id]) {
+        return;
+      }
+
+      setLoadingPlayerId(activePlayer.id);
+
+      try {
+        const nextUrl = await activePlayer.resolveEmbedUrl(resolveOptions);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (nextUrl && isSafeUrl(nextUrl)) {
+          setResolvedUrls((current) => ({
+            ...current,
+            [activePlayer.id]: nextUrl
+          }));
+        } else {
+          setFailedPlayerIds((current) => ({ ...current, [activePlayer.id]: true }));
+        }
+      } catch {
+        if (!cancelled) {
+          setFailedPlayerIds((current) => ({ ...current, [activePlayer.id]: true }));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPlayerId(null);
+        }
+      }
+    }
+
+    void resolveActivePlayer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePlayer, failedPlayerIds, resolveOptions, resolvedUrls]);
 
   if (!activePlayer) {
     return <p className="empty-state">Плееры пока недоступны</p>;
@@ -34,23 +94,41 @@ export function MoviePlayers({ players }: MoviePlayersProps) {
         ))}
       </div>
       <div className="player-frame-wrap">
-        <iframe
-          key={activePlayer.id}
-          title={activePlayer.title}
-          src={activePlayer.embedUrl}
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          allowFullScreen
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-        />
+        {loadingPlayerId === activePlayer.id ? (
+          <p className="player-status">Загрузка плеера...</p>
+        ) : activeEmbedUrl ? (
+          <iframe
+            key={activePlayer.id}
+            title={activePlayer.title}
+            src={activeEmbedUrl}
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+          />
+        ) : (
+          <p className="player-status">Плеер не найден</p>
+        )}
       </div>
     </section>
   );
 }
 
 function hasSafeEmbedUrl(player: PlayerSource): boolean {
+  if (player.resolveEmbedUrl) {
+    return true;
+  }
+
+  if (!player.embedUrl) {
+    return false;
+  }
+
+  return isSafeUrl(player.embedUrl);
+}
+
+function isSafeUrl(embedUrl: string): boolean {
   try {
-    const url = new URL(player.embedUrl);
+    const url = new URL(embedUrl);
 
     return url.protocol === "https:";
   } catch {

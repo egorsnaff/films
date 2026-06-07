@@ -49,15 +49,20 @@ placeholders.
 By default, the app enables:
 
 - `Alloha` through `https://harald-as.newplayjj.com/?kp={kinopoiskId}&token=...`
-- `Трейлер` through a YouTube embed search
+- `Collaps` through `https://api.atomics.ws/embed/kp/{kinopoiskId}`
+- `VideoCDN` through `https://p.lumex.space/...&kp_id={kinopoiskId}`
+- `Coll` through the hometv hardcoded `api.bhcesh.me` token, resolved lazily
+- `kodi` through the hometv hardcoded `kodikapi.com` token, resolved lazily
+- `HDVB` through `VITE_HDVB_TOKEN` or `VITE_API_HDTV_KEY`, resolved lazily
+- `Kodik` through `https://kodik.cc/find-player?kinopoiskID={kinopoiskId}`
+- `Трейлер` through `https://api.atomics.ws/embed/trailer-kp/{kinopoiskId}`
 
-The player registry also contains reserved keys for `Collaps`, `VideoCDN`,
-`Coll`, `kodi`, `HDVB`, and `Kodik`. They stay disabled until their working
-HTTPS embed URLs or API tokens are added, so the UI does not render broken
-iframes.
+Lazy players load only when their tab is selected, matching the `hometv`
+approach and avoiding unnecessary balancer API calls.
 
 ```env
 VITE_PLAYER_TEMPLATES='[{"id":"alloha","title":"Alloha","embedUrlTemplate":"https://harald-as.newplayjj.com/?kp={kinopoiskId}&token=e7b61f129f4a392ac4bf6726a9dd6a"},{"id":"server","title":"Server","embedUrlTemplate":"https://watch.example.test/embed?kp={kinopoiskId}&title={title}"}]'
+VITE_HDVB_TOKEN=optional-hdvb-token
 ```
 
 When your server is ready, add it as another template without changing the
