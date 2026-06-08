@@ -13,6 +13,12 @@ export type KinopoiskFilmDetails = KinopoiskFilm & {
   genres?: string[];
 };
 
+export type KinopoiskCatalogPage = {
+  films: KinopoiskFilm[];
+  page: number;
+  totalPages: number;
+};
+
 type FetchLike = typeof fetch;
 
 type KinopoiskClientOptions = {
@@ -24,6 +30,8 @@ type KinopoiskClientOptions = {
 type SearchFilmResponse = {
   films?: Array<Record<string, unknown>>;
   items?: Array<Record<string, unknown>>;
+  totalPages?: number;
+  pagesCount?: number;
 };
 
 const DEFAULT_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
@@ -65,11 +73,11 @@ export function createKinopoiskClient({
   }
 
   return {
-    async searchFilms(keyword: string, page = 1): Promise<KinopoiskFilm[]> {
+    async searchFilms(keyword: string, page = 1): Promise<KinopoiskCatalogPage> {
       const trimmedKeyword = keyword.trim();
 
       if (!trimmedKeyword) {
-        return [];
+        return { films: [], page: 1, totalPages: 1 };
       }
 
       const params = new URLSearchParams({
@@ -79,15 +87,19 @@ export function createKinopoiskClient({
       const data = await request<SearchFilmResponse>(
         `/v2.1/films/search-by-keyword?${params.toString()}`
       );
-      const films = data.films ?? data.items ?? [];
+      const films = (data.films ?? data.items ?? []).map(mapFilmSummary).filter(isFilm);
 
-      return films.map(mapFilmSummary).filter(isFilm);
+      return {
+        films,
+        page,
+        totalPages: toNumber(data.totalPages ?? data.pagesCount) ?? 1
+      };
     },
 
-    async getRecentFilms(page = 1): Promise<KinopoiskFilm[]> {
+    async getRecentFilms(page = 1, type: "FILM" | "TV_SERIES" = "FILM"): Promise<KinopoiskCatalogPage> {
       const params = new URLSearchParams({
         order: "YEAR",
-        type: "FILM",
+        type,
         ratingFrom: "6",
         ratingTo: "10",
         yearFrom: "2024",
@@ -95,9 +107,13 @@ export function createKinopoiskClient({
         page: String(page)
       });
       const data = await request<SearchFilmResponse>(`/v2.2/films?${params.toString()}`);
-      const films = data.items ?? data.films ?? [];
+      const films = (data.items ?? data.films ?? []).map(mapFilmSummary).filter(isFilm);
 
-      return films.map(mapFilmSummary).filter(isFilm);
+      return {
+        films,
+        page,
+        totalPages: toNumber(data.totalPages) ?? 1
+      };
     },
 
     async getFilm(kinopoiskId: number): Promise<KinopoiskFilmDetails> {

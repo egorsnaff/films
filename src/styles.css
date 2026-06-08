@@ -113,9 +113,9 @@ code {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 18px;
   min-height: 72px;
   margin-bottom: 28px;
@@ -125,6 +125,19 @@ code {
   box-shadow: 0 18px 60px rgb(0 0 0 / 28%);
   padding: 12px 14px 12px 16px;
   backdrop-filter: blur(22px);
+}
+
+.topbar .brand-mark {
+  justify-self: start;
+}
+
+.topbar .topbar__nav,
+.topbar .topbar__search {
+  justify-self: center;
+}
+
+.topbar .search-toggle {
+  justify-self: end;
 }
 
 .brand-mark {
@@ -151,18 +164,13 @@ code {
   box-shadow: 0 12px 30px rgb(240 107 66 / 28%);
 }
 
-.brand-mark strong,
-.brand-mark small {
-  display: block;
-}
-
 .brand-mark strong {
+  display: block;
   font-family: "Space Grotesk", Outfit, sans-serif;
   letter-spacing: -0.04em;
   font-size: 1.1rem;
 }
 
-.brand-mark small,
 .topbar__status {
   color: var(--muted);
   font-size: 0.78rem;
@@ -178,9 +186,14 @@ code {
   padding: 5px;
 }
 
-.topbar__nav a {
+.topbar__nav a,
+.topbar__nav-link {
+  border: 0;
   border-radius: 999px;
+  background: transparent;
   color: #c9c2b3;
+  cursor: pointer;
+  font: inherit;
   font-size: 0.88rem;
   font-weight: 600;
   padding: 8px 13px;
@@ -190,7 +203,8 @@ code {
     color 180ms ease;
 }
 
-.topbar__nav a:hover {
+.topbar__nav a:hover,
+.topbar__nav-link:hover {
   background: rgb(255 255 255 / 9%);
   color: var(--ink);
 }
@@ -959,7 +973,8 @@ h1 em {
   z-index: 20;
 }
 
-.topbar__nav a[aria-current="page"] {
+.topbar__nav a[aria-current="page"],
+.topbar__nav-link[aria-current="page"] {
   background: rgb(255 255 255 / 10%);
   color: var(--ink);
 }
@@ -1246,5 +1261,143 @@ h1 em {
 
   .watch-card .details-hero {
     grid-template-columns: 92px minmax(0, 1fr);
+  }
+}
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.collection-card {
+  display: grid;
+  gap: 12px;
+  min-height: 220px;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 24px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 8%), rgb(255 255 255 / 2%)),
+    linear-gradient(135deg, color-mix(in srgb, var(--collection-accent) 36%, transparent), transparent 72%);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.collection-card:hover {
+  border-color: color-mix(in srgb, var(--collection-accent) 60%, white);
+  transform: translateY(-2px);
+}
+
+.collection-card__badge,
+.profile-list-block h2 {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collection-card strong {
+  font-family: "Space Grotesk", Outfit, sans-serif;
+  font-size: 1.35rem;
+}
+
+.collection-card p,
+.profile-login,
+.profile-panel,
+.profile-list-block {
+  color: var(--muted);
+}
+
+.profile-login {
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.profile-login label {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-login input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  background: rgb(0 0 0 / 22%);
+  color: var(--ink);
+}
+
+.profile-login button,
+.watch-list-controls__buttons button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0b75b, #f06b42);
+  color: #150c07;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.profile-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.profile-list-block {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.watch-list-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.watch-list-controls__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.watch-list-controls__buttons button {
+  background: rgb(255 255 255 / 8%);
+  color: var(--ink);
+}
+
+.watch-list-controls__buttons button.is-active {
+  background: linear-gradient(135deg, #f0b75b, #f06b42);
+  color: #150c07;
+}
+
+.watch-list-hint {
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .collections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .topbar .topbar__nav,
+  .topbar .topbar__search {
+    grid-column: 1 / -1;
+    justify-self: stretch;
   }
 }
