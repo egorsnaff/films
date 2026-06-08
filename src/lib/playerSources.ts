@@ -37,22 +37,57 @@ const COLL_TOKEN = "4c250f7ac0a8c8a658c789186b9a58a5";
 const KODI_TOKEN = "41dd95f84c21719b09d6c71182237a25";
 const KINOBOX_API_BASE_URL = "https://api.kinobox.tv/api";
 const KINOBOX_EMBED_BASE_URL = "https://kinohost.web.app/embed";
+const GEO_BLOCKED_PLAYER_HOSTS = ["stravers.live"];
+const ALLOHA_EMBED_BASE_URL = "https://harald-as.newplayjj.com";
+
+type KinoboxPlayer = {
+  iframeUrl?: string;
+  type?: string;
+};
+
+export function isGeoBlockedPlayerUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+
+    return GEO_BLOCKED_PLAYER_HOSTS.some(
+      (host) => hostname === host || hostname.endsWith(`.${host}`)
+    );
+  } catch {
+    return true;
+  }
+}
+
+export function selectKinoboxIframeUrl(
+  players: KinoboxPlayer[] | undefined,
+  embedFallback: string
+): string {
+  const candidates = (players ?? []).filter((player): player is KinoboxPlayer & {
+    iframeUrl: string;
+  } => {
+    if (!player.iframeUrl) {
+      return false;
+    }
+
+    return !isGeoBlockedPlayerUrl(player.iframeUrl);
+  });
+
+  if (candidates.length === 0) {
+    return embedFallback;
+  }
+
+  const preferred = candidates.find((player) => player.type?.toLowerCase() !== "alloha");
+
+  return (preferred ?? candidates[0]).iframeUrl;
+}
 
 export const players = {
   Alloha: {
     id: "alloha",
     title: "Alloha",
     resolveEmbedUrl: async (kinopoiskId, options) => {
-      const fetchImpl = options?.fetchImpl ?? fetch;
       const token = options?.allohaToken || ALLOHA_TOKEN;
-      const response = await fetchImpl(
-        `https://api.apbugall.org/?token=${token}&kp=${kinopoiskId}`
-      );
-      const data = (await response.json()) as {
-        data?: { iframe?: string };
-      };
 
-      return data.data?.iframe ?? null;
+      return `${ALLOHA_EMBED_BASE_URL}/?kp=${kinopoiskId}&token=${token}`;
     }
   },
   Collaps: {
@@ -90,11 +125,10 @@ export const players = {
         }
 
         const payload = (await response.json()) as {
-          data?: Array<{ iframeUrl?: string }>;
+          data?: KinoboxPlayer[];
         };
-        const iframeUrl = payload.data?.find((player) => player.iframeUrl)?.iframeUrl;
 
-        return iframeUrl ?? embedFallback;
+        return selectKinoboxIframeUrl(payload.data, embedFallback);
       } catch {
         return embedFallback;
       }
@@ -159,7 +193,7 @@ export const players = {
   }
 } satisfies PlayerRegistry;
 
-export function getDefaultPlayerTemplates({ includeAlloha = false } = {}): PlayerTemplate[] {
+export function getDefaultPlayerTemplates({ includeAlloha = true } = {}): PlayerTemplate[] {
   return Object.values(players).filter(
     (template) => includeAlloha || template.id !== players.Alloha.id
   );

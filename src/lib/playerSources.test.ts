@@ -4,8 +4,10 @@ import {
   createPlayerSources,
   defaultPlayerTemplates,
   getDefaultPlayerTemplates,
+  isGeoBlockedPlayerUrl,
   players,
-  resolvePlayerEmbedUrl
+  resolvePlayerEmbedUrl,
+  selectKinoboxIframeUrl
 } from "./playerSources";
 
 describe("createPlayerSources", () => {
@@ -66,6 +68,10 @@ describe("createPlayerSources", () => {
 
     expect(sources).toMatchObject([
       {
+        id: "alloha",
+        title: "Alloha"
+      },
+      {
         id: "collaps",
         title: "Collaps",
         embedUrl: "https://api.atomics.ws/embed/kp/312"
@@ -103,22 +109,66 @@ describe("createPlayerSources", () => {
         embedUrl: "https://api.atomics.ws/embed/trailer-kp/312"
       }
     ]);
-    expect(sources).toHaveLength(8);
-    expect(sources.some((source) => source.id === "alloha")).toBe(false);
-    expect(sources[2].resolveEmbedUrl).toEqual(expect.any(Function));
+    expect(sources).toHaveLength(9);
+    expect(sources[0].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[3].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[4].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[5].resolveEmbedUrl).toEqual(expect.any(Function));
+    expect(sources[6].resolveEmbedUrl).toEqual(expect.any(Function));
   });
 
-  it("keeps Alloha opt-in because its iframe can be geo-blocked", () => {
-    expect(defaultPlayerTemplates.some((template) => template.id === "alloha")).toBe(
-      false
-    );
-    expect(getDefaultPlayerTemplates({ includeAlloha: true }).at(0)).toMatchObject({
+  it("enables Alloha by default like hometv and allows opting out", () => {
+    expect(defaultPlayerTemplates.at(0)).toMatchObject({
       id: "alloha",
       title: "Alloha"
     });
+    expect(getDefaultPlayerTemplates({ includeAlloha: false }).some((t) => t.id === "alloha")).toBe(
+      false
+    );
+  });
+
+  it("detects geo-blocked Alloha player hosts", () => {
+    expect(
+      isGeoBlockedPlayerUrl(
+        "https://sansa.stravers.live/?token_movie=abc&token=def"
+      )
+    ).toBe(true);
+    expect(
+      isGeoBlockedPlayerUrl("https://harald-as.newplayjj.com/?kp=312&token=abc")
+    ).toBe(false);
+    expect(isGeoBlockedPlayerUrl("https://api.atomics.ws/embed/kp/312")).toBe(false);
+  });
+
+  it("skips geo-blocked Kinobox players and prefers non-alloha sources", () => {
+    expect(
+      selectKinoboxIframeUrl(
+        [
+          {
+            type: "alloha",
+            iframeUrl:
+              "https://sansa.stravers.live/?token_movie=abc&token=def"
+          },
+          {
+            type: "collaps",
+            iframeUrl: "https://api.atomics.ws/embed/kp/301"
+          }
+        ],
+        "https://kinohost.web.app/embed/301"
+      )
+    ).toBe("https://api.atomics.ws/embed/kp/301");
+
+    expect(
+      selectKinoboxIframeUrl(
+        [
+          {
+            type: "alloha",
+            iframeUrl:
+              "https://sansa.stravers.live/?token_movie=abc&token=def"
+          }
+        ],
+        "https://kinohost.web.app/embed/301"
+      )
+    ).toBe("https://kinohost.web.app/embed/301");
   });
 
   it("resolves Kinobox through its API and falls back to the public embed page", async () => {
@@ -156,15 +206,18 @@ describe("createPlayerSources", () => {
     );
   });
 
+  it("resolves Alloha through the direct hometv embed URL", async () => {
+    await expect(resolvePlayerEmbedUrl(players.Alloha, 312)).resolves.toBe(
+      "https://harald-as.newplayjj.com/?kp=312&token=e7b61f129f4a392ac4bf6726a9dd6a"
+    );
+    await expect(
+      resolvePlayerEmbedUrl(players.Alloha, 312, { allohaToken: "custom-token" })
+    ).resolves.toBe("https://harald-as.newplayjj.com/?kp=312&token=custom-token");
+  });
+
   it("resolves async player URLs with hardcoded tokens from hometv", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({
-        json: async () => ({
-          status: "success",
-          data: { iframe: "https://alloha.example.test/embed" }
-        })
-      })
       .mockResolvedValueOnce({
         json: async () => ({
           results: [{ iframe_url: "https://coll.example.test/embed" }]
@@ -180,9 +233,6 @@ describe("createPlayerSources", () => {
       });
 
     await expect(
-      resolvePlayerEmbedUrl(players.Alloha, 312, { fetchImpl: fetchMock })
-    ).resolves.toBe("https://alloha.example.test/embed");
-    await expect(
       resolvePlayerEmbedUrl(players.Coll, 312, { fetchImpl: fetchMock })
     ).resolves.toBe("https://coll.example.test/embed");
     await expect(
@@ -197,18 +247,14 @@ describe("createPlayerSources", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "https://api.apbugall.org/?token=e7b61f129f4a392ac4bf6726a9dd6a&kp=312"
-    );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
       "https://api.bhcesh.me/list?token=4c250f7ac0a8c8a658c789186b9a58a5&kinopoisk_id=312"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
+      2,
       "https://kodikapi.com/search?token=41dd95f84c21719b09d6c71182237a25&kinopoisk_id=312"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      4,
+      3,
       "https://apivb.com/api/videos.json?id_kp=312&token=hdvb-token"
     );
   });
