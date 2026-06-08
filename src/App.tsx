@@ -98,8 +98,12 @@ export function App() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const pageRef = useRef(1);
+  const hasMoreRef = useRef(hasMore);
+  const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
   queryRef.current = query;
+  hasMoreRef.current = hasMore;
+  catalogModeRef.current = catalogMode;
 
   const client = useMemo(
     () => createKinopoiskClient({ apiKey, baseUrl: apiBaseUrl }),
@@ -163,11 +167,13 @@ export function App() {
     async ({
       mode,
       nextPage,
-      replace
+      replace,
+      autoChaseDepth = 0
     }: {
       mode: CatalogMode;
       nextPage: number;
       replace: boolean;
+      autoChaseDepth?: number;
     }) => {
       if (replace) {
         setStatus("loading");
@@ -186,14 +192,42 @@ export function App() {
                 mode === "serials" ? "TV_SERIES" : "FILM"
               );
 
-        setFilms((current) =>
-          replace ? catalogPage.films : mergeFilms(current, catalogPage.films)
-        );
+        let shouldLoadAnotherPage = false;
+
+        setFilms((current) => {
+          const merged = replace ? catalogPage.films : mergeFilms(current, catalogPage.films);
+          const previousVisibleCount = countVisibleFilms(current, mode);
+          const nextVisibleCount = countVisibleFilms(merged, mode);
+
+          if (
+            !replace &&
+            catalogPage.page < catalogPage.totalPages &&
+            nextVisibleCount === previousVisibleCount
+          ) {
+            shouldLoadAnotherPage = true;
+          }
+
+          return merged;
+        });
         setPage(catalogPage.page);
+        pageRef.current = catalogPage.page;
         setTotalPages(catalogPage.totalPages);
         setCatalogMode(mode);
-        setHasMore(catalogPage.page < catalogPage.totalPages);
+        catalogModeRef.current = mode;
+        const nextHasMore = catalogPage.page < catalogPage.totalPages;
+        setHasMore(nextHasMore);
+        hasMoreRef.current = nextHasMore;
         setStatus("success");
+
+        if (shouldLoadAnotherPage && autoChaseDepth < 6) {
+          await loadCatalogPage({
+            mode,
+            nextPage: catalogPage.page + 1,
+            replace: false,
+            autoChaseDepth: autoChaseDepth + 1
+          });
+          return;
+        }
       } catch (loadError) {
         setError(getErrorMessage(loadError));
         setStatus("error");
@@ -206,17 +240,20 @@ export function App() {
   );
 
   const loadNextPage = useCallback(async () => {
-    if (!hasMore || isFetchingMoreRef.current || status === "loading" || isLoadingMore) {
+    if (!hasMoreRef.current || isFetchingMoreRef.current) {
       return;
     }
 
     isFetchingMoreRef.current = true;
     await loadCatalogPage({
-      mode: catalogMode,
+      mode: catalogModeRef.current,
       nextPage: pageRef.current + 1,
       replace: false
     });
-  }, [catalogMode, hasMore, isLoadingMore, loadCatalogPage, status]);
+  }, [loadCatalogPage]);
+
+  const loadNextPageRef = useRef(loadNextPage);
+  loadNextPageRef.current = loadNextPage;
 
   useEffect(() => {
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
@@ -225,7 +262,7 @@ export function App() {
   useEffect(() => {
     const target = loadMoreRef.current;
 
-    if (!target || !hasMore || status === "loading" || isLoadingMore || view !== "catalog") {
+    if (!target || view !== "catalog") {
       return;
     }
 
@@ -236,7 +273,7 @@ export function App() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          void loadNextPage();
+          void loadNextPageRef.current();
         }
       },
       { rootMargin: "480px" }
@@ -245,7 +282,27 @@ export function App() {
     observer.observe(target);
 
     return () => observer.disconnect();
-  }, [catalogMode, hasMore, isLoadingMore, loadNextPage, status, view]);
+  }, [view]);
+
+  useEffect(() => {
+    if (view !== "catalog" || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    const target = loadMoreRef.current;
+    if (!target) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      const rect = target.getBoundingClientRect();
+      if (rect.top <= window.innerHeight + 480) {
+        void loadNextPageRef.current();
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [films, hasMore, isLoadingMore, page, view]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -427,16 +484,35 @@ export function App() {
             ))}
           </nav>
         )}
-        <button
-          type="button"
-          className="search-toggle"
-          aria-expanded={isSearchOpen}
-          aria-controls="top-search"
-          aria-label={isSearchOpen ? "Закрыть поиск" : "Открыть поиск"}
-          onClick={() => setIsSearchOpen((current) => !current)}
-        >
-          <span aria-hidden="true" />
-        </button>
+        <div className="topbar__actions">
+          {authUser ? (
+            <button
+              type="button"
+              className="topbar-auth-button"
+              onClick={() => void handleMenuClick("Профиль")}
+            >
+              {authUser.username}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="topbar-auth-button topbar-auth-button--primary"
+              onClick={() => void handleMenuClick("Профиль")}
+            >
+              Войти
+            </button>
+          )}
+          <button
+            type="button"
+            className="search-toggle"
+            aria-expanded={isSearchOpen}
+            aria-controls="top-search"
+            aria-label={isSearchOpen ? "Закрыть поиск" : "Открыть поиск"}
+            onClick={() => setIsSearchOpen((current) => !current)}
+          >
+            <span aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       {error ? <p className="error-message">{error}</p> : null}
@@ -473,6 +549,11 @@ export function App() {
               : hasMore
                 ? `Листайте дальше · страница ${page} из ${totalPages}`
                 : "Это всё на сейчас"}
+            {hasMore && !isLoadingMore ? (
+              <button type="button" className="load-more-button" onClick={() => void loadNextPage()}>
+                Загрузить ещё
+              </button>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -667,6 +748,14 @@ export function App() {
       ) : null}
     </main>
   );
+}
+
+function countVisibleFilms(films: KinopoiskFilm[], mode: CatalogMode): number {
+  if (mode === "search") {
+    return films.length;
+  }
+
+  return films.filter((film) => hasValidPosterUrl(film.posterUrl)).length;
 }
 
 function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {
