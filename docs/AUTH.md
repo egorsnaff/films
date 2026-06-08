@@ -81,6 +81,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8080/api/auth/
 | Симптом | Причина | Решение |
 |---------|---------|---------|
 | `:3001/health` OK, `:8080/api/*` → 404 | nginx в контейнере `films` не срезает `/api` | `git pull` + пересобрать `films` |
+| `:3001/health` OK, `:8080/api/*` → 500 | сломанный `proxy_pass` с переменной | обновить `deploy/nginx.conf`, пересобрать `films` |
 | `:8080/api/*` → 502 | контейнер `api` не запущен | `docker-compose ps`, `docker-compose logs api` |
 | через домен 404, локально OK | на **хосте** лишний `location /api/` → `:3001` | оставить только `proxy_pass` на `:8080` (см. выше) |
 
