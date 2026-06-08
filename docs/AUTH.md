@@ -19,10 +19,10 @@ npm install
 npm run create-user -- egor your-strong-password
 ```
 
-Через Docker:
+Через Docker (на ServerSpace обычно `docker-compose` с дефисом):
 
 ```bash
-docker compose exec api npm run create-user -- egor your-strong-password
+docker-compose exec api npm run create-user -- egor your-strong-password
 ```
 
 ## Запуск API
@@ -52,7 +52,7 @@ API_HTTP_PORT=3001
 Перезапуск:
 
 ```bash
-docker compose up -d --build
+docker-compose up -d --build
 ```
 
 ## Подборки
