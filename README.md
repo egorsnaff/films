@@ -53,6 +53,7 @@ docker compose up -d --build
 
 - [docs/SERVERSPACE.md](docs/SERVERSPACE.md) — **ServerSpace** + домен **films.qzz.io** (DNS, HTTPS, `./deploy/deploy.sh`)
 - [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) — общий гайд, бесплатные домены, плееры
+- [docs/AUTH.md](docs/AUTH.md) — авторизация, списки просмотра, создание пользователей
 
 ## Player templates
 

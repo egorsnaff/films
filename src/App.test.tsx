@@ -8,9 +8,21 @@ describe("App", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ items: [] })
+      vi.fn().mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth") || url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: "Не авторизован" })
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ items: [], totalPages: 1 })
+        });
       })
     );
   });
@@ -25,38 +37,49 @@ describe("App", () => {
 
     const header = screen.getByRole("banner", { name: "Навигация" });
 
-    expect(screen.getByRole("link", { name: "Главная" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Фильмы" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Сериалы" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Подборки" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Профиль" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Главная" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Фильмы" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Подборки" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Поиск фильма" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Найди фильм/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/найдено/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
 
     expect(header).toContainElement(screen.getByRole("searchbox", { name: "Поиск фильма" }));
-    expect(screen.queryByRole("link", { name: "Фильмы" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Сериалы" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Фильмы" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Сериалы" })).not.toBeInTheDocument();
   });
 
   it("renders a default premieres collection on the home page", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          items: [
-            {
-              kinopoiskId: 77,
-              nameRu: "Премьера недели",
-              year: 2026,
-              posterUrlPreview: "https://example.test/premiere.jpg",
-              ratingKinopoisk: 7.7
-            }
-          ]
-        })
+      vi.fn().mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth") || url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: "Не авторизован" })
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                kinopoiskId: 77,
+                nameRu: "Премьера недели",
+                year: 2026,
+                posterUrlPreview: "https://example.test/premiere.jpg",
+                ratingKinopoisk: 7.7
+              }
+            ],
+            totalPages: 3
+          })
+        });
       })
     );
 
@@ -64,35 +87,49 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.getByText("Новинки для вечера")).toBeInTheDocument();
+    expect(screen.getByText(/страница 1 из 3/i)).toBeInTheDocument();
   });
 
   it("hides premieres without posters on the home page", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          items: [
-            {
-              kinopoiskId: 11,
-              nameRu: "С постером",
-              year: 2026,
-              posterUrlPreview: "https://example.test/with-poster.jpg"
-            },
-            {
-              kinopoiskId: 12,
-              nameRu: "Без постера",
-              year: 2026
-            },
-            {
-              kinopoiskId: 13,
-              nameRu: "Заглушка постера",
-              year: 2026,
-              posterUrlPreview:
-                "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
-            }
-          ]
-        })
+      vi.fn().mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth") || url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: "Не авторизован" })
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                kinopoiskId: 11,
+                nameRu: "С постером",
+                year: 2026,
+                posterUrlPreview: "https://example.test/with-poster.jpg"
+              },
+              {
+                kinopoiskId: 12,
+                nameRu: "Без постера",
+                year: 2026
+              },
+              {
+                kinopoiskId: 13,
+                nameRu: "Заглушка постера",
+                year: 2026,
+                posterUrlPreview:
+                  "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
+              }
+            ],
+            totalPages: 1
+          })
+        });
       })
     );
 
@@ -104,48 +141,143 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
+  it("loads the next catalog page when the sentinel is visible", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/api/auth") || url.includes("/api/lists")) {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Не авторизован" })
+        });
+      }
+
+      if (url.includes("page=2")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                kinopoiskId: 88,
+                nameRu: "Вторая страница",
+                year: 2026,
+                posterUrlPreview: "https://example.test/page-2.jpg"
+              }
+            ],
+            totalPages: 3
+          })
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              kinopoiskId: 77,
+              nameRu: "Первая страница",
+              year: 2026,
+              posterUrlPreview: "https://example.test/page-1.jpg"
+            }
+          ],
+          totalPages: 3
+        })
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(private callback: IntersectionObserverCallback) {}
+
+        observe() {
+          this.callback([{ isIntersecting: true } as IntersectionObserverEntry], this as never);
+        }
+
+        disconnect() {}
+      }
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("Первая страница")).toBeInTheDocument();
+    expect(await screen.findByText("Вторая страница")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
+  });
+
+  it("opens the collections page from the menu", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Подборки" }));
+
+    expect(await screen.findByText("Подборки фильмов")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Вечер под плед/i })).toBeInTheDocument();
+  });
+
   it("clears stale film details when a later detail request fails", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          items: []
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          films: [
-            {
-              filmId: 1,
-              nameRu: "Первый",
-              year: "2001",
-              posterUrlPreview: "https://example.test/one.jpg"
-            },
-            {
-              filmId: 2,
-              nameRu: "Второй",
-              year: "2002",
-              posterUrlPreview: "https://example.test/two.jpg"
-            }
-          ]
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          kinopoiskId: 1,
-          nameRu: "Первый подробно",
-          year: 2001,
-          description: "Старые детали"
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({})
+      .mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth") || url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ error: "Не авторизован" })
+          });
+        }
+
+        if (url.includes("search-by-keyword")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              films: [
+                {
+                  filmId: 1,
+                  nameRu: "Первый",
+                  year: "2001",
+                  posterUrlPreview: "https://example.test/one.jpg"
+                },
+                {
+                  filmId: 2,
+                  nameRu: "Второй",
+                  year: "2002",
+                  posterUrlPreview: "https://example.test/two.jpg"
+                }
+              ],
+              pagesCount: 1
+            })
+          });
+        }
+
+        if (url.endsWith("/films/1")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              kinopoiskId: 1,
+              nameRu: "Первый подробно",
+              year: 2001,
+              description: "Старые детали"
+            })
+          });
+        }
+
+        if (url.endsWith("/films/2")) {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            json: async () => ({})
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ items: [], totalPages: 1 })
+        });
       });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -170,9 +302,32 @@ describe("App", () => {
 
   it("opens players on a dedicated watch page", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/api/auth") || url.includes("/api/lists")) {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Не авторизован" })
+        });
+      }
+
+      if (url.endsWith("/films/301")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            kinopoiskId: 301,
+            nameRu: "Матрица",
+            year: 1999,
+            posterUrl: "https://example.test/matrix.jpg",
+            ratingKinopoisk: 8.5,
+            description: "Фильм о выборе реальности."
+          })
+        });
+      }
+
+      return Promise.resolve({
         ok: true,
         json: async () => ({
           items: [
@@ -183,20 +338,11 @@ describe("App", () => {
               posterUrlPreview: "https://example.test/matrix.jpg",
               ratingKinopoisk: 8.5
             }
-          ]
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          kinopoiskId: 301,
-          nameRu: "Матрица",
-          year: 1999,
-          posterUrl: "https://example.test/matrix.jpg",
-          ratingKinopoisk: 8.5,
-          description: "Фильм о выборе реальности."
+          ],
+          totalPages: 1
         })
       });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);

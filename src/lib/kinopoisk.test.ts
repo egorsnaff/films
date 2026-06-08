@@ -28,7 +28,8 @@ describe("createKinopoiskClient", () => {
             posterUrlPreview: "https://example.test/matrix-small.jpg",
             rating: "8.5"
           }
-        ]
+        ],
+        pagesCount: 4
       })
     });
     const client = createKinopoiskClient({
@@ -36,7 +37,7 @@ describe("createKinopoiskClient", () => {
       fetchImpl: fetchMock
     });
 
-    const films = await client.searchFilms("матрица");
+    const page = await client.searchFilms("матрица");
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=%D0%BC%D0%B0%D1%82%D1%80%D0%B8%D1%86%D0%B0&page=1",
@@ -46,16 +47,20 @@ describe("createKinopoiskClient", () => {
         })
       })
     );
-    expect(films).toEqual([
-      {
-        kinopoiskId: 301,
-        title: "Матрица",
-        originalTitle: "The Matrix",
-        year: "1999",
-        posterUrl: "https://example.test/matrix-small.jpg",
-        rating: "8.5"
-      }
-    ]);
+    expect(page).toEqual({
+      page: 1,
+      totalPages: 4,
+      films: [
+        {
+          kinopoiskId: 301,
+          title: "Матрица",
+          originalTitle: "The Matrix",
+          year: "1999",
+          posterUrl: "https://example.test/matrix-small.jpg",
+          rating: "8.5"
+        }
+      ]
+    });
   });
 
   it("loads film details from the v2.2 film endpoint", async () => {
@@ -108,7 +113,8 @@ describe("createKinopoiskClient", () => {
             posterUrlPreview:
               "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
           }
-        ]
+        ],
+        totalPages: 1
       })
     });
     const client = createKinopoiskClient({
@@ -116,9 +122,9 @@ describe("createKinopoiskClient", () => {
       fetchImpl: fetchMock
     });
 
-    const films = await client.getRecentFilms();
+    const page = await client.getRecentFilms();
 
-    expect(films).toEqual([
+    expect(page.films).toEqual([
       {
         kinopoiskId: 501,
         title: "Без реального постера",
@@ -140,7 +146,8 @@ describe("createKinopoiskClient", () => {
             posterUrlPreview: "https://example.test/new-film.jpg",
             ratingKinopoisk: 7.4
           }
-        ]
+        ],
+        totalPages: 7
       })
     });
     const client = createKinopoiskClient({
@@ -148,7 +155,7 @@ describe("createKinopoiskClient", () => {
       fetchImpl: fetchMock
     });
 
-    const films = await client.getRecentFilms(3);
+    const page = await client.getRecentFilms(3);
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://kinopoiskapiunofficial.tech/api/v2.2/films?order=YEAR&type=FILM&ratingFrom=6&ratingTo=10&yearFrom=2024&yearTo=2026&page=3",
@@ -158,15 +165,19 @@ describe("createKinopoiskClient", () => {
         })
       })
     );
-    expect(films).toEqual([
-      {
-        kinopoiskId: 123,
-        title: "Новый фильм",
-        originalTitle: "New Film",
-        year: "2026",
-        posterUrl: "https://example.test/new-film.jpg",
-        rating: "7.4"
-      }
-    ]);
+    expect(page).toEqual({
+      page: 3,
+      totalPages: 7,
+      films: [
+        {
+          kinopoiskId: 123,
+          title: "Новый фильм",
+          originalTitle: "New Film",
+          year: "2026",
+          posterUrl: "https://example.test/new-film.jpg",
+          rating: "7.4"
+        }
+      ]
+    });
   });
 });
