@@ -37,7 +37,8 @@ const COLL_TOKEN = "4c250f7ac0a8c8a658c789186b9a58a5";
 const KODI_TOKEN = "41dd95f84c21719b09d6c71182237a25";
 const KINOBOX_API_BASE_URL = "https://api.kinobox.tv/api";
 const KINOBOX_EMBED_BASE_URL = "https://kinohost.web.app/embed";
-const GEO_BLOCKED_PLAYER_HOSTS = ["stravers.live", "newplayjj.com"];
+const GEO_BLOCKED_PLAYER_HOSTS = ["stravers.live"];
+const ALLOHA_EMBED_BASE_URL = "https://harald-as.newplayjj.com";
 
 type KinoboxPlayer = {
   iframeUrl?: string;
@@ -84,16 +85,9 @@ export const players = {
     id: "alloha",
     title: "Alloha",
     resolveEmbedUrl: async (kinopoiskId, options) => {
-      const fetchImpl = options?.fetchImpl ?? fetch;
       const token = options?.allohaToken || ALLOHA_TOKEN;
-      const response = await fetchImpl(
-        `https://api.apbugall.org/?token=${token}&kp=${kinopoiskId}`
-      );
-      const data = (await response.json()) as {
-        data?: { iframe?: string };
-      };
 
-      return data.data?.iframe ?? null;
+      return `${ALLOHA_EMBED_BASE_URL}/?kp=${kinopoiskId}&token=${token}`;
     }
   },
   Collaps: {
@@ -199,7 +193,7 @@ export const players = {
   }
 } satisfies PlayerRegistry;
 
-export function getDefaultPlayerTemplates({ includeAlloha = false } = {}): PlayerTemplate[] {
+export function getDefaultPlayerTemplates({ includeAlloha = true } = {}): PlayerTemplate[] {
   return Object.values(players).filter(
     (template) => includeAlloha || template.id !== players.Alloha.id
   );

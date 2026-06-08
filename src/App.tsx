@@ -20,9 +20,10 @@ const DEFAULT_API_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
 
 const apiKey = import.meta.env.VITE_KINOPOISK_API_KEY || DEFAULT_API_KEY;
 const apiBaseUrl = import.meta.env.VITE_KINOPOISK_API_BASE_URL || DEFAULT_API_BASE_URL;
-const allohaToken = import.meta.env.VITE_ALLOHA_TOKEN;
+const allohaToken =
+  import.meta.env.VITE_ALLOHA_TOKEN || import.meta.env.VITE_API_ALOHA_KEY;
 const hdvbToken = import.meta.env.VITE_HDVB_TOKEN || import.meta.env.VITE_API_HDTV_KEY;
-const enableAlloha = import.meta.env.VITE_ENABLE_ALLOHA === "true";
+const enableAlloha = import.meta.env.VITE_ENABLE_ALLOHA !== "false";
 const envPlayerTemplates = parsePlayerTemplates(import.meta.env.VITE_PLAYER_TEMPLATES);
 const playerTemplates =
   envPlayerTemplates.length > 0
