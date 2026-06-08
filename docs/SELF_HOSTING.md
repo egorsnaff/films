@@ -138,9 +138,14 @@ VITE_PLAYER_EMBED_DOMAIN=nayteruz.github.io
 ## Обновление после деплоя
 
 ```bash
-git pull
-docker compose up -d --build
+./deploy/update.sh
 ```
+
+Скрипт делает `git pull`, пересборку `api` и `films` и проверяет `/api/health`.
+
+### Автодеплой из GitHub
+
+После мержа в `main` можно не заходить на сервер: workflow **Deploy VPS** подключается по SSH и запускает `deploy/update.sh`. Секреты и ключ — в [docs/SERVERSPACE.md](./SERVERSPACE.md#шаг-6-обновление-после-изменений-в-коде).
 
 ## GitHub Pages параллельно
 
@@ -149,4 +154,4 @@ docker compose up -d --build
 ## Что можно добавить позже
 
 - **Backend-прокси** для API-ключей (сейчас ключи попадают в JS-бандл — типично для статики, но на своём сервере можно спрятать их за nginx/Node).
-- **CI deploy** на VPS через SSH или Watchtower для автообновления образа.
+- ~~**CI deploy** на VPS через SSH~~ — уже есть workflow `deploy-vps.yml`.

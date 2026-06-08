@@ -181,13 +181,43 @@ curl -s http://127.0.0.1:8080/api/health
 
 ## Шаг 6. Обновление после изменений в коде
 
-На сервере:
+### Вручную
 
 ```bash
 cd /opt/films
-git pull
-./deploy/deploy.sh
+./deploy/update.sh
 ```
+
+### Автоматически (после мержа в `main`)
+
+В репозитории есть workflow **Deploy VPS** (`.github/workflows/deploy-vps.yml`): при пуше в `main` GitHub подключается по SSH и запускает `deploy/update.sh` на сервере.
+
+**Один раз настройте секреты** в GitHub → репозиторий → **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Пример | Описание |
+|--------|--------|----------|
+| `VPS_HOST` | `185.x.x.x` или `films.qzz.io` | IP или хост VPS |
+| `VPS_USER` | `root` | SSH-пользователь |
+| `VPS_SSH_KEY` | содержимое `id_ed25519` | Приватный ключ (без passphrase удобнее для CI) |
+| `VPS_PORT` | `22` | Необязательно, если стандартный порт |
+| `VPS_DEPLOY_PATH` | `/opt/films` | Необязательно, по умолчанию `/opt/films` |
+
+**На сервере** — добавьте публичный ключ в `~/.ssh/authorized_keys` пользователя деплоя:
+
+```bash
+# на вашем ПК
+ssh-keygen -t ed25519 -C "github-deploy-films" -f ~/.ssh/films_deploy -N ""
+
+# скопировать на сервер
+ssh-copy-id -i ~/.ssh/films_deploy.pub root@185.x.x.x
+
+# в GitHub Secret VPS_SSH_KEY — вставить:
+cat ~/.ssh/films_deploy
+```
+
+Проверка: **Actions → Deploy VPS → Run workflow** (или дождитесь мержа в `main`).
+
+Логи деплоя смотрите в GitHub Actions; на сервере — `docker-compose ps` и `docker-compose logs -f api films`.
 
 ---
 
