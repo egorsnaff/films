@@ -168,15 +168,16 @@ code {
 }
 
 .load-more-button {
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid rgb(255 255 255 / 12%);
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid rgb(240 183 91 / 40%);
   border-radius: 999px;
-  background: rgb(255 255 255 / 8%);
+  background: linear-gradient(135deg, rgb(240 183 91 / 24%), rgb(240 107 66 / 18%));
   color: var(--ink);
   cursor: pointer;
   font: inherit;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .brand-mark {

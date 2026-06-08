@@ -98,10 +98,12 @@ export function App() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const pageRef = useRef(1);
+  const filmsRef = useRef<KinopoiskFilm[]>([]);
   const hasMoreRef = useRef(hasMore);
   const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
   queryRef.current = query;
+  filmsRef.current = films;
   hasMoreRef.current = hasMore;
   catalogModeRef.current = catalogMode;
 
@@ -192,23 +194,17 @@ export function App() {
                 mode === "serials" ? "TV_SERIES" : "FILM"
               );
 
-        let shouldLoadAnotherPage = false;
+        const previousFilms = filmsRef.current;
+        const merged = replace ? catalogPage.films : mergeFilms(previousFilms, catalogPage.films);
+        const previousVisibleCount = countVisibleFilms(previousFilms, mode);
+        const nextVisibleCount = countVisibleFilms(merged, mode);
+        const shouldLoadAnotherPage =
+          !replace &&
+          catalogPage.page < catalogPage.totalPages &&
+          nextVisibleCount === previousVisibleCount;
 
-        setFilms((current) => {
-          const merged = replace ? catalogPage.films : mergeFilms(current, catalogPage.films);
-          const previousVisibleCount = countVisibleFilms(current, mode);
-          const nextVisibleCount = countVisibleFilms(merged, mode);
-
-          if (
-            !replace &&
-            catalogPage.page < catalogPage.totalPages &&
-            nextVisibleCount === previousVisibleCount
-          ) {
-            shouldLoadAnotherPage = true;
-          }
-
-          return merged;
-        });
+        setFilms(merged);
+        filmsRef.current = merged;
         setPage(catalogPage.page);
         pageRef.current = catalogPage.page;
         setTotalPages(catalogPage.totalPages);
@@ -255,37 +251,8 @@ export function App() {
   const loadNextPageRef = useRef(loadNextPage);
   loadNextPageRef.current = loadNextPage;
 
-  useEffect(() => {
-    void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-  }, [loadCatalogPage]);
-
-  useEffect(() => {
-    const target = loadMoreRef.current;
-
-    if (!target || view !== "catalog") {
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void loadNextPageRef.current();
-        }
-      },
-      { rootMargin: "480px" }
-    );
-
-    observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [view]);
-
-  useEffect(() => {
-    if (view !== "catalog" || !hasMore || isLoadingMore) {
+  const maybeLoadMoreFromScroll = useCallback(() => {
+    if (view !== "catalog" || !hasMoreRef.current || isFetchingMoreRef.current) {
       return;
     }
 
@@ -294,15 +261,32 @@ export function App() {
       return;
     }
 
-    const frameId = requestAnimationFrame(() => {
-      const rect = target.getBoundingClientRect();
-      if (rect.top <= window.innerHeight + 480) {
-        void loadNextPageRef.current();
-      }
-    });
+    const rect = target.getBoundingClientRect();
+    if (rect.top <= window.innerHeight + 320) {
+      void loadNextPageRef.current();
+    }
+  }, [view]);
 
-    return () => cancelAnimationFrame(frameId);
-  }, [films, hasMore, isLoadingMore, page, view]);
+  useEffect(() => {
+    void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+  }, [loadCatalogPage]);
+
+  useEffect(() => {
+    if (view !== "catalog") {
+      return;
+    }
+
+    const onScroll = () => maybeLoadMoreFromScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    const frameId = requestAnimationFrame(onScroll);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(frameId);
+    };
+  }, [maybeLoadMoreFromScroll, view, films.length, hasMore, isLoadingMore]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

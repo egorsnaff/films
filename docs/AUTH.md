@@ -27,18 +27,26 @@ docker-compose exec api npm run create-user -- egor your-strong-password
 
 ## Запуск API
 
-В `docker-compose.yml` добавлен сервис `api` на порту **3001**.
+`docker-compose.yml` поднимает два сервиса: `films` (сайт) и `api` (авторизация).
 
-В nginx на хосте (перед Cloudflare):
+**Важно:** nginx внутри контейнера `films` сам проксирует `/api/` → `api:3001`.  
+На хосте достаточно одного блока:
 
 ```nginx
-location /api/ {
-    proxy_pass http://127.0.0.1:3001/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-Proto $scheme;
+server {
+    listen 80;
+    server_name films.qzz.io;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
+
+Отдельный `location /api/` на `127.0.0.1:3001` **не нужен** (и может дать 502, если порт 3001 снаружи закрыт).
 
 В `.env` на сервере:
 
@@ -46,13 +54,28 @@ location /api/ {
 JWT_SECRET=длинный-случайный-секрет
 CORS_ORIGIN=https://films.qzz.io
 COOKIE_SECURE=true
-API_HTTP_PORT=3001
 ```
 
 Перезапуск:
 
 ```bash
 docker-compose up -d --build
+```
+
+## Проверка API
+
+```bash
+docker-compose ps
+curl -s http://127.0.0.1:8080/api/health
+curl -s -X POST http://127.0.0.1:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"egor","password":"your-password"}'
+```
+
+Через домен:
+
+```bash
+curl -s https://films.qzz.io/api/health
 ```
 
 ## Подборки
