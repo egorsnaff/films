@@ -62,6 +62,35 @@ COOKIE_SECURE=true
 docker-compose up -d --build
 ```
 
+## Если API возвращает 404 (вход, списки)
+
+Чаще всего запрос доходит до API с лишним префиксом `/api` (`/api/auth/login` вместо `/auth/login`).
+
+**На сервере проверьте:**
+
+```bash
+# должно быть {"ok":true}
+curl -s http://127.0.0.1:8080/api/health
+
+# должно вернуть user или 401, но НЕ 404
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"egor","password":"test"}'
+```
+
+| Симптом | Причина | Решение |
+|---------|---------|---------|
+| `:3001/health` OK, `:8080/api/*` → 404 | nginx в контейнере `films` не срезает `/api` | `git pull` + пересобрать `films` |
+| `:8080/api/*` → 502 | контейнер `api` не запущен | `docker-compose ps`, `docker-compose logs api` |
+| через домен 404, локально OK | на **хосте** лишний `location /api/` → `:3001` | оставить только `proxy_pass` на `:8080` (см. выше) |
+
+Пересборка:
+
+```bash
+docker-compose build --no-cache films
+docker-compose up -d films
+```
+
 ## Если `/api/health` возвращает 502
 
 ```bash
