@@ -62,6 +62,32 @@ COOKIE_SECURE=true
 docker-compose up -d --build
 ```
 
+## Если `/api/health` возвращает 502
+
+```bash
+cd /opt/films
+docker-compose ps
+docker-compose logs --tail=50 api
+curl -s http://127.0.0.1:3001/health
+```
+
+| Симптом | Причина | Решение |
+|---------|---------|---------|
+| `api` нет в `ps` или `Exit` | контейнер не запущен / упал | `docker-compose up -d --build api` |
+| `:3001/health` OK, `:8080/api/health` 502 | films не видит api в сети | `docker-compose down && docker-compose up -d --build` |
+| оба 502 / connection refused | api не слушает порт | смотреть `docker-compose logs api` |
+
+Полный перезапуск:
+
+```bash
+docker-compose down
+docker-compose build --no-cache api films
+docker-compose up -d
+sleep 5
+curl -s http://127.0.0.1:3001/health
+curl -s http://127.0.0.1:8080/api/health
+```
+
 ## Проверка API
 
 ```bash
