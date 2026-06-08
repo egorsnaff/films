@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  buildAllohaEmbedUrl,
   createPlayerSources,
   defaultPlayerTemplates,
   getDefaultPlayerTemplates,
@@ -79,8 +80,7 @@ describe("createPlayerSources", () => {
       {
         id: "videocdn",
         title: "VideoCDN",
-        embedUrl:
-          "https://p.lumex.space/j3mqebEPqCLB?domain=nayteruz.github.io&kp_id=312"
+        embedUrl: "https://p.lumex.space/j3mqebEPqCLB?domain=nayteruz.github.io&kp_id=312"
       },
       {
         id: "kinobox",
@@ -206,13 +206,21 @@ describe("createPlayerSources", () => {
     );
   });
 
-  it("resolves Alloha through the direct hometv embed URL", async () => {
+  it("resolves Alloha through the direct hometv embed URL with embed domain", async () => {
+    expect(buildAllohaEmbedUrl(312, "custom-token", "nayteruz.github.io")).toBe(
+      "https://harald-as.newplayjj.com/?kp=312&token=custom-token&domain=nayteruz.github.io"
+    );
     await expect(resolvePlayerEmbedUrl(players.Alloha, 312)).resolves.toBe(
-      "https://harald-as.newplayjj.com/?kp=312&token=e7b61f129f4a392ac4bf6726a9dd6a"
+      "https://harald-as.newplayjj.com/?kp=312&token=e7b61f129f4a392ac4bf6726a9dd6a&domain=nayteruz.github.io"
     );
     await expect(
-      resolvePlayerEmbedUrl(players.Alloha, 312, { allohaToken: "custom-token" })
-    ).resolves.toBe("https://harald-as.newplayjj.com/?kp=312&token=custom-token");
+      resolvePlayerEmbedUrl(players.Alloha, 312, {
+        allohaToken: "custom-token",
+        embedDomain: "nayteruz.github.io"
+      })
+    ).resolves.toBe(
+      "https://harald-as.newplayjj.com/?kp=312&token=custom-token&domain=nayteruz.github.io"
+    );
   });
 
   it("resolves async player URLs with hardcoded tokens from hometv", async () => {

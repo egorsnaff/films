@@ -23,6 +23,7 @@ const apiBaseUrl = import.meta.env.VITE_KINOPOISK_API_BASE_URL || DEFAULT_API_BA
 const allohaToken =
   import.meta.env.VITE_ALLOHA_TOKEN || import.meta.env.VITE_API_ALOHA_KEY;
 const hdvbToken = import.meta.env.VITE_HDVB_TOKEN || import.meta.env.VITE_API_HDTV_KEY;
+const embedDomain = import.meta.env.VITE_PLAYER_EMBED_DOMAIN || "nayteruz.github.io";
 const enableAlloha = import.meta.env.VITE_ENABLE_ALLOHA !== "false";
 const envPlayerTemplates = parsePlayerTemplates(import.meta.env.VITE_PLAYER_TEMPLATES);
 const playerTemplates =
@@ -343,7 +344,7 @@ export function App() {
               <div className="watch-card__player">
                 <MoviePlayers
                   players={players}
-                  resolveOptions={{ allohaToken, hdvbToken }}
+                  resolveOptions={{ allohaToken, hdvbToken, embedDomain }}
                 />
                 {players.length === 0 ? (
                   <p className="hint">
