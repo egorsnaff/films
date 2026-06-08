@@ -1461,6 +1461,31 @@ h1 em {
   line-height: 1;
 }
 
+.film-shelf__subtitle {
+  margin: 8px 0 0;
+  color: #b8ad9a;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 52ch;
+}
+
+.home-view .film-shelf {
+  margin-top: 4px;
+}
+
+.recommendations-shelf-skeleton {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 172px);
+  gap: 14px;
+  overflow: hidden;
+}
+
+.film-skeleton--shelf {
+  aspect-ratio: 2 / 3;
+  min-height: 220px;
+}
+
 .film-shelf__count {
   min-width: 34px;
   border-radius: 999px;

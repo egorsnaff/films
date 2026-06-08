@@ -4,7 +4,8 @@ const TTL_MS = {
   film: 30 * 24 * 60 * 60 * 1000,
   catalog: 6 * 60 * 60 * 1000,
   search: 2 * 60 * 60 * 1000,
-  list: 24 * 60 * 60 * 1000
+  list: 24 * 60 * 60 * 1000,
+  recommendations: 24 * 60 * 60 * 1000
 } as const;
 
 type CacheKind = keyof typeof TTL_MS;
@@ -141,6 +142,45 @@ export function writeFilmCache(film: CachedFilm): void {
     film.genres ? JSON.stringify(film.genres) : null,
     new Date().toISOString()
   );
+}
+
+export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
+  const row = db
+    .prepare(
+      `SELECT kinopoisk_id, title, original_title, year, poster_url, rating,
+              description, film_length_minutes, genres, fetched_at
+       FROM films_cache WHERE kinopoisk_id = ?`
+    )
+    .get(kinopoiskId) as
+    | {
+        kinopoisk_id: number;
+        title: string;
+        original_title: string | null;
+        year: string | null;
+        poster_url: string | null;
+        rating: string | null;
+        description: string | null;
+        film_length_minutes: number | null;
+        genres: string | null;
+        fetched_at: string;
+      }
+    | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    kinopoiskId: row.kinopoisk_id,
+    title: row.title,
+    originalTitle: row.original_title ?? undefined,
+    year: row.year ?? undefined,
+    posterUrl: row.poster_url ?? undefined,
+    rating: row.rating ?? undefined,
+    description: row.description ?? undefined,
+    filmLengthMinutes: row.film_length_minutes ?? undefined,
+    genres: row.genres ? (JSON.parse(row.genres) as string[]) : undefined
+  };
 }
 
 export function readFilmsCache(kinopoiskIds: number[]): Record<number, CachedFilm> {

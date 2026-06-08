@@ -21,6 +21,7 @@ import {
   getTopList,
   searchCatalog
 } from "./kinopoiskProxy.js";
+import { getRecommendations } from "./recommendations.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -219,6 +220,18 @@ app.post("/auth/login", (req, res) => {
 app.post("/auth/logout", (_req, res) => {
   res.clearCookie(cookieName);
   res.status(204).send();
+});
+
+app.get("/recommendations", requireUser, async (req, res) => {
+  const user = res.locals.user as { id: number };
+
+  try {
+    const result = await getRecommendations(user.id);
+    res.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Не удалось собрать рекомендации";
+    res.status(502).json({ error: message });
+  }
 });
 
 app.get("/lists", requireUser, async (req, res) => {
