@@ -39,7 +39,7 @@ npm run build:selfhost
 | Переменная | Назначение |
 |------------|------------|
 | `VITE_BASE_PATH` | `/` для своего сервера, `/films/` для GitHub Pages |
-| `VITE_KINOPOISK_API_KEY` | Ключ Kinopoisk Unofficial API |
+| `KINOPOISK_API_KEY` | Ключ Kinopoisk Unofficial API (только на сервере, прокси `/api/kp/*`) |
 | `VITE_PLAYER_EMBED_DOMAIN` | Домен, внесённый в whitelist Alloha/Kinobox |
 | `VITE_ALLOHA_TOKEN` | Токен Alloha |
 | `FILMS_HTTP_PORT` | Порт Docker-контейнера на хосте (по умолчанию 8080) |

@@ -13,6 +13,14 @@ import {
   upsertUserFilm,
   type WatchStatus
 } from "./db.js";
+import {
+  ensureFilmsCached,
+  getFilmDetails,
+  getRecentCatalog,
+  getThemeList,
+  getTopList,
+  searchCatalog
+} from "./kinopoiskProxy.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -88,6 +96,75 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+function handleKpError(error: unknown, res: express.Response) {
+  const message = error instanceof Error ? error.message : "Kinopoisk proxy error";
+  const status = message.includes("не настроен") ? 503 : 502;
+  res.status(status).json({ error: message });
+}
+
+app.get("/kp/films/:kinopoiskId", async (req, res) => {
+  const kinopoiskId = Number(req.params.kinopoiskId);
+  if (!Number.isFinite(kinopoiskId)) {
+    res.status(400).json({ error: "Некорректный id фильма" });
+    return;
+  }
+
+  try {
+    const result = await getFilmDetails(kinopoiskId);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/catalog/recent", async (req, res) => {
+  const page = Math.max(1, Number(req.query.page ?? 1));
+  const type = req.query.type === "TV_SERIES" ? "TV_SERIES" : "FILM";
+
+  try {
+    const result = await getRecentCatalog(page, type);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/search", async (req, res) => {
+  const keyword = String(req.query.keyword ?? "");
+  const page = Math.max(1, Number(req.query.page ?? 1));
+
+  try {
+    const result = await searchCatalog(keyword, page);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/top", async (req, res) => {
+  const type = String(req.query.type ?? "");
+  const page = Math.max(1, Number(req.query.page ?? 1));
+
+  try {
+    const result = await getTopList(type, page);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/collections", async (req, res) => {
+  const type = String(req.query.type ?? "");
+  const page = Math.max(1, Number(req.query.page ?? 1));
+
+  try {
+    const result = await getThemeList(type, page);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
 app.get("/auth/me", (req, res) => {
   const session = readSession(req);
 
@@ -144,7 +221,7 @@ app.post("/auth/logout", (_req, res) => {
   res.status(204).send();
 });
 
-app.get("/lists", requireUser, (req, res) => {
+app.get("/lists", requireUser, async (req, res) => {
   const user = res.locals.user as { id: number };
   const items = listUserFilms(user.id).map((item) => ({
     kinopoiskId: item.kinopoisk_id,
@@ -154,7 +231,13 @@ app.get("/lists", requireUser, (req, res) => {
     updatedAt: item.updated_at
   }));
 
-  res.json({ items });
+  try {
+    const kinopoiskIds = items.map((item) => item.kinopoiskId);
+    const films = await ensureFilmsCached(kinopoiskIds, 8);
+    res.json({ items, films });
+  } catch (error) {
+    res.json({ items, films: {} });
+  }
 });
 
 app.put("/lists", requireUser, (req, res) => {

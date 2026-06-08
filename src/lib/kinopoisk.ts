@@ -1,3 +1,5 @@
+import { readLocalCache, writeLocalCache } from "./kpLocalCache";
+
 export type KinopoiskFilm = {
   kinopoiskId: number;
   title: string;
@@ -20,22 +22,29 @@ export type KinopoiskCatalogPage = {
   totalPages: number;
 };
 
+export type TopCollectionType =
+  | "TOP_250_BEST_FILMS"
+  | "TOP_100_POPULAR_FILMS"
+  | "TOP_AWAIT_FILMS";
+
+export type ThemeCollectionType =
+  | "VAMPIRE_THEME"
+  | "ZOMBIE_THEME"
+  | "LOVE_THEME"
+  | "COMICS_THEME"
+  | "FAMILY"
+  | "CATASTROPHE_THEME"
+  | "KIDS_ANIMATION_THEME";
+
 type FetchLike = typeof fetch;
 
 type KinopoiskClientOptions = {
-  apiKey: string;
-  baseUrl?: string;
   fetchImpl?: FetchLike;
+  proxyBaseUrl?: string;
 };
 
-type SearchFilmResponse = {
-  films?: Array<Record<string, unknown>>;
-  items?: Array<Record<string, unknown>>;
-  totalPages?: number;
-  pagesCount?: number;
-};
-
-const DEFAULT_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
+const PROXY_BASE =
+  import.meta.env.VITE_SITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
 
 export function hasValidPosterUrl(posterUrl?: string): boolean {
   const trimmed = posterUrl?.trim();
@@ -48,36 +57,43 @@ export function hasValidPosterUrl(posterUrl?: string): boolean {
 }
 
 export function createKinopoiskClient({
-  apiKey,
-  baseUrl = DEFAULT_BASE_URL,
-  fetchImpl = fetch
-}: KinopoiskClientOptions) {
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-  const filmDetailsCache = new Map<number, KinopoiskFilmDetails>();
+  fetchImpl = fetch,
+  proxyBaseUrl = PROXY_BASE
+}: KinopoiskClientOptions = {}) {
+  const proxyBase = proxyBaseUrl.replace(/\/+$/, "");
 
-  async function request<T>(path: string): Promise<T> {
-    if (!apiKey.trim()) {
-      throw new Error("Kinopoisk API key is not configured");
-    }
-
-    const response = await fetchImpl(`${normalizedBaseUrl}${path}`, {
-      headers: {
-        Accept: "application/json",
-        "X-API-KEY": apiKey
-      }
+  async function proxyRequest<T>(path: string): Promise<T> {
+    const response = await fetchImpl(`${proxyBase}/kp${path}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" }
     });
 
     if (!response.ok) {
-      throw new Error(`Kinopoisk API request failed with status ${response.status}`);
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? `Kinopoisk proxy failed with status ${response.status}`);
     }
 
     return (await response.json()) as T;
   }
 
+  async function getCachedCatalogPage(
+    cacheKey: string,
+    kind: "catalog" | "search" | "list",
+    path: string
+  ): Promise<KinopoiskCatalogPage> {
+    const local = readLocalCache<KinopoiskCatalogPage>(cacheKey, kind);
+    if (local) {
+      return local;
+    }
+
+    const result = await proxyRequest<{ page: KinopoiskCatalogPage }>(path);
+    writeLocalCache(cacheKey, result.page);
+    return result.page;
+  }
+
   return {
     async searchFilms(keyword: string, page = 1): Promise<KinopoiskCatalogPage> {
       const trimmedKeyword = keyword.trim();
-
       if (!trimmedKeyword) {
         return { films: [], page: 1, totalPages: 1 };
       }
@@ -86,126 +102,58 @@ export function createKinopoiskClient({
         keyword: trimmedKeyword,
         page: String(page)
       });
-      const data = await request<SearchFilmResponse>(
-        `/v2.1/films/search-by-keyword?${params.toString()}`
-      );
-      const films = (data.films ?? data.items ?? []).map(mapFilmSummary).filter(isFilm);
 
-      return {
-        films,
-        page,
-        totalPages: toNumber(data.totalPages ?? data.pagesCount) ?? 1
-      };
+      return getCachedCatalogPage(
+        `search:${trimmedKeyword.toLowerCase()}:${page}`,
+        "search",
+        `/search?${params.toString()}`
+      );
     },
 
     async getRecentFilms(page = 1, type: "FILM" | "TV_SERIES" = "FILM"): Promise<KinopoiskCatalogPage> {
       const params = new URLSearchParams({
-        order: "YEAR",
         type,
-        ratingFrom: "6",
-        ratingTo: "10",
-        yearFrom: "2024",
-        yearTo: "2026",
         page: String(page)
       });
-      const data = await request<SearchFilmResponse>(`/v2.2/films?${params.toString()}`);
-      const films = (data.items ?? data.films ?? []).map(mapFilmSummary).filter(isFilm);
 
-      return {
-        films,
-        page,
-        totalPages: toNumber(data.totalPages) ?? 1
-      };
+      return getCachedCatalogPage(
+        `catalog:recent:${type}:${page}`,
+        "catalog",
+        `/catalog/recent?${params.toString()}`
+      );
+    },
+
+    async getTopFilms(type: TopCollectionType, page = 1): Promise<KinopoiskCatalogPage> {
+      const params = new URLSearchParams({
+        type,
+        page: String(page)
+      });
+
+      return getCachedCatalogPage(`top:${type}:${page}`, "list", `/top?${params.toString()}`);
+    },
+
+    async getThemeFilms(type: ThemeCollectionType, page = 1): Promise<KinopoiskCatalogPage> {
+      const params = new URLSearchParams({
+        type,
+        page: String(page)
+      });
+
+      return getCachedCatalogPage(
+        `theme:${type}:${page}`,
+        "list",
+        `/collections?${params.toString()}`
+      );
     },
 
     async getFilm(kinopoiskId: number): Promise<KinopoiskFilmDetails> {
-      const cached = filmDetailsCache.get(kinopoiskId);
-      if (cached) {
-        return cached;
+      const local = readLocalCache<KinopoiskFilmDetails>(`film:${kinopoiskId}`, "film");
+      if (local) {
+        return local;
       }
 
-      const data = await request<Record<string, unknown>>(`/v2.2/films/${kinopoiskId}`);
-      const details = mapFilmDetails(data);
-      filmDetailsCache.set(kinopoiskId, details);
-      return details;
+      const result = await proxyRequest<{ film: KinopoiskFilmDetails }>(`/films/${kinopoiskId}`);
+      writeLocalCache(`film:${kinopoiskId}`, result.film);
+      return result.film;
     }
   };
-}
-
-function mapFilmSummary(raw: Record<string, unknown>): KinopoiskFilm | null {
-  const kinopoiskId = toNumber(raw.filmId ?? raw.kinopoiskId);
-
-  if (!kinopoiskId) {
-    return null;
-  }
-
-  return {
-    kinopoiskId,
-    title: toStringValue(raw.nameRu ?? raw.nameEn ?? raw.nameOriginal) ?? "Без названия",
-    originalTitle: toStringValue(raw.nameEn ?? raw.nameOriginal),
-    year: toStringValue(raw.year),
-    posterUrl: normalizePosterUrl(raw.posterUrlPreview ?? raw.posterUrl),
-    rating: toStringValue(raw.rating ?? raw.ratingKinopoisk)
-  };
-}
-
-function mapFilmDetails(raw: Record<string, unknown>): KinopoiskFilmDetails {
-  const summary = mapFilmSummary(raw);
-
-  if (!summary) {
-    throw new Error("Kinopoisk API returned film details without an id");
-  }
-
-  return {
-    ...summary,
-    description: toStringValue(raw.description),
-    countries: mapNamedList(raw.countries),
-    genres: mapNamedList(raw.genres),
-    filmLengthMinutes: toNumber(raw.filmLength)
-  };
-}
-
-function mapNamedList(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-
-  const names = value
-    .map((item) =>
-      typeof item === "object" && item !== null ? toStringValue(item.name) : undefined
-    )
-    .filter((item): item is string => Boolean(item));
-
-  return names.length > 0 ? names : undefined;
-}
-
-function isFilm(value: KinopoiskFilm | null): value is KinopoiskFilm {
-  return value !== null;
-}
-
-function normalizePosterUrl(value: unknown): string | undefined {
-  const posterUrl = toStringValue(value);
-
-  return hasValidPosterUrl(posterUrl) ? posterUrl : undefined;
-}
-
-function toStringValue(value: unknown): string | undefined {
-  if (value === null || value === undefined || value === "") {
-    return undefined;
-  }
-
-  return String(value);
-}
-
-function toNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  return undefined;
 }
