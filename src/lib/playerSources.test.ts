@@ -4,8 +4,10 @@ import {
   createPlayerSources,
   defaultPlayerTemplates,
   getDefaultPlayerTemplates,
+  isGeoBlockedPlayerUrl,
   players,
-  resolvePlayerEmbedUrl
+  resolvePlayerEmbedUrl,
+  selectKinoboxIframeUrl
 } from "./playerSources";
 
 describe("createPlayerSources", () => {
@@ -119,6 +121,50 @@ describe("createPlayerSources", () => {
       id: "alloha",
       title: "Alloha"
     });
+  });
+
+  it("detects geo-blocked Alloha player hosts", () => {
+    expect(
+      isGeoBlockedPlayerUrl(
+        "https://sansa.stravers.live/?token_movie=abc&token=def"
+      )
+    ).toBe(true);
+    expect(
+      isGeoBlockedPlayerUrl("https://harald-as.newplayjj.com/?kp=312&token=abc")
+    ).toBe(true);
+    expect(isGeoBlockedPlayerUrl("https://api.atomics.ws/embed/kp/312")).toBe(false);
+  });
+
+  it("skips geo-blocked Kinobox players and prefers non-alloha sources", () => {
+    expect(
+      selectKinoboxIframeUrl(
+        [
+          {
+            type: "alloha",
+            iframeUrl:
+              "https://sansa.stravers.live/?token_movie=abc&token=def"
+          },
+          {
+            type: "collaps",
+            iframeUrl: "https://api.atomics.ws/embed/kp/301"
+          }
+        ],
+        "https://kinohost.web.app/embed/301"
+      )
+    ).toBe("https://api.atomics.ws/embed/kp/301");
+
+    expect(
+      selectKinoboxIframeUrl(
+        [
+          {
+            type: "alloha",
+            iframeUrl:
+              "https://sansa.stravers.live/?token_movie=abc&token=def"
+          }
+        ],
+        "https://kinohost.web.app/embed/301"
+      )
+    ).toBe("https://kinohost.web.app/embed/301");
   });
 
   it("resolves Kinobox through its API and falls back to the public embed page", async () => {
