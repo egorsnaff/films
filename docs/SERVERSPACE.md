@@ -149,6 +149,36 @@ chmod +x deploy/deploy.sh deploy/bootstrap-ssl.sh
 
 ---
 
+## Nginx на хосте (films + API через один порт)
+
+Если сайт идёт через `127.0.0.1:8080`, конфиг **без** отдельного `/api/`:
+
+```nginx
+server {
+    listen 80;
+    server_name films.qzz.io;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Контейнер `films` сам проксирует `/api/` на сервис `api`.  
+Если в nginx на хосте есть `location /api/ { proxy_pass http://127.0.0.1:3001; }` — **удалите** его, иначе будет **502**.
+
+Проверка:
+
+```bash
+curl -s http://127.0.0.1:8080/api/health
+# {"ok":true}
+```
+
+---
+
 ## Шаг 6. Обновление после изменений в коде
 
 На сервере:

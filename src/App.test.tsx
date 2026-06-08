@@ -142,7 +142,8 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
-  it("loads the next catalog page when the sentinel is visible", async () => {
+  it("loads the next catalog page when the load-more button is clicked", async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
       const url = String(input);
 
@@ -187,22 +188,11 @@ describe("App", () => {
       });
     });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class {
-        constructor(private callback: IntersectionObserverCallback) {}
-
-        observe() {
-          this.callback([{ isIntersecting: true } as IntersectionObserverEntry], this as never);
-        }
-
-        disconnect() {}
-      }
-    );
 
     render(<App />);
 
     expect(await screen.findByText("Первая страница")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Загрузить ещё" }));
     expect(await screen.findByText("Вторая страница")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
   });

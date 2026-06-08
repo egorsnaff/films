@@ -14,6 +14,7 @@ import {
 } from "./db.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const port = Number(process.env.PORT ?? 3001);
 const jwtSecret = process.env.JWT_SECRET ?? "change-me-in-production";
 const cookieName = "films_session";
