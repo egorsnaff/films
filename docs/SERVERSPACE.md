@@ -73,8 +73,17 @@ ssh root@185.x.x.x
 Установите Docker (Ubuntu 22.04/24.04):
 
 ```bash
-apt update && apt install -y git curl gettext-base
+apt update && apt install -y git curl gettext-base docker-compose-plugin
 curl -fsSL https://get.docker.com | sh
+docker compose version
+```
+
+Если `docker compose version` пишет «command not found», установите плагин:
+
+```bash
+apt install -y docker-compose-plugin
+# или старый вариант:
+apt install -y docker-compose
 ```
 
 Откройте порты в файрволе ServerSpace (если включён):
