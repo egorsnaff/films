@@ -136,8 +136,47 @@ code {
   justify-self: center;
 }
 
-.topbar .search-toggle {
+.topbar .topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   justify-self: end;
+}
+
+.topbar-auth-button {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 7%);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.topbar-auth-button--primary {
+  border-color: rgb(240 183 91 / 40%);
+  background: linear-gradient(135deg, rgb(240 183 91 / 24%), rgb(240 107 66 / 18%));
+}
+
+.load-more-sentinel {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.load-more-button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
 }
 
 .brand-mark {

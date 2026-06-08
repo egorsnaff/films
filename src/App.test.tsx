@@ -42,6 +42,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Подборки" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Войти" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Поиск фильма" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
