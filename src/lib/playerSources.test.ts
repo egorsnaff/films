@@ -44,6 +44,7 @@ describe("createPlayerSources", () => {
       "Alloha",
       "Collaps",
       "VideoCDN",
+      "Kinobox",
       "Coll",
       "kodi",
       "HDVB",
@@ -76,6 +77,10 @@ describe("createPlayerSources", () => {
           "https://p.lumex.space/j3mqebEPqCLB?domain=nayteruz.github.io&kp_id=312"
       },
       {
+        id: "kinobox",
+        title: "Kinobox"
+      },
+      {
         id: "coll",
         title: "Coll"
       },
@@ -98,11 +103,12 @@ describe("createPlayerSources", () => {
         embedUrl: "https://api.atomics.ws/embed/trailer-kp/312"
       }
     ]);
-    expect(sources).toHaveLength(7);
+    expect(sources).toHaveLength(8);
     expect(sources.some((source) => source.id === "alloha")).toBe(false);
     expect(sources[2].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[3].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[4].resolveEmbedUrl).toEqual(expect.any(Function));
+    expect(sources[5].resolveEmbedUrl).toEqual(expect.any(Function));
   });
 
   it("keeps Alloha opt-in because its iframe can be geo-blocked", () => {
@@ -113,6 +119,41 @@ describe("createPlayerSources", () => {
       id: "alloha",
       title: "Alloha"
     });
+  });
+
+  it("resolves Kinobox through its API and falls back to the public embed page", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [{ iframeUrl: "https://kinobox.example.test/embed" }]
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({})
+      });
+
+    await expect(
+      resolvePlayerEmbedUrl(players.Kinobox, 301, { fetchImpl: fetchMock })
+    ).resolves.toBe("https://kinobox.example.test/embed");
+    await expect(
+      resolvePlayerEmbedUrl(players.Kinobox, 301, { fetchImpl: fetchMock })
+    ).resolves.toBe("https://kinohost.web.app/embed/301");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.kinobox.tv/api/players?kinopoisk=301",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: "application/json",
+          Origin: "https://kinohost.web.app",
+          Referer: "https://kinohost.web.app/"
+        })
+      })
+    );
   });
 
   it("resolves async player URLs with hardcoded tokens from hometv", async () => {
