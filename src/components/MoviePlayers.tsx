@@ -6,9 +6,10 @@ import type { PlayerResolveOptions, PlayerSource } from "../lib/playerSources";
 type MoviePlayersProps = {
   players: PlayerSource[];
   resolveOptions?: PlayerResolveOptions;
+  onPlaybackStarted?: () => void;
 };
 
-export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
+export function MoviePlayers({ players, resolveOptions, onPlaybackStarted }: MoviePlayersProps) {
   const safePlayers = useMemo(() => players.filter(hasSafeEmbedUrl), [players]);
   const [activePlayerId, setActivePlayerId] = useState<string | undefined>(
     safePlayers.at(0)?.id
@@ -106,6 +107,7 @@ export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
             kinopoiskId={activePlayer.kinopoiskId}
             embedFallback={activePlayer.kinoboxEmbedFallback}
             resolveOptions={resolveOptions}
+            onPlaybackStarted={onPlaybackStarted}
           />
         ) : loadingPlayerId === activePlayer.id ? (
           <p className="player-status">Загрузка плеера...</p>
@@ -116,6 +118,7 @@ export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
             src={activeEmbedUrl}
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             allowFullScreen
+            onLoad={() => onPlaybackStarted?.()}
           />
         ) : (
           <p className="player-status">Плеер не найден</p>

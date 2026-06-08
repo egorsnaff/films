@@ -11,13 +11,15 @@ type KinoboxPlayerPanelProps = {
   kinopoiskId?: number;
   embedFallback?: string;
   resolveOptions?: PlayerResolveOptions;
+  onPlaybackStarted?: () => void;
 };
 
 export function KinoboxPlayerPanel({
   resolvePlayers,
   kinopoiskId,
   embedFallback,
-  resolveOptions
+  resolveOptions,
+  onPlaybackStarted
 }: KinoboxPlayerPanelProps) {
   const fallbackUrl =
     embedFallback ??
@@ -112,6 +114,7 @@ export function KinoboxPlayerPanel({
           src={activeEmbedUrl}
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
+          onLoad={() => onPlaybackStarted?.()}
         />
       </div>
     </div>

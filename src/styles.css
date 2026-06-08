@@ -1190,6 +1190,37 @@ h1 em {
   transform: translateY(-1px);
 }
 
+.back-button--fancy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px 11px 14px;
+  border-color: rgb(240 183 91 / 28%);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%)),
+    rgb(9 10 13 / 40%);
+  color: var(--ink);
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.back-button__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(240 183 91 / 16%);
+  color: var(--gold);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.back-button--fancy:hover .back-button__icon {
+  transform: translateX(-2px);
+}
+
 .watch-card {
   position: relative;
   display: grid;
@@ -1351,15 +1382,40 @@ h1 em {
   color: var(--muted);
 }
 
+.profile-view {
+  display: grid;
+  gap: 28px;
+  padding-top: 12px;
+}
+
+.profile-login-wrap {
+  display: grid;
+  justify-items: center;
+  padding: 40px 0 20px;
+}
+
 .profile-login {
   display: grid;
   gap: 14px;
-  max-width: 420px;
-  margin-bottom: 28px;
-  padding: 20px;
+  width: min(420px, 100%);
+  padding: 28px;
   border: 1px solid var(--line);
-  border-radius: 22px;
-  background: rgb(255 255 255 / 4%);
+  border-radius: 28px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 7%), rgb(255 255 255 / 2%)),
+    rgb(9 10 13 / 52%);
+  box-shadow: var(--shadow);
+}
+
+.profile-login h1 {
+  margin: 0 0 6px;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 0.95;
+}
+
+.profile-shelves {
+  display: grid;
+  gap: 34px;
 }
 
 .profile-login label {
@@ -1387,17 +1443,201 @@ h1 em {
   font-weight: 700;
 }
 
-.profile-panel {
-  display: flex;
-  align-items: center;
+.film-shelf {
+  display: grid;
   gap: 16px;
-  margin-bottom: 28px;
 }
 
-.profile-list-block {
+.film-shelf__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.film-shelf__head h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  line-height: 1;
+}
+
+.film-shelf__count {
+  min-width: 34px;
+  border-radius: 999px;
+  background: rgb(240 183 91 / 14%);
+  color: var(--gold);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 6px 10px;
+}
+
+.film-shelf__track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 4px 2px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(240 183 91 / 40%) transparent;
+}
+
+.film-shelf__track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.film-shelf__track::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(240 183 91 / 36%);
+}
+
+.film-shelf__card {
   display: grid;
-  gap: 14px;
-  margin-bottom: 28px;
+  flex: 0 0 168px;
+  gap: 10px;
+  width: 168px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  scroll-snap-align: start;
+  text-align: left;
+}
+
+.film-shelf__card:hover .film-shelf__poster,
+.film-shelf__card:focus-visible .film-shelf__poster {
+  border-color: rgb(240 183 91 / 70%);
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px rgb(0 0 0 / 48%), 0 0 0 5px rgb(240 183 91 / 9%);
+}
+
+.film-shelf__poster {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 6%);
+  aspect-ratio: 2 / 3;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.film-shelf__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.film-shelf__progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: rgb(0 0 0 / 42%);
+}
+
+.film-shelf__progress::after {
+  display: block;
+  width: var(--progress, 0%);
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--ember));
+  content: "";
+}
+
+.film-shelf__meta {
+  display: grid;
+  gap: 4px;
+}
+
+.film-shelf__meta strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.film-shelf__meta small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.film-shelf--empty {
+  border: 1px dashed rgb(255 255 255 / 12%);
+  border-radius: 24px;
+  background: rgb(255 255 255 / 3%);
+  padding: 20px 22px;
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-menu__trigger {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 7%);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.user-menu__trigger:hover,
+.user-menu__trigger[aria-expanded="true"] {
+  border-color: rgb(240 183 91 / 46%);
+  background: rgb(255 255 255 / 11%);
+}
+
+.user-menu__avatar {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, #fff4d8, transparent 42%),
+    linear-gradient(145deg, #f5c66e, #f06b42);
+  box-shadow: 0 0 0 3px rgb(240 183 91 / 18%);
+}
+
+.user-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 168px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 18px;
+  background: rgb(16 18 20 / 96%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 42%);
+  padding: 6px;
+  backdrop-filter: blur(18px);
+}
+
+.user-menu__dropdown button {
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  padding: 11px 14px;
+  text-align: left;
+}
+
+.user-menu__dropdown button:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.user-menu__logout {
+  color: #ffb4a8 !important;
 }
 
 .watch-list-controls {
@@ -1420,6 +1660,29 @@ h1 em {
 .watch-list-controls__buttons button.is-active {
   background: linear-gradient(135deg, #f0b75b, #f06b42);
   color: #150c07;
+}
+
+.watch-list-controls__auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 0;
+  border: 1px solid rgb(132 214 125 / 28%);
+  border-radius: 999px;
+  background: rgb(132 214 125 / 10%);
+  color: #c8f0c4;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+
+.watch-list-controls__progress {
+  border-radius: 999px;
+  background: rgb(0 0 0 / 22%);
+  color: var(--gold);
+  font-size: 0.78rem;
+  padding: 3px 8px;
 }
 
 .watch-list-hint {

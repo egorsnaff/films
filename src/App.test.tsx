@@ -88,7 +88,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.getByText("Новинки для вечера")).toBeInTheDocument();
-    expect(screen.getByText(/страница 1 из 3/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Загрузить ещё" })).toBeInTheDocument();
   });
 
   it("hides premieres without posters on the home page", async () => {
@@ -280,7 +280,7 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: /Первый/ }));
     expect(await screen.findByText("Первый подробно")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Вернуться на главную" }));
+    await user.click(screen.getByRole("button", { name: "К результатам" }));
     await user.click(screen.getByRole("button", { name: /Второй/ }));
 
     await waitFor(() =>

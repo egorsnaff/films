@@ -5,15 +5,17 @@ import { siteApi, watchStatusLabels, type WatchStatus } from "../lib/siteApi";
 type WatchListControlsProps = {
   kinopoiskId: number;
   currentStatus?: WatchStatus;
+  progressPercent?: number;
   isAuthenticated: boolean;
   onStatusChange?: (status: WatchStatus | null) => void;
 };
 
-const statuses: WatchStatus[] = ["watching", "plan", "waiting", "watched"];
+const manualStatuses: WatchStatus[] = ["plan", "waiting"];
 
 export function WatchListControls({
   kinopoiskId,
   currentStatus,
+  progressPercent,
   isAuthenticated,
   onStatusChange
 }: WatchListControlsProps) {
@@ -21,11 +23,7 @@ export function WatchListControls({
   const [error, setError] = useState<string | null>(null);
 
   if (!isAuthenticated) {
-    return (
-      <p className="hint watch-list-hint">
-        Войдите в профиль, чтобы добавить фильм в «Смотрю сейчас» и другие списки.
-      </p>
-    );
+    return null;
   }
 
   async function handleSelect(status: WatchStatus) {
@@ -49,9 +47,16 @@ export function WatchListControls({
 
   return (
     <div className="watch-list-controls">
-      <p className="eyebrow">Мои списки</p>
+      {currentStatus === "watching" || currentStatus === "watched" ? (
+        <p className="watch-list-controls__auto">
+          {currentStatus === "watched" ? "Просмотрено" : "Смотрите сейчас"}
+          {typeof progressPercent === "number" && progressPercent > 0 ? (
+            <span className="watch-list-controls__progress">{progressPercent}%</span>
+          ) : null}
+        </p>
+      ) : null}
       <div className="watch-list-controls__buttons">
-        {statuses.map((status) => (
+        {manualStatuses.map((status) => (
           <button
             key={status}
             type="button"

@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
+import { BackButton } from "./components/BackButton";
 import { FilmGrid } from "./components/FilmGrid";
+import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
+import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
+import { useWatchTracker } from "./hooks/useWatchTracker";
 import { filmCollections, getCollectionById } from "./data/collections";
 import {
   KinopoiskFilm,
@@ -16,6 +20,13 @@ import {
   getDefaultPlayerTemplates,
   parsePlayerTemplates
 } from "./lib/playerSources";
+import {
+  getBackLabel,
+  type CatalogMode,
+  type MenuItem,
+  type NavigationSnapshot,
+  type ViewState
+} from "./lib/navigation";
 import {
   siteApi,
   watchStatusLabels,
@@ -42,9 +53,6 @@ const playerTemplates =
     : getDefaultPlayerTemplates({ includeAlloha: enableAlloha });
 
 type LoadState = "idle" | "loading" | "success" | "error";
-type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile";
-type CatalogMode = "premieres" | "search" | "films" | "serials";
-type MenuItem = "Главная" | "Фильмы" | "Сериалы" | "Подборки" | "Профиль";
 
 const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Подборки", "Профиль"];
 
@@ -102,6 +110,7 @@ export function App() {
   const hasMoreRef = useRef(hasMore);
   const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
+  const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   queryRef.current = query;
   filmsRef.current = films;
   hasMoreRef.current = hasMore;
@@ -123,6 +132,19 @@ export function App() {
     ? ({ "--poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
     : undefined;
   const activeCollection = collectionId ? getCollectionById(collectionId) : undefined;
+  const selectedListEntry = selectedFilm
+    ? userLists.find((item) => item.kinopoiskId === selectedFilm.kinopoiskId)
+    : undefined;
+  const progressByFilm = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const item of userLists) {
+      if (item.progressPercent) {
+        map[item.kinopoiskId] = item.progressPercent;
+      }
+    }
+    return map;
+  }, [userLists]);
+  const backLabel = getBackLabel(navHistoryRef.current.at(-1));
 
   useEffect(() => {
     pageRef.current = page;
@@ -164,6 +186,106 @@ export function App() {
     }
     setListFilms(nextFilms);
   }, [client]);
+
+  const { markPlaybackStarted } = useWatchTracker({
+    enabled: Boolean(authUser && view === "watch" && selectedFilm),
+    kinopoiskId: selectedFilm?.kinopoiskId,
+    filmLengthMinutes: selectedFilm?.filmLengthMinutes,
+    currentStatus: selectedListStatus,
+    onStatusChange: (status) => {
+      setSelectedListStatus(status);
+      void refreshUserLists();
+    }
+  });
+
+  const captureSnapshot = useCallback((): NavigationSnapshot => {
+    return {
+      view,
+      activeMenu,
+      catalogMode,
+      collectionId,
+      filmId: selectedFilm?.kinopoiskId ?? null,
+      scrollY: window.scrollY
+    };
+  }, [activeMenu, catalogMode, collectionId, selectedFilm, view]);
+
+  const restoreSnapshot = useCallback(
+    async (snapshot: NavigationSnapshot) => {
+      setActiveMenu(snapshot.activeMenu);
+      setCatalogMode(snapshot.catalogMode);
+      setCollectionId(snapshot.collectionId);
+      setIsSearchOpen(false);
+      setError(null);
+
+      if (snapshot.view === "watch" && snapshot.filmId) {
+        setView("watch");
+        setSelectedFilm(null);
+        setDetailsStatus("loading");
+        setSelectedListStatus(
+          userLists.find((item) => item.kinopoiskId === snapshot.filmId)?.status ?? null
+        );
+
+        try {
+          const details = await client.getFilm(snapshot.filmId);
+          setSelectedFilm(details);
+          setDetailsStatus("success");
+        } catch (detailsError) {
+          setError(getErrorMessage(detailsError));
+          setDetailsStatus("error");
+        }
+      } else if (snapshot.view === "collection" && snapshot.collectionId) {
+        setView("collection");
+        const collection = getCollectionById(snapshot.collectionId);
+        if (collection) {
+          setCollectionStatus("loading");
+          const loaded = await Promise.all(
+            collection.kinopoiskIds.map(async (kinopoiskId) => {
+              try {
+                return await client.getFilm(kinopoiskId);
+              } catch {
+                return null;
+              }
+            })
+          );
+          setCollectionFilms(loaded.filter((film): film is KinopoiskFilm => film !== null));
+          setCollectionStatus("success");
+        }
+      } else if (snapshot.view === "collections") {
+        setView("collections");
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
+      } else if (snapshot.view === "profile") {
+        setView("profile");
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
+        if (authUser) {
+          await refreshUserLists();
+        }
+      } else {
+        setView("catalog");
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
+      }
+
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: snapshot.scrollY, behavior: "auto" });
+      });
+    },
+    [authUser, client, refreshUserLists, userLists]
+  );
+
+  const goBack = useCallback(async () => {
+    const snapshot = navHistoryRef.current.pop();
+    if (!snapshot) {
+      setView("catalog");
+      setActiveMenu("Главная");
+      setSelectedFilm(null);
+      setDetailsStatus("idle");
+      return;
+    }
+
+    await restoreSnapshot(snapshot);
+  }, [restoreSnapshot]);
 
   const loadCatalogPage = useCallback(
     async ({
@@ -295,6 +417,7 @@ export function App() {
       return;
     }
 
+    navHistoryRef.current.push(captureSnapshot());
     setSelectedFilm(null);
     setView("catalog");
     setActiveMenu("Главная");
@@ -302,7 +425,11 @@ export function App() {
     await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
   }
 
-  async function handleSelectFilm(film: KinopoiskFilm) {
+  async function openFilm(film: KinopoiskFilm, options?: { pushHistory?: boolean }) {
+    if (options?.pushHistory !== false) {
+      navHistoryRef.current.push(captureSnapshot());
+    }
+
     setError(null);
     setSelectedFilm(null);
     setDetailsStatus("loading");
@@ -321,11 +448,15 @@ export function App() {
     }
   }
 
-  async function openCollection(id: string) {
+  async function openCollection(id: string, options?: { pushHistory?: boolean }) {
     const collection = getCollectionById(id);
 
     if (!collection) {
       return;
+    }
+
+    if (options?.pushHistory !== false) {
+      navHistoryRef.current.push(captureSnapshot());
     }
 
     setCollectionId(id);
@@ -351,7 +482,11 @@ export function App() {
     }
   }
 
-  async function handleMenuClick(item: MenuItem) {
+  async function handleMenuClick(item: MenuItem, options?: { pushHistory?: boolean }) {
+    if (options?.pushHistory !== false) {
+      navHistoryRef.current.push(captureSnapshot());
+    }
+
     setActiveMenu(item);
     setSelectedFilm(null);
     setDetailsStatus("idle");
@@ -387,11 +522,13 @@ export function App() {
     }
   }
 
-  function handleHomeClick() {
+  async function goHome() {
+    navHistoryRef.current = [];
     setView("catalog");
     setActiveMenu("Главная");
     setSelectedFilm(null);
     setDetailsStatus("idle");
+    await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -429,7 +566,7 @@ export function App() {
         className={`topbar${isSearchOpen ? " topbar--search-active" : ""}`}
         aria-label="Навигация"
       >
-        <button className="brand-mark" type="button" onClick={() => void handleMenuClick("Главная")}>
+        <button className="brand-mark" type="button" onClick={() => void goHome()}>
           <span className="brand-mark__glyph">F</span>
           <strong>films</strong>
         </button>
@@ -469,23 +606,12 @@ export function App() {
           </nav>
         )}
         <div className="topbar__actions">
-          {authUser ? (
-            <button
-              type="button"
-              className="topbar-auth-button"
-              onClick={() => void handleMenuClick("Профиль")}
-            >
-              {authUser.username}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="topbar-auth-button topbar-auth-button--primary"
-              onClick={() => void handleMenuClick("Профиль")}
-            >
-              Войти
-            </button>
-          )}
+          <UserMenu
+            isAuthenticated={Boolean(authUser)}
+            onLogin={() => void handleMenuClick("Профиль")}
+            onProfile={() => void handleMenuClick("Профиль")}
+            onLogout={() => void handleLogout()}
+          />
           <button
             type="button"
             className="search-toggle"
@@ -525,7 +651,9 @@ export function App() {
             </div>
           ) : null}
 
-          {visibleFilms.length > 0 ? <FilmGrid films={visibleFilms} onSelect={handleSelectFilm} /> : null}
+          {visibleFilms.length > 0 ? (
+            <FilmGrid films={visibleFilms} onSelect={(film) => void openFilm(film)} />
+          ) : null}
 
           <div ref={loadMoreRef} className="load-more-sentinel" aria-live="polite">
             {isLoadingMore
@@ -572,9 +700,7 @@ export function App() {
 
       {view === "collection" && activeCollection ? (
         <section className="collection-detail-view" id="main">
-          <button className="back-button" type="button" onClick={() => setView("collections")}>
-            Ко всем подборкам
-          </button>
+          <BackButton label={backLabel} onClick={() => void goBack()} />
           <div className="section-heading">
             <p className="eyebrow">collection</p>
             <h1>{activeCollection.title}</h1>
@@ -582,7 +708,7 @@ export function App() {
           </div>
           {collectionStatus === "loading" ? <p className="player-status">Загружаем подборку...</p> : null}
           {collectionFilms.length > 0 ? (
-            <FilmGrid films={collectionFilms} onSelect={handleSelectFilm} />
+            <FilmGrid films={collectionFilms} onSelect={(film) => void openFilm(film)} />
           ) : collectionStatus === "success" ? (
             <div className="empty-state">
               <strong>В подборке пока нет доступных карточек.</strong>
@@ -593,78 +719,61 @@ export function App() {
 
       {view === "profile" ? (
         <section className="profile-view" id="main">
-          <div className="section-heading">
-            <p className="eyebrow">profile</p>
-            <h1>Профиль</h1>
-            <p>
-              Регистрация только вручную через базу на сервере. Публичной формы регистрации нет.
-            </p>
-          </div>
-
           {!authUser ? (
-            <form className="profile-login" onSubmit={handleLogin}>
-              <label>
-                Логин
-                <input
-                  value={loginForm.username}
-                  onChange={(event) =>
-                    setLoginForm((current) => ({ ...current, username: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Пароль
-                <input
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(event) =>
-                    setLoginForm((current) => ({ ...current, password: event.target.value }))
-                  }
-                />
-              </label>
-              <button type="submit" disabled={authStatus === "loading"}>
-                {authStatus === "loading" ? "Входим..." : "Войти"}
-              </button>
-            </form>
+            <div className="profile-login-wrap">
+              <form className="profile-login" onSubmit={handleLogin}>
+                <h1>Вход</h1>
+                <label>
+                  Логин
+                  <input
+                    value={loginForm.username}
+                    onChange={(event) =>
+                      setLoginForm((current) => ({ ...current, username: event.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  Пароль
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(event) =>
+                      setLoginForm((current) => ({ ...current, password: event.target.value }))
+                    }
+                  />
+                </label>
+                <button type="submit" disabled={authStatus === "loading"}>
+                  {authStatus === "loading" ? "Входим..." : "Войти"}
+                </button>
+              </form>
+            </div>
           ) : (
-            <div className="profile-panel">
-              <p>
-                Вы вошли как <strong>{authUser.username}</strong>
-              </p>
-              <button type="button" className="back-button" onClick={() => void handleLogout()}>
-                Выйти
-              </button>
+            <div className="profile-shelves">
+              {(["watching", "plan", "waiting", "watched"] as WatchStatus[]).map((statusKey) => {
+                const items = userLists.filter((item) => item.status === statusKey);
+                const films = items
+                  .map((item) => listFilms[item.kinopoiskId])
+                  .filter((film): film is KinopoiskFilm => Boolean(film));
+                const showProgress = statusKey === "watching" || statusKey === "watched";
+
+                return (
+                  <FilmShelf
+                    key={statusKey}
+                    title={watchStatusLabels[statusKey]}
+                    films={films}
+                    progressByFilm={showProgress ? progressByFilm : undefined}
+                    onSelect={(film) => void openFilm(film)}
+                  />
+                );
+              })}
             </div>
           )}
-
-          {authUser
-            ? (["watching", "plan", "waiting", "watched"] as WatchStatus[]).map((statusKey) => {
-                const items = userLists.filter((item) => item.status === statusKey);
-                return (
-                  <section key={statusKey} className="profile-list-block">
-                    <h2>{watchStatusLabels[statusKey]}</h2>
-                    {items.length === 0 ? (
-                      <p className="hint">Пока пусто.</p>
-                    ) : (
-                      <FilmGrid
-                        films={items
-                          .map((item) => listFilms[item.kinopoiskId])
-                          .filter((film): film is KinopoiskFilm => Boolean(film))}
-                        onSelect={handleSelectFilm}
-                      />
-                    )}
-                  </section>
-                );
-              })
-            : null}
         </section>
       ) : null}
 
       {view === "watch" ? (
         <section className="watch-page" id="main">
-          <button className="back-button" type="button" onClick={handleHomeClick}>
-            Вернуться на главную
-          </button>
+          <BackButton label={backLabel} onClick={() => void goBack()} />
           <p className="eyebrow">Страница просмотра</p>
           {detailsStatus === "loading" ? (
             <div className="details-loading">
@@ -699,6 +808,7 @@ export function App() {
                 <WatchListControls
                   kinopoiskId={selectedFilm.kinopoiskId}
                   currentStatus={selectedListStatus ?? undefined}
+                  progressPercent={selectedListEntry?.progressPercent}
                   isAuthenticated={Boolean(authUser)}
                   onStatusChange={(nextStatus) => {
                     setSelectedListStatus(nextStatus);
@@ -713,6 +823,7 @@ export function App() {
                 <MoviePlayers
                   players={players}
                   resolveOptions={{ allohaToken, hdvbToken, embedDomain }}
+                  onPlaybackStarted={() => void markPlaybackStarted()}
                 />
                 {players.length === 0 ? (
                   <p className="hint">

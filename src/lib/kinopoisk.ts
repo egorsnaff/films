@@ -11,6 +11,7 @@ export type KinopoiskFilmDetails = KinopoiskFilm & {
   description?: string;
   countries?: string[];
   genres?: string[];
+  filmLengthMinutes?: number;
 };
 
 export type KinopoiskCatalogPage = {
@@ -152,7 +153,8 @@ function mapFilmDetails(raw: Record<string, unknown>): KinopoiskFilmDetails {
     ...summary,
     description: toStringValue(raw.description),
     countries: mapNamedList(raw.countries),
-    genres: mapNamedList(raw.genres)
+    genres: mapNamedList(raw.genres),
+    filmLengthMinutes: toNumber(raw.filmLength)
   };
 }
 
