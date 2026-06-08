@@ -181,12 +181,186 @@ curl -s http://127.0.0.1:8080/api/health
 
 ## Шаг 6. Обновление после изменений в коде
 
-На сервере:
+### Вручную
 
 ```bash
 cd /opt/films
-git pull
-./deploy/deploy.sh
+./deploy/update.sh
+```
+
+### Автоматически (после мержа в `main`)
+
+Workflow **Deploy VPS** (`.github/workflows/deploy-vps.yml`) при пуше в `main`:
+1. Подключается к VPS по SSH
+2. Заходит в `/opt/films`
+3. Запускает `./deploy/update.sh` (pull + пересборка `api` и `films` + healthcheck)
+
+Ниже — **полная одноразовая настройка** с проверками на каждом шаге.
+
+---
+
+#### Что должно уже быть на сервере
+
+Перед автодеплоем на VPS должно работать ручное обновление:
+
+```bash
+ssh root@ВАШ_IP
+cd /opt/films
+ls -la .env deploy/update.sh docker-compose.yml   # всё на месте
+docker-compose ps                                  # api и films в Up
+curl -s http://127.0.0.1:8080/api/health           # {"ok":true}
+```
+
+Файл `.env` с токенами **остаётся только на сервере** — в GitHub Secrets его не кладём.
+
+---
+
+#### Шаг A. Создать SSH-ключ для GitHub Actions
+
+На **вашем компьютере** (не на сервере):
+
+```bash
+ssh-keygen -t ed25519 -C "github-deploy-films" -f ~/.ssh/films_deploy -N ""
+```
+
+- `-N ""` — без пароля (иначе GitHub Actions не сможет использовать ключ)
+- Появятся два файла:
+  - `~/.ssh/films_deploy` — **приватный** → пойдёт в GitHub Secret
+  - `~/.ssh/films_deploy.pub` — **публичный** → пойдёт на сервер
+
+Проверка:
+
+```bash
+ls -la ~/.ssh/films_deploy*
+# films_deploy      (права 600)
+# films_deploy.pub  (права 644)
+```
+
+---
+
+#### Шаг B. Разрешить этому ключу вход на VPS
+
+```bash
+ssh-copy-id -i ~/.ssh/films_deploy.pub root@ВАШ_IP
+```
+
+Если `ssh-copy-id` нет — вручную на сервере:
+
+```bash
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+nano ~/.ssh/authorized_keys
+# вставить одну строку из cat ~/.ssh/films_deploy.pub
+chmod 600 ~/.ssh/authorized_keys
+```
+
+Проверка с ПК — вход **без пароля**:
+
+```bash
+ssh -i ~/.ssh/films_deploy root@ВАШ_IP "echo OK && hostname"
+# должно вывести OK и имя сервера
+```
+
+---
+
+#### Шаг C. Убедиться, что сервер может `git pull`
+
+`deploy/update.sh` делает `git fetch origin main`. На сервере:
+
+```bash
+cd /opt/films
+git remote -v
+git fetch origin main
+```
+
+| Ситуация | Что сделать |
+|----------|-------------|
+| Репозиторий **публичный**, clone через HTTPS | Обычно уже работает |
+| Репозиторий **приватный** | На сервере нужен [Deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) в Settings → Deploy keys (read-only), либо PAT в URL remote |
+| `git fetch` просит логин | `git remote set-url origin git@github.com:egorsnaff/films.git` + deploy key на сервере |
+
+---
+
+#### Шаг D. Добавить Secrets в GitHub
+
+Откройте:  
+`https://github.com/egorsnaff/films/settings/secrets/actions`  
+→ **New repository secret** (по одному).
+
+**Обязательные (3 штуки):**
+
+| Secret | Что вставить | Пример |
+|--------|--------------|--------|
+| `VPS_HOST` | IP VPS или домен | `185.12.34.56` или `films.qzz.io` |
+| `VPS_USER` | SSH-логин | `root` |
+| `VPS_SSH_KEY` | **Весь** приватный ключ | вывод `cat ~/.ssh/films_deploy` |
+
+Для `VPS_SSH_KEY` скопируйте **включая** строки:
+
+```text
+-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----
+```
+
+**Необязательные:**
+
+| Secret | Когда нужен | Значение |
+|--------|-------------|----------|
+| `VPS_PORT` | SSH не на 22-м порту | `22` |
+| `VPS_DEPLOY_PATH` | проект не в `/opt/films` | `/opt/films` |
+
+---
+
+#### Шаг E. Первый тест на сервере вручную
+
+Перед GitHub Actions проверьте скрипт на VPS:
+
+```bash
+ssh root@ВАШ_IP
+cd /opt/films
+chmod +x deploy/update.sh
+./deploy/update.sh
+```
+
+В конце должно быть:
+
+```text
+  api: ok
+  films/api proxy: ok
+→ Деплой завершён
+```
+
+---
+
+#### Шаг F. Запустить workflow в GitHub
+
+1. Убедитесь, что в `main` есть workflow (PR с автодеплоем смержен).
+2. GitHub → вкладка **Actions** → **Deploy VPS**.
+3. **Run workflow** → branch `main` → Run.
+
+Зелёная галочка = деплой прошёл. Красный крестик — откройте шаг **Deploy over SSH**, там текст ошибки.
+
+После настройки каждый **мерж в `main`** будет запускать деплой сам.
+
+---
+
+#### Частые ошибки автодеплоя
+
+| Ошибка в Actions | Причина | Решение |
+|------------------|---------|---------|
+| `connection refused` / `timeout` | неверный IP, закрыт порт 22 | проверить `VPS_HOST`, firewall ServerSpace |
+| `unable to authenticate` | неверный ключ или не в `authorized_keys` | повторить шаги A–B |
+| `cd: ... No such file` | неверный путь | Secret `VPS_DEPLOY_PATH` или `git clone` в `/opt/films` |
+| `git fetch` failed | сервер не тянет приватный репо | шаг C |
+| `curl ... health` failed | контейнеры не поднялись | на сервере: `docker-compose logs api films` |
+| `permission denied (publickey)` | в Secret попал `.pub` вместо приватного | пересоздать `VPS_SSH_KEY` из `films_deploy` |
+
+Логи на сервере:
+
+```bash
+cd /opt/films
+docker-compose ps
+docker-compose logs --tail=100 api films
 ```
 
 ---
