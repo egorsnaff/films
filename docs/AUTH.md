@@ -89,7 +89,37 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8080/api/auth/
 
 ```bash
 docker-compose build --no-cache films
+docker-compose stop films
+docker-compose rm -f films
 docker-compose up -d films
+```
+
+## Ошибка `KeyError: 'ContainerConfig'` при `docker-compose up`
+
+Старый **docker-compose 1.29.2** + новый Docker Engine иногда ломаются при `recreate` контейнера.
+
+**Решение** — удалить старый контейнер вручную, потом поднять заново:
+
+```bash
+cd /opt/films
+docker-compose stop films
+docker-compose rm -f films
+docker-compose up -d films
+```
+
+Если не помогло — полный перезапуск стека:
+
+```bash
+docker-compose down --remove-orphans
+docker-compose build --no-cache api films
+docker-compose up -d
+```
+
+Проверка:
+
+```bash
+docker-compose ps
+curl -s http://127.0.0.1:8080/api/health
 ```
 
 ## Если `/api/health` возвращает 502
