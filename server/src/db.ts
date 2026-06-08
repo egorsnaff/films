@@ -16,6 +16,8 @@ export type DbUserFilm = {
   user_id: number;
   kinopoisk_id: number;
   status: WatchStatus;
+  watch_seconds: number;
+  progress_percent: number;
   updated_at: string;
 };
 
@@ -45,6 +47,16 @@ db.exec(`
   );
 `);
 
+function ensureColumn(table: string, column: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((entry) => entry.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+ensureColumn("user_films", "watch_seconds", "INTEGER NOT NULL DEFAULT 0");
+ensureColumn("user_films", "progress_percent", "REAL NOT NULL DEFAULT 0");
+
 export function createUser(username: string, passwordHash: string): DbUser {
   const createdAt = new Date().toISOString();
   const result = db
@@ -71,7 +83,8 @@ export function findUserById(id: number): DbUser | undefined {
 export function listUserFilms(userId: number): DbUserFilm[] {
   return db
     .prepare(
-      "SELECT user_id, kinopoisk_id, status, updated_at FROM user_films WHERE user_id = ? ORDER BY updated_at DESC"
+      `SELECT user_id, kinopoisk_id, status, watch_seconds, progress_percent, updated_at
+       FROM user_films WHERE user_id = ? ORDER BY updated_at DESC`
     )
     .all(userId) as DbUserFilm[];
 }
@@ -80,16 +93,60 @@ export function upsertUserFilm(userId: number, kinopoiskId: number, status: Watc
   const updatedAt = new Date().toISOString();
 
   db.prepare(
-    `INSERT INTO user_films (user_id, kinopoisk_id, status, updated_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(user_id, kinopoisk_id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`
+    `INSERT INTO user_films (user_id, kinopoisk_id, status, watch_seconds, progress_percent, updated_at)
+     VALUES (?, ?, ?, 0, 0, ?)
+     ON CONFLICT(user_id, kinopoisk_id) DO UPDATE SET
+       status = excluded.status,
+       updated_at = excluded.updated_at`
   ).run(userId, kinopoiskId, status, updatedAt);
 
+  return getUserFilm(userId, kinopoiskId)!;
+}
+
+export function updateUserFilmProgress(
+  userId: number,
+  kinopoiskId: number,
+  watchSeconds: number,
+  progressPercent: number,
+  forceStatus?: WatchStatus
+): DbUserFilm {
+  const updatedAt = new Date().toISOString();
+  const existing = getUserFilm(userId, kinopoiskId);
+  let nextStatus: WatchStatus =
+    forceStatus ?? existing?.status ?? (progressPercent >= 90 ? "watched" : "watching");
+
+  if (!forceStatus && existing?.status === "plan") {
+    nextStatus = progressPercent >= 90 ? "watched" : "watching";
+  }
+
+  if (!forceStatus && existing?.status === "waiting") {
+    nextStatus = progressPercent >= 90 ? "watched" : "watching";
+  }
+
+  if (progressPercent >= 90) {
+    nextStatus = "watched";
+  }
+
+  db.prepare(
+    `INSERT INTO user_films (user_id, kinopoisk_id, status, watch_seconds, progress_percent, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, kinopoisk_id) DO UPDATE SET
+       status = excluded.status,
+       watch_seconds = MAX(user_films.watch_seconds, excluded.watch_seconds),
+       progress_percent = MAX(user_films.progress_percent, excluded.progress_percent),
+       updated_at = excluded.updated_at`
+  ).run(userId, kinopoiskId, nextStatus, watchSeconds, progressPercent, updatedAt);
+
+  return getUserFilm(userId, kinopoiskId)!;
+}
+
+function getUserFilm(userId: number, kinopoiskId: number): DbUserFilm | undefined {
   return db
     .prepare(
-      "SELECT user_id, kinopoisk_id, status, updated_at FROM user_films WHERE user_id = ? AND kinopoisk_id = ?"
+      `SELECT user_id, kinopoisk_id, status, watch_seconds, progress_percent, updated_at
+       FROM user_films WHERE user_id = ? AND kinopoisk_id = ?`
     )
-    .get(userId, kinopoiskId) as DbUserFilm;
+    .get(userId, kinopoiskId) as DbUserFilm | undefined;
 }
 
 export function deleteUserFilm(userId: number, kinopoiskId: number): boolean {

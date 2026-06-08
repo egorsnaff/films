@@ -8,6 +8,8 @@ export type AuthUser = {
 export type UserFilmEntry = {
   kinopoiskId: number;
   status: WatchStatus;
+  watchSeconds?: number;
+  progressPercent?: number;
   updatedAt: string;
 };
 
@@ -67,6 +69,19 @@ export const siteApi = {
     const data = await request<{ item: UserFilmEntry }>("/lists", {
       method: "PUT",
       body: JSON.stringify({ kinopoiskId, status })
+    });
+    return data.item;
+  },
+
+  async updateWatchProgress(input: {
+    kinopoiskId: number;
+    watchSeconds: number;
+    progressPercent: number;
+    forceStatus?: WatchStatus;
+  }): Promise<UserFilmEntry> {
+    const data = await request<{ item: UserFilmEntry }>("/lists/progress", {
+      method: "PATCH",
+      body: JSON.stringify(input)
     });
     return data.item;
   },

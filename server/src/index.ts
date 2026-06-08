@@ -9,6 +9,7 @@ import {
   findUserById,
   findUserByUsername,
   listUserFilms,
+  updateUserFilmProgress,
   upsertUserFilm,
   type WatchStatus
 } from "./db.js";
@@ -148,6 +149,8 @@ app.get("/lists", requireUser, (req, res) => {
   const items = listUserFilms(user.id).map((item) => ({
     kinopoiskId: item.kinopoisk_id,
     status: item.status,
+    watchSeconds: item.watch_seconds,
+    progressPercent: item.progress_percent,
     updatedAt: item.updated_at
   }));
 
@@ -171,6 +174,45 @@ app.put("/lists", requireUser, (req, res) => {
     item: {
       kinopoiskId: item.kinopoisk_id,
       status: item.status,
+      watchSeconds: item.watch_seconds,
+      progressPercent: item.progress_percent,
+      updatedAt: item.updated_at
+    }
+  });
+});
+
+app.patch("/lists/progress", requireUser, (req, res) => {
+  const user = res.locals.user as { id: number };
+  const kinopoiskId = Number(req.body?.kinopoiskId);
+  const watchSeconds = Number(req.body?.watchSeconds ?? 0);
+  const progressPercent = Number(req.body?.progressPercent ?? 0);
+  const forceStatus = req.body?.forceStatus as WatchStatus | undefined;
+  const allowed: WatchStatus[] = ["watching", "plan", "waiting", "watched"];
+
+  if (
+    !Number.isFinite(kinopoiskId) ||
+    !Number.isFinite(watchSeconds) ||
+    !Number.isFinite(progressPercent) ||
+    (forceStatus && !allowed.includes(forceStatus))
+  ) {
+    res.status(400).json({ error: "Некорректные данные прогресса" });
+    return;
+  }
+
+  const item = updateUserFilmProgress(
+    user.id,
+    kinopoiskId,
+    Math.max(0, Math.floor(watchSeconds)),
+    Math.min(100, Math.max(0, progressPercent)),
+    forceStatus
+  );
+
+  res.json({
+    item: {
+      kinopoiskId: item.kinopoisk_id,
+      status: item.status,
+      watchSeconds: item.watch_seconds,
+      progressPercent: item.progress_percent,
       updatedAt: item.updated_at
     }
   });
