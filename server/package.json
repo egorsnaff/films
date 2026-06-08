@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
     "create-user": "tsx scripts/create-user.ts"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.4",
     "tsx": "^4.20.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

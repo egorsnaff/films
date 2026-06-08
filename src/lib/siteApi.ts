@@ -22,6 +22,14 @@ export type CachedListFilm = {
   rating?: string;
 };
 
+export type RecommendationMode = "cold" | "warm";
+
+export type RecommendationResponse = {
+  films: CachedListFilm[];
+  mode: RecommendationMode;
+  reason?: string;
+};
+
 const API_BASE = import.meta.env.VITE_SITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -99,6 +107,10 @@ export const siteApi = {
 
   async removeFilm(kinopoiskId: number): Promise<void> {
     await request<void>(`/lists/${kinopoiskId}`, { method: "DELETE" });
+  },
+
+  async getRecommendations(): Promise<RecommendationResponse> {
+    return request<RecommendationResponse>("/recommendations");
   }
 };
 

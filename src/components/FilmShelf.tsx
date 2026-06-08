@@ -4,17 +4,21 @@ import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 type FilmShelfProps = {
   title: string;
+  subtitle?: string;
   films: KinopoiskFilm[];
   progressByFilm?: Record<number, number>;
   onSelect: (film: KinopoiskFilm) => void;
 };
 
-export function FilmShelf({ title, films, progressByFilm, onSelect }: FilmShelfProps) {
+export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: FilmShelfProps) {
   if (films.length === 0) {
     return (
       <section className="film-shelf film-shelf--empty">
         <div className="film-shelf__head">
-          <h2>{title}</h2>
+          <div>
+            <h2>{title}</h2>
+            {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
+          </div>
         </div>
         <p className="hint">Пока пусто — начните смотреть фильм, и он появится здесь.</p>
       </section>
@@ -24,7 +28,10 @@ export function FilmShelf({ title, films, progressByFilm, onSelect }: FilmShelfP
   return (
     <section className="film-shelf">
       <div className="film-shelf__head">
-        <h2>{title}</h2>
+        <div>
+          <h2>{title}</h2>
+          {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
+        </div>
         <span className="film-shelf__count">{films.length}</span>
       </div>
       <div className="film-shelf__track" role="list">

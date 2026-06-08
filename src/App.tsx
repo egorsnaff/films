@@ -31,6 +31,7 @@ import {
   siteApi,
   watchStatusLabels,
   type AuthUser,
+  type RecommendationResponse,
   type UserFilmEntry,
   type WatchStatus
 } from "./lib/siteApi";
@@ -98,6 +99,8 @@ export function App() {
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
   const [selectedListStatus, setSelectedListStatus] = useState<WatchStatus | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
+  const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const lastLoadMoreAtRef = useRef(0);
@@ -138,10 +141,40 @@ export function App() {
     return map;
   }, [userLists]);
   const backLabel = getBackLabel(navHistoryRef.current.at(-1));
+  const recommendationFilms = useMemo(
+    () =>
+      (recommendations?.films ?? []).filter((film) => hasValidPosterUrl(film.posterUrl)),
+    [recommendations]
+  );
+  const recommendationTitle =
+    recommendations?.mode === "cold"
+      ? "250 лучших, которые вы ещё не смотрели"
+      : "На основе ваших интересов";
+  const showRecommendations =
+    Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
 
   useEffect(() => {
     pageRef.current = page;
   }, [page]);
+
+  const refreshUserLists = useCallback(async () => {
+    const { items, films } = await siteApi.getLists();
+    setUserLists(items);
+    setListFilms((current) => ({ ...current, ...films }));
+  }, []);
+
+  const loadRecommendations = useCallback(async () => {
+    setRecommendationsStatus("loading");
+
+    try {
+      const result = await siteApi.getRecommendations();
+      setRecommendations(result);
+      setRecommendationsStatus("success");
+    } catch {
+      setRecommendations(null);
+      setRecommendationsStatus("error");
+    }
+  }, []);
 
   useEffect(() => {
     document.title = "films";
@@ -154,13 +187,15 @@ export function App() {
         void refreshUserLists();
       }
     });
-  }, []);
+  }, [refreshUserLists]);
 
-  const refreshUserLists = useCallback(async () => {
-    const { items, films } = await siteApi.getLists();
-    setUserLists(items);
-    setListFilms((current) => ({ ...current, ...films }));
-  }, []);
+  useEffect(() => {
+    if (!authUser || view !== "catalog" || catalogMode !== "premieres") {
+      return;
+    }
+
+    void loadRecommendations();
+  }, [authUser, catalogMode, loadRecommendations, userLists, view]);
 
   const handleWatchTrackerStatusChange = useCallback(
     (status: WatchStatus) => {
@@ -533,6 +568,8 @@ export function App() {
     setUserLists([]);
     setListFilms({});
     setSelectedListStatus(null);
+    setRecommendations(null);
+    setRecommendationsStatus("idle");
   }
 
   const heading = catalogHeadings[catalogMode];
@@ -614,6 +651,23 @@ export function App() {
             <h1>{heading.title}</h1>
             <p>{heading.text}</p>
           </div>
+
+          {authUser && catalogMode === "premieres" && recommendationsStatus === "loading" ? (
+            <div className="recommendations-shelf-skeleton" aria-label="Загрузка рекомендаций">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <span key={index} className="film-skeleton film-skeleton--shelf" />
+              ))}
+            </div>
+          ) : null}
+
+          {showRecommendations ? (
+            <FilmShelf
+              title={recommendationTitle}
+              subtitle={recommendations?.reason}
+              films={recommendationFilms}
+              onSelect={(film) => void openFilm(film)}
+            />
+          ) : null}
 
           {status === "loading" ? (
             <div className="skeleton-grid" aria-label="Загрузка результатов">
