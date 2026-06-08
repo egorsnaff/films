@@ -53,6 +53,7 @@ export function createKinopoiskClient({
   fetchImpl = fetch
 }: KinopoiskClientOptions) {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const filmDetailsCache = new Map<number, KinopoiskFilmDetails>();
 
   async function request<T>(path: string): Promise<T> {
     if (!apiKey.trim()) {
@@ -118,9 +119,15 @@ export function createKinopoiskClient({
     },
 
     async getFilm(kinopoiskId: number): Promise<KinopoiskFilmDetails> {
-      const data = await request<Record<string, unknown>>(`/v2.2/films/${kinopoiskId}`);
+      const cached = filmDetailsCache.get(kinopoiskId);
+      if (cached) {
+        return cached;
+      }
 
-      return mapFilmDetails(data);
+      const data = await request<Record<string, unknown>>(`/v2.2/films/${kinopoiskId}`);
+      const details = mapFilmDetails(data);
+      filmDetailsCache.set(kinopoiskId, details);
+      return details;
     }
   };
 }

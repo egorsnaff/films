@@ -21,8 +21,13 @@ export function useWatchTracker({
   onStatusChange
 }: UseWatchTrackerOptions) {
   const watchSecondsRef = useRef(0);
+  const onStatusChangeRef = useRef(onStatusChange);
   const [playbackStarted, setPlaybackStarted] = useState(false);
   const durationSeconds = Math.max((filmLengthMinutes ?? 90) * 60, 60);
+
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
 
   useEffect(() => {
     watchSecondsRef.current = 0;
@@ -45,9 +50,9 @@ export function useWatchTracker({
         progressPercent,
         forceStatus
       });
-      onStatusChange?.(item.status);
+      onStatusChangeRef.current?.(item.status);
     },
-    [durationSeconds, kinopoiskId, onStatusChange]
+    [durationSeconds, kinopoiskId]
   );
 
   const markPlaybackStarted = useCallback(async () => {

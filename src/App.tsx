@@ -105,14 +105,17 @@ export function App() {
   const [selectedListStatus, setSelectedListStatus] = useState<WatchStatus | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
+  const lastLoadMoreAtRef = useRef(0);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
+  const listFilmsRef = useRef(listFilms);
   const hasMoreRef = useRef(hasMore);
   const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   queryRef.current = query;
   filmsRef.current = films;
+  listFilmsRef.current = listFilms;
   hasMoreRef.current = hasMore;
   catalogModeRef.current = catalogMode;
 
@@ -167,35 +170,50 @@ export function App() {
     const items = await siteApi.getLists();
     setUserLists(items);
 
+    const missingIds = items
+      .map((item) => item.kinopoiskId)
+      .filter((id) => !listFilmsRef.current[id]);
+
+    if (missingIds.length === 0) {
+      return;
+    }
+
     const details = await Promise.all(
-      items.map(async (item) => {
+      missingIds.map(async (kinopoiskId) => {
         try {
-          const film = await client.getFilm(item.kinopoiskId);
-          return [item.kinopoiskId, film] as const;
+          const film = await client.getFilm(kinopoiskId);
+          return [kinopoiskId, film] as const;
         } catch {
           return null;
         }
       })
     );
 
-    const nextFilms: Record<number, KinopoiskFilm> = {};
-    for (const entry of details) {
-      if (entry) {
-        nextFilms[entry[0]] = entry[1];
+    setListFilms((current) => {
+      const nextFilms = { ...current };
+      for (const entry of details) {
+        if (entry) {
+          nextFilms[entry[0]] = entry[1];
+        }
       }
-    }
-    setListFilms(nextFilms);
+      return nextFilms;
+    });
   }, [client]);
+
+  const handleWatchTrackerStatusChange = useCallback(
+    (status: WatchStatus) => {
+      setSelectedListStatus(status);
+      void refreshUserLists();
+    },
+    [refreshUserLists]
+  );
 
   const { markPlaybackStarted } = useWatchTracker({
     enabled: Boolean(authUser && view === "watch" && selectedFilm),
     kinopoiskId: selectedFilm?.kinopoiskId,
     filmLengthMinutes: selectedFilm?.filmLengthMinutes,
     currentStatus: selectedListStatus,
-    onStatusChange: (status) => {
-      setSelectedListStatus(status);
-      void refreshUserLists();
-    }
+    onStatusChange: handleWatchTrackerStatusChange
   });
 
   const captureSnapshot = useCallback((): NavigationSnapshot => {
@@ -337,7 +355,7 @@ export function App() {
         hasMoreRef.current = nextHasMore;
         setStatus("success");
 
-        if (shouldLoadAnotherPage && autoChaseDepth < 6) {
+        if (shouldLoadAnotherPage && autoChaseDepth < 3) {
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -349,6 +367,8 @@ export function App() {
       } catch (loadError) {
         setError(getErrorMessage(loadError));
         setStatus("error");
+        setHasMore(false);
+        hasMoreRef.current = false;
       } finally {
         setIsLoadingMore(false);
         isFetchingMoreRef.current = false;
@@ -378,6 +398,11 @@ export function App() {
       return;
     }
 
+    const now = Date.now();
+    if (now - lastLoadMoreAtRef.current < 1200) {
+      return;
+    }
+
     const target = loadMoreRef.current;
     if (!target) {
       return;
@@ -385,6 +410,7 @@ export function App() {
 
     const rect = target.getBoundingClientRect();
     if (rect.top <= window.innerHeight + 320) {
+      lastLoadMoreAtRef.current = now;
       void loadNextPageRef.current();
     }
   }, [view]);
@@ -401,14 +427,12 @@ export function App() {
     const onScroll = () => maybeLoadMoreFromScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
-    const frameId = requestAnimationFrame(onScroll);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
-      cancelAnimationFrame(frameId);
     };
-  }, [maybeLoadMoreFromScroll, view, films.length, hasMore, isLoadingMore]);
+  }, [maybeLoadMoreFromScroll, view]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
