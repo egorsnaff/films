@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_HDVB_TOKEN?: string;
   readonly VITE_API_HDTV_KEY?: string;
   readonly VITE_PLAYER_TEMPLATES?: string;
+  readonly VITE_PLAYER_EMBED_DOMAIN?: string;
 }
 
 interface ImportMeta {

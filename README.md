@@ -49,7 +49,8 @@ placeholders.
 By default, the app enables:
 
 - `Alloha` through the direct hometv embed URL
-  `https://harald-as.newplayjj.com/?kp={kinopoiskId}&token={token}`
+  `https://harald-as.newplayjj.com/?kp={kinopoiskId}&token={token}&domain={embedDomain}`
+  (defaults to `nayteruz.github.io`, same as hometv)
 - `Collaps` through `https://api.atomics.ws/embed/kp/{kinopoiskId}`
 - `VideoCDN` through `https://p.lumex.space/...&kp_id={kinopoiskId}`
 - `Kinobox` as an aggregator alternative: tries `https://api.kinobox.tv/api/players?kinopoisk={id}`
@@ -62,13 +63,16 @@ By default, the app enables:
 
 Set `VITE_ENABLE_ALLOHA=false` to hide the Alloha tab. The token can be passed
 through `VITE_ALLOHA_TOKEN` or `VITE_API_ALOHA_KEY` (same env name as hometv).
+If your Alloha token is whitelisted for another domain (like hometv on
+`nayteruz.github.io`), set `VITE_PLAYER_EMBED_DOMAIN` to that hostname.
 
 Lazy players load only when their tab is selected, matching the `hometv`
 approach and avoiding unnecessary balancer API calls.
 
 ```env
 VITE_ALLOHA_TOKEN=e7b61f129f4a392ac4bf6726a9dd6a
-VITE_ENABLE_ALLOHA=false
+VITE_PLAYER_EMBED_DOMAIN=nayteruz.github.io
+VITE_ENABLE_ALLOHA=true
 VITE_HDVB_TOKEN=optional-hdvb-token
 VITE_PLAYER_TEMPLATES='[{"id":"server","title":"Server","embedUrlTemplate":"https://watch.example.test/embed?kp={kinopoiskId}&title={title}"}]'
 ```

@@ -11,6 +11,7 @@ export type PlayerResolveOptions = {
   fetchImpl?: typeof fetch;
   allohaToken?: string;
   hdvbToken?: string;
+  embedDomain?: string;
 };
 
 export type EmbedPlayerTemplate = {
@@ -39,6 +40,25 @@ const KINOBOX_API_BASE_URL = "https://api.kinobox.tv/api";
 const KINOBOX_EMBED_BASE_URL = "https://kinohost.web.app/embed";
 const GEO_BLOCKED_PLAYER_HOSTS = ["stravers.live"];
 const ALLOHA_EMBED_BASE_URL = "https://harald-as.newplayjj.com";
+const DEFAULT_EMBED_DOMAIN = "nayteruz.github.io";
+
+export function getDefaultEmbedDomain(): string {
+  return import.meta.env.VITE_PLAYER_EMBED_DOMAIN?.trim() || DEFAULT_EMBED_DOMAIN;
+}
+
+export function buildAllohaEmbedUrl(
+  kinopoiskId: number,
+  token: string,
+  embedDomain = getDefaultEmbedDomain()
+): string {
+  const params = new URLSearchParams({
+    kp: String(kinopoiskId),
+    token,
+    domain: embedDomain
+  });
+
+  return `${ALLOHA_EMBED_BASE_URL}/?${params.toString()}`;
+}
 
 type KinoboxPlayer = {
   iframeUrl?: string;
@@ -86,8 +106,9 @@ export const players = {
     title: "Alloha",
     resolveEmbedUrl: async (kinopoiskId, options) => {
       const token = options?.allohaToken || ALLOHA_TOKEN;
+      const embedDomain = options?.embedDomain || getDefaultEmbedDomain();
 
-      return `${ALLOHA_EMBED_BASE_URL}/?kp=${kinopoiskId}&token=${token}`;
+      return buildAllohaEmbedUrl(kinopoiskId, token, embedDomain);
     }
   },
   Collaps: {
@@ -99,7 +120,7 @@ export const players = {
     id: "videocdn",
     title: "VideoCDN",
     embedUrlTemplate:
-      "https://p.lumex.space/j3mqebEPqCLB?domain=nayteruz.github.io&kp_id={kinopoiskId}"
+      "https://p.lumex.space/j3mqebEPqCLB?domain={embedDomain}&kp_id={kinopoiskId}"
   },
   Kinobox: {
     id: "kinobox",
@@ -219,6 +240,7 @@ export function createPlayerSources(
       title: template.title,
       embedUrl: template.embedUrlTemplate
         .replaceAll("{kinopoiskId}", encodeURIComponent(String(film.kinopoiskId)))
+        .replaceAll("{embedDomain}", encodeURIComponent(getDefaultEmbedDomain()))
         .replaceAll("{title}", encodeURIComponent(film.title))
         .replaceAll("{originalTitle}", encodeURIComponent(film.originalTitle ?? ""))
         .replaceAll("{year}", encodeURIComponent(film.year ?? ""))
