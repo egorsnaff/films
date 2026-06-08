@@ -49,9 +49,10 @@ cp .env.production.example .env
 docker compose up -d --build
 ```
 
-Подробно: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) — Docker, nginx, HTTPS,
-бесплатные домены (DuckDNS, sslip.io, Cloudflare Tunnel) и настройка плееров
-при смене адреса.
+Подробно:
+
+- [docs/SERVERSPACE.md](docs/SERVERSPACE.md) — **ServerSpace** + домен **films.qzz.io** (DNS, HTTPS, `./deploy/deploy.sh`)
+- [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) — общий гайд, бесплатные домены, плееры
 
 ## Player templates
 

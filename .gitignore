@@ -7,3 +7,4 @@ coverage/
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js
+deploy/proxy/active/*.conf

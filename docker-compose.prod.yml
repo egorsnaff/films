@@ -1,0 +1,58 @@
+# Production stack: app + nginx reverse proxy + certbot (HTTPS for films.qzz.io).
+# Usage on VPS:
+#   cp .env.production.example .env
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   ./deploy/bootstrap-ssl.sh
+
+services:
+  films:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+        VITE_KINOPOISK_API_KEY: ${VITE_KINOPOISK_API_KEY:-}
+        VITE_KINOPOISK_API_BASE_URL: ${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}
+        VITE_ALLOHA_TOKEN: ${VITE_ALLOHA_TOKEN:-}
+        VITE_PLAYER_EMBED_DOMAIN: ${VITE_PLAYER_EMBED_DOMAIN:-nayteruz.github.io}
+        VITE_ENABLE_ALLOHA: ${VITE_ENABLE_ALOHA:-true}
+        VITE_HDVB_TOKEN: ${VITE_HDVB_TOKEN:-}
+        VITE_PLAYER_TEMPLATES: ${VITE_PLAYER_TEMPLATES:-}
+    expose:
+      - "80"
+    networks:
+      - films-web
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/proxy/active:/etc/nginx/conf.d:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      - films
+    networks:
+      - films-web
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:v2.11.0
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - films-web
+    restart: unless-stopped
+
+volumes:
+  certbot-www:
+  certbot-conf:
+
+networks:
+  films-web:
+    driver: bridge

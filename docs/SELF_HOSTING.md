@@ -2,6 +2,9 @@
 
 Этот гайд описывает переезд с GitHub Pages на VPS, домашний сервер или любой хост с Docker.
 
+> **ServerSpace + films.qzz.io:** пошаговый гайд с DNS, HTTPS и скриптами —
+> [docs/SERVERSPACE.md](SERVERSPACE.md).
+
 ## Быстрый старт (Docker)
 
 ```bash
