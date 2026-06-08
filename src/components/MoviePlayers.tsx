@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { KinoboxPlayerPanel } from "./KinoboxPlayerPanel";
 import type { PlayerResolveOptions, PlayerSource } from "../lib/playerSources";
 
 type MoviePlayersProps = {
@@ -31,7 +32,12 @@ export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
     let cancelled = false;
 
     async function resolveActivePlayer() {
-      if (!activePlayer || activePlayer.embedUrl || !activePlayer.resolveEmbedUrl) {
+      if (
+        !activePlayer ||
+        activePlayer.embedUrl ||
+        activePlayer.resolveKinoboxPlayers ||
+        !activePlayer.resolveEmbedUrl
+      ) {
         return;
       }
 
@@ -94,7 +100,14 @@ export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
         ))}
       </div>
       <div className="player-frame-wrap">
-        {loadingPlayerId === activePlayer.id ? (
+        {activePlayer.resolveKinoboxPlayers ? (
+          <KinoboxPlayerPanel
+            resolvePlayers={activePlayer.resolveKinoboxPlayers}
+            kinopoiskId={activePlayer.kinopoiskId}
+            embedFallback={activePlayer.kinoboxEmbedFallback}
+            resolveOptions={resolveOptions}
+          />
+        ) : loadingPlayerId === activePlayer.id ? (
           <p className="player-status">Загрузка плеера...</p>
         ) : activeEmbedUrl ? (
           <iframe
@@ -113,6 +126,10 @@ export function MoviePlayers({ players, resolveOptions }: MoviePlayersProps) {
 }
 
 function hasSafeEmbedUrl(player: PlayerSource): boolean {
+  if (player.resolveKinoboxPlayers) {
+    return true;
+  }
+
   if (player.resolveEmbedUrl) {
     return true;
   }

@@ -53,8 +53,9 @@ By default, the app enables:
   (defaults to `nayteruz.github.io`, same as hometv)
 - `Collaps` through `https://api.atomics.ws/embed/kp/{kinopoiskId}`
 - `VideoCDN` through `https://p.lumex.space/...&kp_id={kinopoiskId}`
-- `Kinobox` as an aggregator alternative: tries `https://api.kinobox.tv/api/players?kinopoisk={id}`
-  and falls back to `https://kinohost.web.app/embed/{id}` when the API is unavailable
+- `Kinobox` as an aggregator: loads `https://api.kinobox.tv/api/players?kinopoisk={id}&domain={embedDomain}`,
+  shows an in-tab source picker (balancer, translation, quality), and falls back to
+  `https://kinohost.web.app/embed/{id}?domain={embedDomain}` when needed
 - `Coll` through the hometv hardcoded `api.bhcesh.me` token, resolved lazily
 - `kodi` through the hometv hardcoded `kodikapi.com` token, resolved lazily
 - `HDVB` through `VITE_HDVB_TOKEN` or `VITE_API_HDTV_KEY`, resolved lazily

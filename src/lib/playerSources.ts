@@ -1,10 +1,23 @@
 import type { KinopoiskFilm } from "./kinopoisk";
 
+export type KinoboxPlayerOption = {
+  id: string;
+  type: string;
+  iframeUrl: string;
+  translation?: string;
+  quality?: string;
+};
+
 export type PlayerSource = {
   id: string;
   title: string;
+  kinopoiskId?: number;
   embedUrl?: string;
   resolveEmbedUrl?: (options?: PlayerResolveOptions) => Promise<string | null>;
+  resolveKinoboxPlayers?: (
+    options?: PlayerResolveOptions
+  ) => Promise<KinoboxPlayerOption[]>;
+  kinoboxEmbedFallback?: string;
 };
 
 export type PlayerResolveOptions = {
@@ -29,7 +42,16 @@ export type AsyncPlayerTemplate = {
   ) => Promise<string | null>;
 };
 
-export type PlayerTemplate = EmbedPlayerTemplate | AsyncPlayerTemplate;
+export type KinoboxPlayerTemplate = {
+  id: string;
+  title: string;
+  kinobox: true;
+};
+
+export type PlayerTemplate =
+  | EmbedPlayerTemplate
+  | AsyncPlayerTemplate
+  | KinoboxPlayerTemplate;
 
 export type PlayerRegistry = Record<string, PlayerTemplate>;
 
@@ -60,10 +82,119 @@ export function buildAllohaEmbedUrl(
   return `${ALLOHA_EMBED_BASE_URL}/?${params.toString()}`;
 }
 
-type KinoboxPlayer = {
+type KinoboxApiPlayer = {
   iframeUrl?: string;
   type?: string;
+  translation?: string;
+  quality?: string;
 };
+
+export function buildKinoboxPlayersUrl(
+  kinopoiskId: number,
+  embedDomain = getDefaultEmbedDomain()
+): string {
+  const params = new URLSearchParams({
+    kinopoisk: String(kinopoiskId),
+    domain: embedDomain
+  });
+
+  return `${KINOBOX_API_BASE_URL}/players?${params.toString()}`;
+}
+
+export function buildKinoboxEmbedFallbackUrl(
+  kinopoiskId: number,
+  embedDomain = getDefaultEmbedDomain()
+): string {
+  const params = new URLSearchParams({ domain: embedDomain });
+
+  return `${KINOBOX_EMBED_BASE_URL}/${kinopoiskId}?${params.toString()}`;
+}
+
+export function formatKinoboxPlayerLabel(player: KinoboxPlayerOption): string {
+  return [player.type, player.translation, player.quality].filter(Boolean).join(" · ");
+}
+
+function isSafeHttpsUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function enhanceKinoboxIframeUrl(url: string, embedDomain: string): string {
+  try {
+    const parsed = new URL(url);
+
+    if (
+      parsed.hostname.includes("newplayjj.com") &&
+      !parsed.searchParams.has("domain")
+    ) {
+      parsed.searchParams.set("domain", embedDomain);
+      return parsed.toString();
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
+}
+
+export function normalizeKinoboxPlayers(
+  players: KinoboxApiPlayer[] | undefined,
+  embedDomain = getDefaultEmbedDomain()
+): KinoboxPlayerOption[] {
+  const seen = new Set<string>();
+
+  return (players ?? []).flatMap((player, index) => {
+    if (!player.iframeUrl || !isSafeHttpsUrl(player.iframeUrl)) {
+      return [];
+    }
+
+    const iframeUrl = enhanceKinoboxIframeUrl(player.iframeUrl, embedDomain);
+
+    if (isGeoBlockedPlayerUrl(iframeUrl) || seen.has(iframeUrl)) {
+      return [];
+    }
+
+    seen.add(iframeUrl);
+
+    return [
+      {
+        id: `${player.type ?? "player"}-${index}`,
+        type: player.type ?? "player",
+        iframeUrl,
+        translation: player.translation,
+        quality: player.quality
+      }
+    ];
+  });
+}
+
+export async function fetchKinoboxPlayers(
+  kinopoiskId: number,
+  options?: PlayerResolveOptions
+): Promise<KinoboxPlayerOption[]> {
+  const fetchImpl = options?.fetchImpl ?? fetch;
+  const embedDomain = options?.embedDomain || getDefaultEmbedDomain();
+  const response = await fetchImpl(buildKinoboxPlayersUrl(kinopoiskId, embedDomain), {
+    headers: {
+      Accept: "application/json",
+      Origin: "https://kinohost.web.app",
+      Referer: "https://kinohost.web.app/"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Kinobox API request failed with status ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    data?: KinoboxApiPlayer[];
+  };
+
+  return normalizeKinoboxPlayers(payload.data, embedDomain);
+}
 
 export function isGeoBlockedPlayerUrl(url: string): boolean {
   try {
@@ -78,26 +209,19 @@ export function isGeoBlockedPlayerUrl(url: string): boolean {
 }
 
 export function selectKinoboxIframeUrl(
-  players: KinoboxPlayer[] | undefined,
-  embedFallback: string
+  players: KinoboxApiPlayer[] | undefined,
+  embedFallback: string,
+  embedDomain = getDefaultEmbedDomain()
 ): string {
-  const candidates = (players ?? []).filter((player): player is KinoboxPlayer & {
-    iframeUrl: string;
-  } => {
-    if (!player.iframeUrl) {
-      return false;
-    }
+  const normalized = normalizeKinoboxPlayers(players, embedDomain);
 
-    return !isGeoBlockedPlayerUrl(player.iframeUrl);
-  });
-
-  if (candidates.length === 0) {
+  if (normalized.length === 0) {
     return embedFallback;
   }
 
-  const preferred = candidates.find((player) => player.type?.toLowerCase() !== "alloha");
+  const preferred = normalized.find((player) => player.type.toLowerCase() !== "alloha");
 
-  return (preferred ?? candidates[0]).iframeUrl;
+  return (preferred ?? normalized[0]).iframeUrl;
 }
 
 export const players = {
@@ -125,35 +249,7 @@ export const players = {
   Kinobox: {
     id: "kinobox",
     title: "Kinobox",
-    resolveEmbedUrl: async (kinopoiskId, options) => {
-      const fetchImpl = options?.fetchImpl ?? fetch;
-      const embedFallback = `${KINOBOX_EMBED_BASE_URL}/${kinopoiskId}`;
-
-      try {
-        const response = await fetchImpl(
-          `${KINOBOX_API_BASE_URL}/players?kinopoisk=${kinopoiskId}`,
-          {
-            headers: {
-              Accept: "application/json",
-              Origin: "https://kinohost.web.app",
-              Referer: "https://kinohost.web.app/"
-            }
-          }
-        );
-
-        if (!response.ok) {
-          return embedFallback;
-        }
-
-        const payload = (await response.json()) as {
-          data?: KinoboxPlayer[];
-        };
-
-        return selectKinoboxIframeUrl(payload.data, embedFallback);
-      } catch {
-        return embedFallback;
-      }
-    }
+    kinobox: true
   },
   Coll: {
     id: "coll",
@@ -227,6 +323,22 @@ export function createPlayerSources(
   templates: PlayerTemplate[]
 ): PlayerSource[] {
   return templates.map((template) => {
+    if ("kinobox" in template) {
+      const embedDomain = getDefaultEmbedDomain();
+
+      return {
+        id: template.id,
+        title: template.title,
+        kinopoiskId: film.kinopoiskId,
+        resolveKinoboxPlayers: (options) =>
+          fetchKinoboxPlayers(film.kinopoiskId, options),
+        kinoboxEmbedFallback: buildKinoboxEmbedFallbackUrl(
+          film.kinopoiskId,
+          embedDomain
+        )
+      };
+    }
+
     if ("resolveEmbedUrl" in template) {
       return {
         id: template.id,
@@ -253,14 +365,26 @@ export function resolvePlayerEmbedUrl(
   kinopoiskId: number,
   options?: PlayerResolveOptions
 ): Promise<string | null> | string {
+  if ("kinobox" in template) {
+    return fetchKinoboxPlayers(kinopoiskId, options).then(
+      (sources) =>
+        sources.at(0)?.iframeUrl ??
+        buildKinoboxEmbedFallbackUrl(kinopoiskId, options?.embedDomain)
+    );
+  }
+
   if ("resolveEmbedUrl" in template) {
     return template.resolveEmbedUrl(kinopoiskId, options);
   }
 
-  return template.embedUrlTemplate.replaceAll(
-    "{kinopoiskId}",
-    encodeURIComponent(String(kinopoiskId))
-  );
+  if ("embedUrlTemplate" in template) {
+    return template.embedUrlTemplate.replaceAll(
+      "{kinopoiskId}",
+      encodeURIComponent(String(kinopoiskId))
+    );
+  }
+
+  return buildKinoboxEmbedFallbackUrl(kinopoiskId, options?.embedDomain);
 }
 
 export function parsePlayerTemplates(rawTemplates?: string): PlayerTemplate[] {
@@ -287,6 +411,14 @@ function isPlayerTemplate(value: unknown): value is PlayerTemplate {
   }
 
   const maybeTemplate = value as Record<string, unknown>;
+
+  if (
+    typeof maybeTemplate.id === "string" &&
+    typeof maybeTemplate.title === "string" &&
+    maybeTemplate.kinobox === true
+  ) {
+    return true;
+  }
 
   return (
     typeof maybeTemplate.id === "string" &&

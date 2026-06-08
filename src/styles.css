@@ -808,6 +808,55 @@ h1 em {
   color: #d4c9b6;
 }
 
+.kinobox-panel {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+}
+
+.kinobox-panel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kinobox-panel__tab {
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 6%);
+  color: #d9d0c0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.kinobox-panel__tab[aria-pressed="true"] {
+  border-color: rgb(240 183 91 / 60%);
+  background: linear-gradient(135deg, #f5c66e, #f06b42);
+  color: #150c07;
+}
+
+.kinobox-panel__hint {
+  margin: 0;
+  color: #b9ae9b;
+  font-size: 0.9rem;
+}
+
+.kinobox-panel__frame {
+  min-height: 0;
+  aspect-ratio: auto;
+  flex: 1;
+}
+
+.player-frame-wrap:has(.kinobox-panel) {
+  display: block;
+  aspect-ratio: auto;
+  min-height: 480px;
+  padding: 0;
+}
+
 .hint {
   margin-top: 12px;
   font-size: 0.92rem;

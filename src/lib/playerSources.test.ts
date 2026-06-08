@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildAllohaEmbedUrl,
+  buildKinoboxEmbedFallbackUrl,
+  buildKinoboxPlayersUrl,
   createPlayerSources,
   defaultPlayerTemplates,
+  fetchKinoboxPlayers,
   getDefaultPlayerTemplates,
   isGeoBlockedPlayerUrl,
+  normalizeKinoboxPlayers,
   players,
   resolvePlayerEmbedUrl,
   selectKinoboxIframeUrl
@@ -111,7 +115,7 @@ describe("createPlayerSources", () => {
     ]);
     expect(sources).toHaveLength(9);
     expect(sources[0].resolveEmbedUrl).toEqual(expect.any(Function));
-    expect(sources[3].resolveEmbedUrl).toEqual(expect.any(Function));
+    expect(sources[3].resolveKinoboxPlayers).toEqual(expect.any(Function));
     expect(sources[4].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[5].resolveEmbedUrl).toEqual(expect.any(Function));
     expect(sources[6].resolveEmbedUrl).toEqual(expect.any(Function));
@@ -171,31 +175,62 @@ describe("createPlayerSources", () => {
     ).toBe("https://kinohost.web.app/embed/301");
   });
 
-  it("resolves Kinobox through its API and falls back to the public embed page", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: [{ iframeUrl: "https://kinobox.example.test/embed" }]
-        })
+  it("builds Kinobox API and fallback URLs with embed domain", () => {
+    expect(buildKinoboxPlayersUrl(301, "nayteruz.github.io")).toBe(
+      "https://api.kinobox.tv/api/players?kinopoisk=301&domain=nayteruz.github.io"
+    );
+    expect(buildKinoboxEmbedFallbackUrl(301, "nayteruz.github.io")).toBe(
+      "https://kinohost.web.app/embed/301?domain=nayteruz.github.io"
+    );
+  });
+
+  it("normalizes Kinobox players and appends embed domain to Alloha iframes", () => {
+    const normalized = normalizeKinoboxPlayers(
+      [
+        {
+          type: "alloha",
+          iframeUrl: "https://harald-as.newplayjj.com/?kp=301&token=abc",
+          translation: "Дубляж",
+          quality: "1080p"
+        },
+        {
+          type: "collaps",
+          iframeUrl: "https://api.atomics.ws/embed/kp/301"
+        }
+      ],
+      "nayteruz.github.io"
+    );
+
+    expect(normalized).toHaveLength(2);
+    expect(normalized[0].iframeUrl).toBe(
+      "https://harald-as.newplayjj.com/?kp=301&token=abc&domain=nayteruz.github.io"
+    );
+    expect(normalized[0].translation).toBe("Дубляж");
+  });
+
+  it("fetches Kinobox players from the API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{ type: "collaps", iframeUrl: "https://api.atomics.ws/embed/kp/301" }]
       })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 503,
-        json: async () => ({})
-      });
+    });
 
     await expect(
-      resolvePlayerEmbedUrl(players.Kinobox, 301, { fetchImpl: fetchMock })
-    ).resolves.toBe("https://kinobox.example.test/embed");
-    await expect(
-      resolvePlayerEmbedUrl(players.Kinobox, 301, { fetchImpl: fetchMock })
-    ).resolves.toBe("https://kinohost.web.app/embed/301");
+      fetchKinoboxPlayers(301, {
+        fetchImpl: fetchMock,
+        embedDomain: "nayteruz.github.io"
+      })
+    ).resolves.toEqual([
+      {
+        id: "collaps-0",
+        type: "collaps",
+        iframeUrl: "https://api.atomics.ws/embed/kp/301"
+      }
+    ]);
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "https://api.kinobox.tv/api/players?kinopoisk=301",
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.kinobox.tv/api/players?kinopoisk=301&domain=nayteruz.github.io",
       expect.objectContaining({
         headers: expect.objectContaining({
           Accept: "application/json",
