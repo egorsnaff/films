@@ -1,53 +1,73 @@
+import type { ThemeCollectionType, TopCollectionType } from "../lib/kinopoisk";
+
+export type CollectionSource =
+  | { kind: "top"; type: TopCollectionType }
+  | { kind: "theme"; type: ThemeCollectionType };
+
 export type FilmCollection = {
   id: string;
   title: string;
   description: string;
   accent: string;
-  kinopoiskIds: number[];
+  source: CollectionSource;
 };
 
 export const filmCollections: FilmCollection[] = [
   {
-    id: "evening-mood",
-    title: "Вечер под плед",
-    description: "Спокойные драмы и тёплые истории для расслабленного просмотра.",
+    id: "top-250",
+    title: "250 лучших фильмов",
+    description: "Официальный топ Кинопоиска — проверенная классика.",
     accent: "#f0b75b",
-    kinopoiskIds: [435, 326, 258687, 535341, 1048334, 111543]
+    source: { kind: "top", type: "TOP_250_BEST_FILMS" }
   },
   {
-    id: "action-night",
-    title: "Боевик на ночь",
-    description: "Драйв, погони и взрывы — когда хочется адреналина.",
-    accent: "#f06b42",
-    kinopoiskIds: [301, 8124, 666564, 462682, 1044002, 843649]
-  },
-  {
-    id: "sci-fi",
-    title: "Фантастика и будущее",
-    description: "Космос, технологии и альтернативные реальности.",
+    id: "top-await",
+    title: "Скоро в кино",
+    description: "Самые ожидаемые премьеры по версии Кинопоиска.",
     accent: "#7eb6ff",
-    kinopoiskIds: [258687, 301, 535341, 468466, 427076, 1044002]
+    source: { kind: "top", type: "TOP_AWAIT_FILMS" }
+  },
+  {
+    id: "vampires",
+    title: "Фильмы про вампиров",
+    description: "Клыки, ночь и вечная любовь.",
+    accent: "#c49bff",
+    source: { kind: "theme", type: "VAMPIRE_THEME" }
+  },
+  {
+    id: "zombies",
+    title: "Фильмы про зомби",
+    description: "Живые мертвецы и выживание.",
+    accent: "#8fd98d",
+    source: { kind: "theme", type: "ZOMBIE_THEME" }
+  },
+  {
+    id: "love",
+    title: "Про любовь и страсть",
+    description: "Романтика, драма и сильные чувства.",
+    accent: "#f06b42",
+    source: { kind: "theme", type: "LOVE_THEME" }
   },
   {
     id: "family",
     title: "Семейный просмотр",
     description: "Фильмы, которые можно включить всей семьёй.",
-    accent: "#8fd98d",
-    kinopoiskIds: [1113011, 1048334, 535341, 462682, 843649, 111543]
-  },
-  {
-    id: "series-binge",
-    title: "Сериалы на выходные",
-    description: "Истории в несколько сезонов — когда хочется марафона.",
-    accent: "#c49bff",
-    kinopoiskIds: [4049003, 1044002, 843649, 1113011, 535341, 468466]
-  },
-  {
-    id: "classics",
-    title: "Классика, которую стоит пересмотреть",
-    description: "Проверенные временем фильмы с высоким рейтингом.",
     accent: "#e8dfd0",
-    kinopoiskIds: [435, 326, 301, 8124, 258687, 111543]
+    source: { kind: "theme", type: "FAMILY" }
+  },
+  {
+    id: "comics",
+    title: "По комиксам",
+    description: "Супергерои и экранизации графических новелл.",
+    accent: "#f5c66e",
+    source: { kind: "theme", type: "COMICS_THEME" }
+  },
+  {
+    id: "sci-fi",
+    title: "Катастрофы и апокалипсис",
+    description: "Когда мир рушится — но красиво.",
+    accent: "#84d67d",
+    source: { kind: "theme", type: "CATASTROPHE_THEME" }
   }
 ];
 

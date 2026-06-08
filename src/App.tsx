@@ -36,11 +36,6 @@ import {
 } from "./lib/siteApi";
 import "./styles.css";
 
-const DEFAULT_API_KEY = "e99d6de0-9f14-42e9-b3c6-32172a36d434";
-const DEFAULT_API_BASE_URL = "https://kinopoiskapiunofficial.tech/api";
-
-const apiKey = import.meta.env.VITE_KINOPOISK_API_KEY || DEFAULT_API_KEY;
-const apiBaseUrl = import.meta.env.VITE_KINOPOISK_API_BASE_URL || DEFAULT_API_BASE_URL;
 const allohaToken =
   import.meta.env.VITE_ALLOHA_TOKEN || import.meta.env.VITE_API_ALOHA_KEY;
 const hdvbToken = import.meta.env.VITE_HDVB_TOKEN || import.meta.env.VITE_API_HDTV_KEY;
@@ -108,21 +103,16 @@ export function App() {
   const lastLoadMoreAtRef = useRef(0);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
-  const listFilmsRef = useRef(listFilms);
   const hasMoreRef = useRef(hasMore);
   const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   queryRef.current = query;
   filmsRef.current = films;
-  listFilmsRef.current = listFilms;
   hasMoreRef.current = hasMore;
   catalogModeRef.current = catalogMode;
 
-  const client = useMemo(
-    () => createKinopoiskClient({ apiKey, baseUrl: apiBaseUrl }),
-    []
-  );
+  const client = useMemo(() => createKinopoiskClient(), []);
   const players = selectedFilm ? createPlayerSources(selectedFilm, playerTemplates) : [];
   const visibleFilms = useMemo(
     () =>
@@ -167,38 +157,10 @@ export function App() {
   }, []);
 
   const refreshUserLists = useCallback(async () => {
-    const items = await siteApi.getLists();
+    const { items, films } = await siteApi.getLists();
     setUserLists(items);
-
-    const missingIds = items
-      .map((item) => item.kinopoiskId)
-      .filter((id) => !listFilmsRef.current[id]);
-
-    if (missingIds.length === 0) {
-      return;
-    }
-
-    const details = await Promise.all(
-      missingIds.map(async (kinopoiskId) => {
-        try {
-          const film = await client.getFilm(kinopoiskId);
-          return [kinopoiskId, film] as const;
-        } catch {
-          return null;
-        }
-      })
-    );
-
-    setListFilms((current) => {
-      const nextFilms = { ...current };
-      for (const entry of details) {
-        if (entry) {
-          nextFilms[entry[0]] = entry[1];
-        }
-      }
-      return nextFilms;
-    });
-  }, [client]);
+    setListFilms((current) => ({ ...current, ...films }));
+  }, []);
 
   const handleWatchTrackerStatusChange = useCallback(
     (status: WatchStatus) => {
@@ -256,17 +218,16 @@ export function App() {
         const collection = getCollectionById(snapshot.collectionId);
         if (collection) {
           setCollectionStatus("loading");
-          const loaded = await Promise.all(
-            collection.kinopoiskIds.map(async (kinopoiskId) => {
-              try {
-                return await client.getFilm(kinopoiskId);
-              } catch {
-                return null;
-              }
-            })
-          );
-          setCollectionFilms(loaded.filter((film): film is KinopoiskFilm => film !== null));
-          setCollectionStatus("success");
+          try {
+            const page =
+              collection.source.kind === "top"
+                ? await client.getTopFilms(collection.source.type, 1)
+                : await client.getThemeFilms(collection.source.type, 1);
+            setCollectionFilms(page.films);
+            setCollectionStatus("success");
+          } catch {
+            setCollectionStatus("error");
+          }
         }
       } else if (snapshot.view === "collections") {
         setView("collections");
@@ -490,16 +451,11 @@ export function App() {
     setCollectionFilms([]);
 
     try {
-      const loaded = await Promise.all(
-        collection.kinopoiskIds.map(async (kinopoiskId) => {
-          try {
-            return await client.getFilm(kinopoiskId);
-          } catch {
-            return null;
-          }
-        })
-      );
-      setCollectionFilms(loaded.filter((film): film is KinopoiskFilm => film !== null));
+      const page =
+        collection.source.kind === "top"
+          ? await client.getTopFilms(collection.source.type, 1)
+          : await client.getThemeFilms(collection.source.type, 1);
+      setCollectionFilms(page.films);
       setCollectionStatus("success");
     } catch {
       setCollectionStatus("error");
@@ -700,8 +656,8 @@ export function App() {
             <p className="eyebrow">collections</p>
             <h1>Подборки фильмов</h1>
             <p>
-              Тематические списки, как на киносайтах: жанры, настроение и сценарии просмотра.
-              Раздел можно расширять вручную в <code>src/data/collections.ts</code>.
+              Подборки подтягиваются с Кинопоиска через серверный кэш — один запрос на список,
+              без лишней траты квоты API.
             </p>
           </div>
           <div className="collections-grid">
@@ -713,7 +669,7 @@ export function App() {
                 style={{ "--collection-accent": collection.accent } as CSSProperties}
                 onClick={() => void openCollection(collection.id)}
               >
-                <span className="collection-card__badge">{collection.kinopoiskIds.length} тайтлов</span>
+                <span className="collection-card__badge">Кинопоиск</span>
                 <strong>{collection.title}</strong>
                 <p>{collection.description}</p>
               </button>

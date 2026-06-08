@@ -134,6 +134,17 @@ curl -s -X POST http://127.0.0.1:8080/api/auth/login \
 curl -s https://films.qzz.io/api/health
 ```
 
-## Подборки
+## Подборки и Kinopoisk
 
-Статические подборки лежат в `src/data/collections.ts`. Можно менять заголовки, описания и `kinopoiskIds` без бэкенда.
+Подборки описаны в `src/data/collections.ts` и подгружаются через официальные эндпоинты Kinopoisk Unofficial API (`top`, `collections`) — **один запрос на подборку**, а не `getFilm` на каждый фильм.
+
+Браузер не ходит в Kinopoisk напрямую: фронт вызывает `/api/kp/*`, бэкенд кэширует ответы в SQLite (`kp_cache`, `films_cache`). Ключ API задаётся только на сервере: `KINOPOISK_API_KEY` в `.env`.
+
+| TTL | Данные |
+|-----|--------|
+| 30 дней | карточка фильма |
+| 6 часов | каталог новинок |
+| 2 часа | поиск |
+| 24 часа | топы и тематические подборки |
+
+На клиенте дополнительно кэш в `localStorage` (`src/lib/kpLocalCache.ts`).

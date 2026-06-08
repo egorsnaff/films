@@ -117,7 +117,7 @@ FILMS_DOMAIN=films.qzz.io
 CERTBOT_EMAIL=ваш@email.com
 
 VITE_BASE_PATH=/
-VITE_KINOPOISK_API_KEY=ваш-ключ
+KINOPOISK_API_KEY=ваш-ключ
 VITE_ALLOHA_TOKEN=ваш-токен
 
 # Пока Alloha не добавит films.qzz.io в whitelist — оставьте hometv:

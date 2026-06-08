@@ -13,6 +13,15 @@ export type UserFilmEntry = {
   updatedAt: string;
 };
 
+export type CachedListFilm = {
+  kinopoiskId: number;
+  title: string;
+  originalTitle?: string;
+  year?: string;
+  posterUrl?: string;
+  rating?: string;
+};
+
 const API_BASE = import.meta.env.VITE_SITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -60,9 +69,11 @@ export const siteApi = {
     await request<void>("/auth/logout", { method: "POST" });
   },
 
-  async getLists(): Promise<UserFilmEntry[]> {
-    const data = await request<{ items: UserFilmEntry[] }>("/lists");
-    return data.items;
+  async getLists(): Promise<{ items: UserFilmEntry[]; films: Record<number, CachedListFilm> }> {
+    const data = await request<{ items: UserFilmEntry[]; films?: Record<number, CachedListFilm> }>(
+      "/lists"
+    );
+    return { items: data.items, films: data.films ?? {} };
   },
 
   async setFilmStatus(kinopoiskId: number, status: WatchStatus): Promise<UserFilmEntry> {

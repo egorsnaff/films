@@ -15,36 +15,37 @@ describe("hasValidPosterUrl", () => {
 });
 
 describe("createKinopoiskClient", () => {
-  it("sends the API key header and normalizes keyword search results", async () => {
+  it("loads search results through the Kinopoisk proxy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        films: [
-          {
-            filmId: 301,
-            nameRu: "Матрица",
-            nameEn: "The Matrix",
-            year: "1999",
-            posterUrlPreview: "https://example.test/matrix-small.jpg",
-            rating: "8.5"
-          }
-        ],
-        pagesCount: 4
+        page: {
+          films: [
+            {
+              kinopoiskId: 301,
+              title: "Матрица",
+              originalTitle: "The Matrix",
+              year: "1999",
+              posterUrl: "https://example.test/matrix-small.jpg",
+              rating: "8.5"
+            }
+          ],
+          page: 1,
+          totalPages: 4
+        }
       })
     });
     const client = createKinopoiskClient({
-      apiKey: "test-key",
-      fetchImpl: fetchMock
+      fetchImpl: fetchMock,
+      proxyBaseUrl: "/api"
     });
 
     const page = await client.searchFilms("матрица");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=%D0%BC%D0%B0%D1%82%D1%80%D0%B8%D1%86%D0%B0&page=1",
+      "/api/kp/search?keyword=%D0%BC%D0%B0%D1%82%D1%80%D0%B8%D1%86%D0%B0&page=1",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          "X-API-KEY": "test-key"
-        })
+        credentials: "include"
       })
     );
     expect(page).toEqual({
@@ -63,32 +64,32 @@ describe("createKinopoiskClient", () => {
     });
   });
 
-  it("loads film details from the v2.2 film endpoint", async () => {
+  it("loads film details through the Kinopoisk proxy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        kinopoiskId: 435,
-        nameRu: "Зелёная миля",
-        nameOriginal: "The Green Mile",
-        year: 1999,
-        posterUrl: "https://example.test/green-mile.jpg",
-        ratingKinopoisk: 9.1,
-        description: "История блока смертников."
+        film: {
+          kinopoiskId: 435,
+          title: "Зелёная миля",
+          originalTitle: "The Green Mile",
+          year: "1999",
+          posterUrl: "https://example.test/green-mile.jpg",
+          rating: "9.1",
+          description: "История блока смертников."
+        }
       })
     });
     const client = createKinopoiskClient({
-      apiKey: "test-key",
-      fetchImpl: fetchMock
+      fetchImpl: fetchMock,
+      proxyBaseUrl: "/api"
     });
 
     const details = await client.getFilm(435);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://kinopoiskapiunofficial.tech/api/v2.2/films/435",
+      "/api/kp/films/435",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          "X-API-KEY": "test-key"
-        })
+        credentials: "include"
       })
     );
     expect(details).toMatchObject({
@@ -102,67 +103,37 @@ describe("createKinopoiskClient", () => {
     });
   });
 
-  it("drops Kinopoisk no-poster placeholders during normalization", async () => {
+  it("loads recent catalog pages through the Kinopoisk proxy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        items: [
-          {
-            kinopoiskId: 501,
-            nameRu: "Без реального постера",
-            posterUrlPreview:
-              "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
-          }
-        ],
-        totalPages: 1
+        page: {
+          films: [
+            {
+              kinopoiskId: 123,
+              title: "Новый фильм",
+              originalTitle: "New Film",
+              year: "2026",
+              posterUrl: "https://example.test/new-film.jpg",
+              rating: "7.4"
+            }
+          ],
+          page: 3,
+          totalPages: 7
+        }
       })
     });
     const client = createKinopoiskClient({
-      apiKey: "test-key",
-      fetchImpl: fetchMock
-    });
-
-    const page = await client.getRecentFilms();
-
-    expect(page.films).toEqual([
-      {
-        kinopoiskId: 501,
-        title: "Без реального постера",
-        posterUrl: undefined
-      }
-    ]);
-  });
-
-  it("loads a paginated default collection of recent films", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [
-          {
-            kinopoiskId: 123,
-            nameRu: "Новый фильм",
-            nameOriginal: "New Film",
-            year: 2026,
-            posterUrlPreview: "https://example.test/new-film.jpg",
-            ratingKinopoisk: 7.4
-          }
-        ],
-        totalPages: 7
-      })
-    });
-    const client = createKinopoiskClient({
-      apiKey: "test-key",
-      fetchImpl: fetchMock
+      fetchImpl: fetchMock,
+      proxyBaseUrl: "/api"
     });
 
     const page = await client.getRecentFilms(3);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://kinopoiskapiunofficial.tech/api/v2.2/films?order=YEAR&type=FILM&ratingFrom=6&ratingTo=10&yearFrom=2024&yearTo=2026&page=3",
+      "/api/kp/catalog/recent?type=FILM&page=3",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          "X-API-KEY": "test-key"
-        })
+        credentials: "include"
       })
     );
     expect(page).toEqual({

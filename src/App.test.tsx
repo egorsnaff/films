@@ -4,30 +4,70 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
+type MockFilm = {
+  kinopoiskId: number;
+  title: string;
+  year?: string;
+  posterUrl?: string;
+  rating?: string;
+  description?: string;
+};
+
+function catalogResponse(films: MockFilm[], page = 1, totalPages = 1) {
+  return {
+    ok: true,
+    json: async () => ({
+      page: { films, page, totalPages }
+    })
+  };
+}
+
+function filmResponse(film: MockFilm) {
+  return {
+    ok: true,
+    json: async () => ({ film })
+  };
+}
+
+type FetchResponse = {
+  ok: boolean;
+  status?: number;
+  json: () => Promise<unknown>;
+};
+
+function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
+  return vi.fn().mockImplementation((input: RequestInfo) => {
+    const url = String(input);
+
+    if (url.includes("/api/auth") || url.includes("/api/lists")) {
+      return Promise.resolve({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: "Не авторизован" })
+      });
+    }
+
+    const custom = handlers(url);
+    if (custom) {
+      return Promise.resolve(custom);
+    }
+
+    if (url.includes("/api/kp/catalog/recent")) {
+      return Promise.resolve(catalogResponse([]));
+    }
+
+    return Promise.resolve(catalogResponse([]));
+  });
+}
+
 describe("App", () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((input: RequestInfo) => {
-        const url = String(input);
-
-        if (url.includes("/api/auth") || url.includes("/api/lists")) {
-          return Promise.resolve({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Не авторизован" })
-          });
-        }
-
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ items: [], totalPages: 1 })
-        });
-      })
-    );
+    window.localStorage.clear();
+    vi.stubGlobal("fetch", createFetchMock(() => undefined));
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -55,32 +95,24 @@ describe("App", () => {
   it("renders a default premieres collection on the home page", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockImplementation((input: RequestInfo) => {
-        const url = String(input);
-
-        if (url.includes("/api/auth") || url.includes("/api/lists")) {
-          return Promise.resolve({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Не авторизован" })
-          });
-        }
-
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            items: [
+      createFetchMock((url) => {
+        if (url.includes("/api/kp/catalog/recent")) {
+          return catalogResponse(
+            [
               {
                 kinopoiskId: 77,
-                nameRu: "Премьера недели",
-                year: 2026,
-                posterUrlPreview: "https://example.test/premiere.jpg",
-                ratingKinopoisk: 7.7
+                title: "Премьера недели",
+                year: "2026",
+                posterUrl: "https://example.test/premiere.jpg",
+                rating: "7.7"
               }
             ],
-            totalPages: 3
-          })
-        });
+            1,
+            3
+          );
+        }
+
+        return undefined;
       })
     );
 
@@ -94,43 +126,30 @@ describe("App", () => {
   it("hides premieres without posters on the home page", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockImplementation((input: RequestInfo) => {
-        const url = String(input);
-
-        if (url.includes("/api/auth") || url.includes("/api/lists")) {
-          return Promise.resolve({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Не авторизован" })
-          });
+      createFetchMock((url) => {
+        if (url.includes("/api/kp/catalog/recent")) {
+          return catalogResponse([
+            {
+              kinopoiskId: 11,
+              title: "С постером",
+              year: "2026",
+              posterUrl: "https://example.test/with-poster.jpg"
+            },
+            {
+              kinopoiskId: 12,
+              title: "Без постера",
+              year: "2026"
+            },
+            {
+              kinopoiskId: 13,
+              title: "Заглушка постера",
+              year: "2026",
+              posterUrl: "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
+            }
+          ]);
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                kinopoiskId: 11,
-                nameRu: "С постером",
-                year: 2026,
-                posterUrlPreview: "https://example.test/with-poster.jpg"
-              },
-              {
-                kinopoiskId: 12,
-                nameRu: "Без постера",
-                year: 2026
-              },
-              {
-                kinopoiskId: 13,
-                nameRu: "Заглушка постера",
-                year: 2026,
-                posterUrlPreview:
-                  "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
-              }
-            ],
-            totalPages: 1
-          })
-        });
+        return undefined;
       })
     );
 
@@ -144,48 +163,38 @@ describe("App", () => {
 
   it("loads the next catalog page when the load-more button is clicked", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
-      const url = String(input);
-
-      if (url.includes("/api/auth") || url.includes("/api/lists")) {
-        return Promise.resolve({
-          ok: false,
-          status: 401,
-          json: async () => ({ error: "Не авторизован" })
-        });
-      }
-
+    const fetchMock = createFetchMock((url) => {
       if (url.includes("page=2")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                kinopoiskId: 88,
-                nameRu: "Вторая страница",
-                year: 2026,
-                posterUrlPreview: "https://example.test/page-2.jpg"
-              }
-            ],
-            totalPages: 3
-          })
-        });
-      }
-
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          items: [
+        return catalogResponse(
+          [
             {
-              kinopoiskId: 77,
-              nameRu: "Первая страница",
-              year: 2026,
-              posterUrlPreview: "https://example.test/page-1.jpg"
+              kinopoiskId: 88,
+              title: "Вторая страница",
+              year: "2026",
+              posterUrl: "https://example.test/page-2.jpg"
             }
           ],
-          totalPages: 3
-        })
-      });
+          2,
+          3
+        );
+      }
+
+      if (url.includes("/api/kp/catalog/recent")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 77,
+              title: "Первая страница",
+              year: "2026",
+              posterUrl: "https://example.test/page-1.jpg"
+            }
+          ],
+          1,
+          3
+        );
+      }
+
+      return undefined;
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -204,72 +213,52 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Подборки" }));
 
     expect(await screen.findByText("Подборки фильмов")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Вечер под плед/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /250 лучших фильмов/i })).toBeInTheDocument();
   });
 
   it("clears stale film details when a later detail request fails", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi
-      .fn()
-      .mockImplementation((input: RequestInfo) => {
-        const url = String(input);
-
-        if (url.includes("/api/auth") || url.includes("/api/lists")) {
-          return Promise.resolve({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Не авторизован" })
-          });
-        }
-
-        if (url.includes("search-by-keyword")) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              films: [
-                {
-                  filmId: 1,
-                  nameRu: "Первый",
-                  year: "2001",
-                  posterUrlPreview: "https://example.test/one.jpg"
-                },
-                {
-                  filmId: 2,
-                  nameRu: "Второй",
-                  year: "2002",
-                  posterUrlPreview: "https://example.test/two.jpg"
-                }
-              ],
-              pagesCount: 1
-            })
-          });
-        }
-
-        if (url.endsWith("/films/1")) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
+    const fetchMock = createFetchMock((url) => {
+      if (url.includes("/api/kp/search")) {
+        return catalogResponse(
+          [
+            {
               kinopoiskId: 1,
-              nameRu: "Первый подробно",
-              year: 2001,
-              description: "Старые детали"
-            })
-          });
-        }
+              title: "Первый",
+              year: "2001",
+              posterUrl: "https://example.test/one.jpg"
+            },
+            {
+              kinopoiskId: 2,
+              title: "Второй",
+              year: "2002",
+              posterUrl: "https://example.test/two.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
 
-        if (url.endsWith("/films/2")) {
-          return Promise.resolve({
-            ok: false,
-            status: 500,
-            json: async () => ({})
-          });
-        }
-
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ items: [], totalPages: 1 })
+      if (url.endsWith("/api/kp/films/1")) {
+        return filmResponse({
+          kinopoiskId: 1,
+          title: "Первый подробно",
+          year: "2001",
+          description: "Старые детали"
         });
-      });
+      }
+
+      if (url.endsWith("/api/kp/films/2")) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "Kinopoisk API failed with status 500" })
+        };
+      }
+
+      return undefined;
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
@@ -287,52 +276,37 @@ describe("App", () => {
       expect(screen.queryByText("Первый подробно")).not.toBeInTheDocument()
     );
     expect(
-      await screen.findByText("Kinopoisk API request failed with status 500")
+      await screen.findByText("Kinopoisk API failed with status 500")
     ).toBeInTheDocument();
   });
 
   it("opens players on a dedicated watch page", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
-      const url = String(input);
-
-      if (url.includes("/api/auth") || url.includes("/api/lists")) {
-        return Promise.resolve({
-          ok: false,
-          status: 401,
-          json: async () => ({ error: "Не авторизован" })
+    const fetchMock = createFetchMock((url) => {
+      if (url.endsWith("/api/kp/films/301")) {
+        return filmResponse({
+          kinopoiskId: 301,
+          title: "Матрица",
+          year: "1999",
+          posterUrl: "https://example.test/matrix.jpg",
+          rating: "8.5",
+          description: "Фильм о выборе реальности."
         });
       }
 
-      if (url.endsWith("/films/301")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
+      if (url.includes("/api/kp/catalog/recent")) {
+        return catalogResponse([
+          {
             kinopoiskId: 301,
-            nameRu: "Матрица",
-            year: 1999,
+            title: "Матрица",
+            year: "1999",
             posterUrl: "https://example.test/matrix.jpg",
-            ratingKinopoisk: 8.5,
-            description: "Фильм о выборе реальности."
-          })
-        });
+            rating: "8.5"
+          }
+        ]);
       }
 
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          items: [
-            {
-              kinopoiskId: 301,
-              nameRu: "Матрица",
-              year: 1999,
-              posterUrlPreview: "https://example.test/matrix.jpg",
-              ratingKinopoisk: 8.5
-            }
-          ],
-          totalPages: 1
-        })
-      });
+      return undefined;
     });
     vi.stubGlobal("fetch", fetchMock);
 
