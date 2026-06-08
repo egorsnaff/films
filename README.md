@@ -37,8 +37,21 @@ GitHub Actions deployments, the app is available at:
 https://egorsnaff.github.io/films/
 ```
 
-The Vite `base` option is set to `/films/`, so built assets resolve correctly
-under the repository Pages path.
+`npm run build` (alias `build:pages`) uses `VITE_BASE_PATH=/films/` so assets
+resolve correctly under the repository Pages path.
+
+## Self-hosting (свой сервер)
+
+Для VPS, домашнего сервера или Docker:
+
+```bash
+cp .env.production.example .env
+docker compose up -d --build
+```
+
+Подробно: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) — Docker, nginx, HTTPS,
+бесплатные домены (DuckDNS, sslip.io, Cloudflare Tunnel) и настройка плееров
+при смене адреса.
 
 ## Player templates
 

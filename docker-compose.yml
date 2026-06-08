@@ -1,0 +1,17 @@
+services:
+  films:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+        VITE_KINOPOISK_API_KEY: ${VITE_KINOPOISK_API_KEY:-}
+        VITE_KINOPOISK_API_BASE_URL: ${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}
+        VITE_ALLOHA_TOKEN: ${VITE_ALLOHA_TOKEN:-}
+        VITE_PLAYER_EMBED_DOMAIN: ${VITE_PLAYER_EMBED_DOMAIN:-nayteruz.github.io}
+        VITE_ENABLE_ALLOHA: ${VITE_ENABLE_ALOHA:-true}
+        VITE_HDVB_TOKEN: ${VITE_HDVB_TOKEN:-}
+        VITE_PLAYER_TEMPLATES: ${VITE_PLAYER_TEMPLATES:-}
+    ports:
+      - "${FILMS_HTTP_PORT:-8080}:80"
+    restart: unless-stopped
