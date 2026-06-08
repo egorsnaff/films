@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# shellcheck source=deploy/lib.sh
+source "$ROOT_DIR/deploy/lib.sh"
+resolve_compose
+
 COMPOSE_FILE="docker-compose.prod.yml"
 
 if [[ -f .env ]]; then
@@ -26,18 +30,10 @@ render_proxy_config() {
   fi
 }
 
-require_command() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Не найдена команда: $1"
-    exit 1
-  fi
-}
-
-require_command docker
-docker compose version >/dev/null 2>&1 || {
-  echo "Нужен Docker Compose v2 (команда: docker compose)"
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Docker не установлен. Выполните: curl -fsSL https://get.docker.com | sh"
   exit 1
-}
+fi
 
 if [[ ! -f .env ]]; then
   echo "Создайте .env из .env.production.example и заполните ключи API."
@@ -51,10 +47,10 @@ if [[ ! -f deploy/proxy/active/films.conf ]]; then
 fi
 
 echo "→ Сборка и запуск (домен: $FILMS_DOMAIN)"
-docker compose -f "$COMPOSE_FILE" up -d --build
+compose -f "$COMPOSE_FILE" up -d --build
 
 if [[ -n "${CERTBOT_EMAIL:-}" ]]; then
-  if docker compose -f "$COMPOSE_FILE" exec proxy test -f "/etc/letsencrypt/live/${FILMS_DOMAIN}/fullchain.pem" 2>/dev/null; then
+  if compose -f "$COMPOSE_FILE" exec proxy test -f "/etc/letsencrypt/live/${FILMS_DOMAIN}/fullchain.pem" 2>/dev/null; then
     echo "→ Сертификат найден, HTTPS уже настроен"
   else
     echo "→ Для HTTPS выполните: ./deploy/bootstrap-ssl.sh"
