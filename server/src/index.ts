@@ -17,6 +17,7 @@ import {
   ensureFilmsCached,
   getFilmDetails,
   getRecentCatalog,
+  getSimilarFilms,
   getThemeList,
   getTopList,
   probeKinopoisk,
@@ -125,6 +126,21 @@ app.get("/kp/films/:kinopoiskId", async (req, res) => {
 
   try {
     const result = await getFilmDetails(kinopoiskId);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/films/:kinopoiskId/similars", async (req, res) => {
+  const kinopoiskId = Number(req.params.kinopoiskId);
+  if (!Number.isFinite(kinopoiskId)) {
+    res.status(400).json({ error: "Некорректный id фильма" });
+    return;
+  }
+
+  try {
+    const result = await getSimilarFilms(kinopoiskId);
     res.json(result);
   } catch (error) {
     handleKpError(error, res);

@@ -151,4 +151,43 @@ describe("createKinopoiskClient", () => {
       ]
     });
   });
+
+  it("loads similar films through the Kinopoisk proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        films: [
+          {
+            kinopoiskId: 312,
+            title: "Матрица: Перезагрузка",
+            year: "2003",
+            posterUrl: "https://example.test/reloaded.jpg",
+            rating: "7.8"
+          }
+        ]
+      })
+    });
+    const client = createKinopoiskClient({
+      fetchImpl: fetchMock,
+      proxyBaseUrl: "/api"
+    });
+
+    const films = await client.getSimilarFilms(301);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/kp/films/301/similars",
+      expect.objectContaining({
+        credentials: "include"
+      })
+    );
+    expect(films).toEqual([
+      {
+        kinopoiskId: 312,
+        title: "Матрица: Перезагрузка",
+        year: "2003",
+        posterUrl: "https://example.test/reloaded.jpg",
+        rating: "7.8"
+      }
+    ]);
+  });
 });
