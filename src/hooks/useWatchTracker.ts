@@ -5,6 +5,7 @@ import { siteApi, type WatchStatus } from "../lib/siteApi";
 const TICK_MS = 30_000;
 const PLAYER_SYNC_MS = 12_000;
 const WATCHED_THRESHOLD = 90;
+const MIN_WATCH_SECONDS = 60;
 
 type UseWatchTrackerOptions = {
   enabled: boolean;
@@ -20,6 +21,47 @@ type ReportPositionInput = {
   ended?: boolean;
 };
 
+function shouldSyncWatchProgress(
+  watchSeconds: number,
+  progressPercent: number,
+  forceStatus?: WatchStatus
+): boolean {
+  if (forceStatus === "watched" || progressPercent >= WATCHED_THRESHOLD) {
+    return true;
+  }
+
+  if (forceStatus && forceStatus !== "watching") {
+    return true;
+  }
+
+  return watchSeconds >= MIN_WATCH_SECONDS;
+}
+
+function resolveWatchForceStatus(
+  watchSeconds: number,
+  progressPercent: number,
+  requested?: WatchStatus,
+  currentStatus?: WatchStatus | null
+): WatchStatus | undefined {
+  if (progressPercent >= WATCHED_THRESHOLD || requested === "watched") {
+    return "watched";
+  }
+
+  if (requested && requested !== "watching") {
+    return requested;
+  }
+
+  if (watchSeconds < MIN_WATCH_SECONDS) {
+    return undefined;
+  }
+
+  if (currentStatus === "watched") {
+    return undefined;
+  }
+
+  return requested ?? "watching";
+}
+
 export function useWatchTracker({
   enabled,
   kinopoiskId,
@@ -30,6 +72,7 @@ export function useWatchTracker({
   const watchSecondsRef = useRef(0);
   const durationSecondsRef = useRef(Math.max((filmLengthMinutes ?? 90) * 60, 60));
   const onStatusChangeRef = useRef(onStatusChange);
+  const currentStatusRef = useRef(currentStatus);
   const lastSyncedAtRef = useRef(0);
   const lastSyncedPercentRef = useRef(0);
   const hasPlayerSignalRef = useRef(false);
@@ -38,6 +81,10 @@ export function useWatchTracker({
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
+
+  useEffect(() => {
+    currentStatusRef.current = currentStatus;
+  }, [currentStatus]);
 
   useEffect(() => {
     watchSecondsRef.current = 0;
@@ -59,29 +106,47 @@ export function useWatchTracker({
         return;
       }
 
+      const watchSeconds = Math.floor(watchSecondsRef.current);
       const progressPercent = getProgressPercent();
+
+      if (!shouldSyncWatchProgress(watchSeconds, progressPercent, forceStatus)) {
+        return;
+      }
+
+      const resolvedForceStatus = resolveWatchForceStatus(
+        watchSeconds,
+        progressPercent,
+        forceStatus,
+        currentStatusRef.current
+      );
+
       const item = await siteApi.updateWatchProgress({
         kinopoiskId,
-        watchSeconds: Math.floor(watchSecondsRef.current),
+        watchSeconds,
         progressPercent,
-        forceStatus
+        forceStatus: resolvedForceStatus
       });
       lastSyncedAtRef.current = Date.now();
       lastSyncedPercentRef.current = progressPercent;
-      onStatusChangeRef.current?.(item.status);
+
+      if (item) {
+        onStatusChangeRef.current?.(item.status);
+      }
     },
     [getProgressPercent, kinopoiskId]
   );
 
   const maybeSyncProgress = useCallback(
     (forceStatus?: WatchStatus) => {
+      const watchSeconds = Math.floor(watchSecondsRef.current);
       const progressPercent = getProgressPercent();
       const now = Date.now();
       const crossedThreshold =
         lastSyncedPercentRef.current < WATCHED_THRESHOLD && progressPercent >= WATCHED_THRESHOLD;
       const intervalElapsed = now - lastSyncedAtRef.current >= PLAYER_SYNC_MS;
       const shouldSync =
-        forceStatus !== undefined || crossedThreshold || intervalElapsed || progressPercent >= 100;
+        shouldSyncWatchProgress(watchSeconds, progressPercent, forceStatus) &&
+        (forceStatus !== undefined || crossedThreshold || intervalElapsed || progressPercent >= 100);
 
       if (!shouldSync) {
         return;
@@ -109,30 +174,27 @@ export function useWatchTracker({
         setPlaybackStarted(true);
       }
 
+      const watchSeconds = Math.floor(watchSecondsRef.current);
       const progressPercent = getProgressPercent();
       const nextStatus =
         ended || progressPercent >= WATCHED_THRESHOLD
           ? "watched"
-          : currentStatus !== "watched"
+          : watchSeconds >= MIN_WATCH_SECONDS && currentStatusRef.current !== "watched"
             ? "watching"
             : undefined;
 
       maybeSyncProgress(nextStatus);
     },
-    [currentStatus, enabled, getProgressPercent, kinopoiskId, maybeSyncProgress, playbackStarted]
+    [enabled, getProgressPercent, kinopoiskId, maybeSyncProgress, playbackStarted]
   );
 
-  const markPlaybackStarted = useCallback(async () => {
+  const markPlaybackStarted = useCallback(() => {
     if (!enabled || !kinopoiskId || playbackStarted) {
       return;
     }
 
     setPlaybackStarted(true);
-
-    if (currentStatus !== "watching" && currentStatus !== "watched") {
-      await syncProgress("watching");
-    }
-  }, [currentStatus, enabled, kinopoiskId, playbackStarted, syncProgress]);
+  }, [enabled, kinopoiskId, playbackStarted]);
 
   useEffect(() => {
     if (!enabled || !kinopoiskId || !playbackStarted || hasPlayerSignalRef.current) {

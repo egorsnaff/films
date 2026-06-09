@@ -97,11 +97,27 @@ export const siteApi = {
     watchSeconds: number;
     progressPercent: number;
     forceStatus?: WatchStatus;
-  }): Promise<UserFilmEntry> {
-    const data = await request<{ item: UserFilmEntry }>("/lists/progress", {
+  }): Promise<UserFilmEntry | null> {
+    const response = await fetch(`${API_BASE}/lists/progress`, {
       method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify(input)
     });
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? `Request failed with status ${response.status}`);
+    }
+
+    const data = (await response.json()) as { item: UserFilmEntry };
     return data.item;
   },
 

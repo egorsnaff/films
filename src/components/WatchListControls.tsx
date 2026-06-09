@@ -37,7 +37,9 @@ export function WatchListControls({
         progressPercent: 100,
         forceStatus: "watched"
       });
-      onStatusChange?.(item.status);
+      if (item) {
+        onStatusChange?.(item.status);
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
     } finally {
