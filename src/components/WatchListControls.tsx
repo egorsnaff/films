@@ -26,6 +26,25 @@ export function WatchListControls({
     return null;
   }
 
+  async function handleMarkWatched() {
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const item = await siteApi.updateWatchProgress({
+        kinopoiskId,
+        watchSeconds: Math.max(progressPercent ?? 0, 100),
+        progressPercent: 100,
+        forceStatus: "watched"
+      });
+      onStatusChange?.(item.status);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleSelect(status: WatchStatus) {
     setIsSaving(true);
     setError(null);
@@ -56,6 +75,11 @@ export function WatchListControls({
         </p>
       ) : null}
       <div className="watch-list-controls__buttons">
+        {currentStatus === "watching" ? (
+          <button type="button" disabled={isSaving} onClick={() => void handleMarkWatched()}>
+            Отметить просмотренным
+          </button>
+        ) : null}
         {manualStatuses.map((status) => (
           <button
             key={status}

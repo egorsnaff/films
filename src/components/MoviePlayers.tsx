@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { KinoboxPlayerPanel } from "./KinoboxPlayerPanel";
+import { PlayerFrame } from "./PlayerFrame";
 import type { PlayerResolveOptions, PlayerSource } from "../lib/playerSources";
 
 type MoviePlayersProps = {
   players: PlayerSource[];
   resolveOptions?: PlayerResolveOptions;
+  trackProgress?: boolean;
   onPlaybackStarted?: () => void;
+  onPlayerProgress?: (input: { currentTime: number; duration?: number; ended?: boolean }) => void;
 };
 
-export function MoviePlayers({ players, resolveOptions, onPlaybackStarted }: MoviePlayersProps) {
+export function MoviePlayers({
+  players,
+  resolveOptions,
+  trackProgress = false,
+  onPlaybackStarted,
+  onPlayerProgress
+}: MoviePlayersProps) {
   const safePlayers = useMemo(() => players.filter(hasSafeEmbedUrl), [players]);
   const [activePlayerId, setActivePlayerId] = useState<string | undefined>(
     safePlayers.at(0)?.id
@@ -107,18 +116,19 @@ export function MoviePlayers({ players, resolveOptions, onPlaybackStarted }: Mov
             kinopoiskId={activePlayer.kinopoiskId}
             embedFallback={activePlayer.kinoboxEmbedFallback}
             resolveOptions={resolveOptions}
+            trackProgress={trackProgress}
             onPlaybackStarted={onPlaybackStarted}
+            onPlayerProgress={onPlayerProgress}
           />
         ) : loadingPlayerId === activePlayer.id ? (
           <p className="player-status">Загрузка плеера...</p>
         ) : activeEmbedUrl ? (
-          <iframe
-            key={activePlayer.id}
+          <PlayerFrame
             title={activePlayer.title}
             src={activeEmbedUrl}
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            allowFullScreen
-            onLoad={() => onPlaybackStarted?.()}
+            trackProgress={trackProgress}
+            onPlaybackStarted={onPlaybackStarted}
+            onPlayerProgress={onPlayerProgress}
           />
         ) : (
           <p className="player-status">Плеер не найден</p>
