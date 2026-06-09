@@ -56,6 +56,13 @@ function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
       return Promise.resolve(catalogResponse([]));
     }
 
+    if (url.includes("/similars")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ films: [] })
+      });
+    }
+
     return Promise.resolve(catalogResponse([]));
   });
 }

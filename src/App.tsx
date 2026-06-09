@@ -106,6 +106,8 @@ export function App() {
   const [selectedListStatus, setSelectedListStatus] = useState<WatchStatus | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
+  const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
+  const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const lastLoadMoreAtRef = useRef(0);
@@ -160,6 +162,10 @@ export function App() {
       : "На основе ваших интересов";
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
+  const visibleSimilarFilms = useMemo(
+    () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
+    [similarFilms]
+  );
 
   useEffect(() => {
     pageRef.current = page;
@@ -204,6 +210,36 @@ export function App() {
 
     void loadRecommendations();
   }, [authUser, catalogMode, loadRecommendations, userLists, view]);
+
+  useEffect(() => {
+    if (view !== "watch" || !selectedFilm) {
+      setSimilarFilms([]);
+      setSimilarFilmsStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setSimilarFilmsStatus("loading");
+
+    void client.getSimilarFilms(selectedFilm.kinopoiskId).then(
+      (films) => {
+        if (!cancelled) {
+          setSimilarFilms(films ?? []);
+          setSimilarFilmsStatus("success");
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setSimilarFilms([]);
+          setSimilarFilmsStatus("error");
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, selectedFilm, view]);
 
   const handleWatchTrackerStatusChange = useCallback(
     (status: WatchStatus) => {
@@ -980,6 +1016,17 @@ export function App() {
               <strong>Фильм не выбран.</strong>
               <p>Вернитесь на главную и откройте карточку из подборки.</p>
             </div>
+          ) : null}
+          {similarFilmsStatus === "loading" ? (
+            <p className="player-status watch-page__similars-status">Загружаем похожие...</p>
+          ) : null}
+          {visibleSimilarFilms.length > 0 ? (
+            <FilmShelf
+              title="Похожие"
+              subtitle="По данным Кинопоиска, отсортировано по рейтингу"
+              films={visibleSimilarFilms}
+              onSelect={(film) => void openFilm(film)}
+            />
           ) : null}
         </section>
       ) : null}

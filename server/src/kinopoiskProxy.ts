@@ -270,6 +270,64 @@ export async function probeKinopoisk(): Promise<{
   }
 }
 
+const SIMILAR_RESULT_LIMIT = 10;
+const SIMILAR_FETCH_CAP = 24;
+
+type SimilarFilmResponse = {
+  items?: Array<Record<string, unknown>>;
+};
+
+function parseRating(rating?: string): number {
+  if (!rating) {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(rating);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export async function getSimilarFilms(
+  kinopoiskId: number,
+  limit = SIMILAR_RESULT_LIMIT
+): Promise<{ films: CachedFilm[]; fromCache: boolean }> {
+  const cacheKey = `similars:${kinopoiskId}:${limit}`;
+  const cached = readCache<CachedFilm[]>(cacheKey, "list");
+  if (cached) {
+    return { films: cached, fromCache: true };
+  }
+
+  const response = await requestKinopoisk<SimilarFilmResponse>(
+    `/v2.2/films/${kinopoiskId}/similars`
+  );
+
+  const summaries = (response.items ?? [])
+    .map((raw) => mapFilmSummary(raw))
+    .filter(
+      (film): film is CachedFilm =>
+        film !== null && film.kinopoiskId !== kinopoiskId && Boolean(film.posterUrl)
+    )
+    .slice(0, SIMILAR_FETCH_CAP);
+
+  const enriched = await ensureFilmsCached(
+    summaries.map((film) => film.kinopoiskId),
+    SIMILAR_FETCH_CAP
+  );
+
+  const films = summaries
+    .map((summary) => enriched[summary.kinopoiskId] ?? summary)
+    .filter((film) => Boolean(film.posterUrl))
+    .sort((left, right) => parseRating(right.rating) - parseRating(left.rating))
+    .slice(0, limit);
+
+  writeCache(cacheKey, films);
+
+  for (const film of films) {
+    writeFilmCache(film);
+  }
+
+  return { films, fromCache: false };
+}
+
 export async function ensureFilmsCached(
   kinopoiskIds: number[],
   maxFetch = 5

@@ -1,5 +1,7 @@
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
+import { FilmRatingBadge } from "./FilmRatingBadge";
+
 type FilmGridProps = {
   films: KinopoiskFilm[];
   onSelect: (film: KinopoiskFilm) => void;
@@ -21,6 +23,7 @@ export function FilmGrid({ films, onSelect }: FilmGridProps) {
             ) : (
               <span className="poster-placeholder">Нет постера</span>
             )}
+            <FilmRatingBadge rating={film.rating} />
           </span>
           <span className="film-card__body">
             <strong>{film.title}</strong>

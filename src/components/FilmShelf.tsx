@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
+import { FilmRatingBadge } from "./FilmRatingBadge";
+
 type FilmShelfProps = {
   title: string;
   subtitle?: string;
@@ -51,6 +53,7 @@ export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: 
                 ) : (
                   <span className="poster-placeholder">Нет постера</span>
                 )}
+                <FilmRatingBadge rating={film.rating} />
                 {typeof progress === "number" && progress > 0 ? (
                   <span
                     className="film-shelf__progress"

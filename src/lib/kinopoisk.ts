@@ -164,6 +164,21 @@ export function createKinopoiskClient({
       const result = await proxyRequest<{ film: KinopoiskFilmDetails }>(`/films/${kinopoiskId}`);
       writeLocalCache(`film:${kinopoiskId}`, result.film);
       return result.film;
+    },
+
+    async getSimilarFilms(kinopoiskId: number): Promise<KinopoiskFilm[]> {
+      const cacheKey = `similars:${kinopoiskId}`;
+      const local = readLocalCache<KinopoiskFilm[]>(cacheKey, "list");
+      if (local) {
+        return local;
+      }
+
+      const result = await proxyRequest<{ films?: KinopoiskFilm[] }>(
+        `/films/${kinopoiskId}/similars`
+      );
+      const films = result.films ?? [];
+      writeLocalCache(cacheKey, films);
+      return films;
     }
   };
 }
