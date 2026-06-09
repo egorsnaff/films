@@ -5,13 +5,16 @@ import {
   buildKinoboxEmbedFallbackUrl,
   formatKinoboxPlayerLabel
 } from "../lib/playerSources";
+import { PlayerFrame } from "./PlayerFrame";
 
 type KinoboxPlayerPanelProps = {
   resolvePlayers: (options?: PlayerResolveOptions) => Promise<KinoboxPlayerOption[]>;
   kinopoiskId?: number;
   embedFallback?: string;
   resolveOptions?: PlayerResolveOptions;
+  trackProgress?: boolean;
   onPlaybackStarted?: () => void;
+  onPlayerProgress?: (input: { currentTime: number; duration?: number; ended?: boolean }) => void;
 };
 
 export function KinoboxPlayerPanel({
@@ -19,7 +22,9 @@ export function KinoboxPlayerPanel({
   kinopoiskId,
   embedFallback,
   resolveOptions,
-  onPlaybackStarted
+  trackProgress = false,
+  onPlaybackStarted,
+  onPlayerProgress
 }: KinoboxPlayerPanelProps) {
   const fallbackUrl =
     embedFallback ??
@@ -108,13 +113,12 @@ export function KinoboxPlayerPanel({
       )}
 
       <div className="kinobox-panel__frame player-frame-wrap">
-        <iframe
-          key={activeEmbedUrl}
+        <PlayerFrame
           title={activeSource ? formatKinoboxPlayerLabel(activeSource) : "Kinobox"}
           src={activeEmbedUrl}
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          allowFullScreen
-          onLoad={() => onPlaybackStarted?.()}
+          trackProgress={trackProgress}
+          onPlaybackStarted={onPlaybackStarted}
+          onPlayerProgress={onPlayerProgress}
         />
       </div>
     </div>

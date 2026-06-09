@@ -8,6 +8,7 @@ export type NavigationSnapshot = {
   catalogMode: CatalogMode;
   collectionId: string | null;
   filmId: number | null;
+  searchQuery?: string;
   scrollY: number;
 };
 

@@ -21,6 +21,11 @@ import {
   parsePlayerTemplates
 } from "./lib/playerSources";
 import {
+  pushAppHistory,
+  readHistorySnapshot,
+  replaceAppHistory
+} from "./lib/appHistory";
+import {
   getBackLabel,
   type CatalogMode,
   type MenuItem,
@@ -110,6 +115,9 @@ export function App() {
   const catalogModeRef = useRef(catalogMode);
   const queryRef = useRef(query);
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
+  const pendingWatchFilmIdRef = useRef<number | null>(null);
+  const isHistoryNavigationRef = useRef(false);
+  const shouldCommitHistoryRef = useRef(false);
   queryRef.current = query;
   filmsRef.current = films;
   hasMoreRef.current = hasMore;
@@ -205,7 +213,7 @@ export function App() {
     [refreshUserLists]
   );
 
-  const { markPlaybackStarted } = useWatchTracker({
+  const { markPlaybackStarted, reportPosition } = useWatchTracker({
     enabled: Boolean(authUser && view === "watch" && selectedFilm),
     kinopoiskId: selectedFilm?.kinopoiskId,
     filmLengthMinutes: selectedFilm?.filmLengthMinutes,
@@ -219,10 +227,29 @@ export function App() {
       activeMenu,
       catalogMode,
       collectionId,
-      filmId: selectedFilm?.kinopoiskId ?? null,
+      filmId:
+        view === "watch"
+          ? (selectedFilm?.kinopoiskId ?? pendingWatchFilmIdRef.current)
+          : null,
+      searchQuery: catalogMode === "search" ? query : "",
       scrollY: window.scrollY
     };
-  }, [activeMenu, catalogMode, collectionId, selectedFilm, view]);
+  }, [activeMenu, catalogMode, collectionId, query, selectedFilm, view]);
+
+  const beginHistoryEntry = useCallback(
+    (pushHistory = true) => {
+      if (pushHistory && !isHistoryNavigationRef.current) {
+        navHistoryRef.current.push(captureSnapshot());
+      }
+    },
+    [captureSnapshot]
+  );
+
+  const requestHistoryCommit = useCallback((pushHistory = true) => {
+    if (pushHistory && !isHistoryNavigationRef.current) {
+      shouldCommitHistoryRef.current = true;
+    }
+  }, []);
 
   const restoreSnapshot = useCallback(
     async (snapshot: NavigationSnapshot) => {
@@ -279,7 +306,26 @@ export function App() {
         setView("catalog");
         setSelectedFilm(null);
         setDetailsStatus("idle");
+
+        if (snapshot.catalogMode === "search" && snapshot.searchQuery) {
+          setQuery(snapshot.searchQuery);
+          setStatus("loading");
+          setError(null);
+
+          try {
+            const page = await client.searchFilms(snapshot.searchQuery, 1);
+            setFilms(page.films);
+            setPage(page.page);
+            setHasMore(page.page < page.totalPages);
+            setStatus("success");
+          } catch (searchError) {
+            setError(getErrorMessage(searchError));
+            setStatus("error");
+          }
+        }
       }
+
+      pendingWatchFilmIdRef.current = null;
 
       requestAnimationFrame(() => {
         window.scrollTo({ top: snapshot.scrollY, behavior: "auto" });
@@ -288,7 +334,12 @@ export function App() {
     [authUser, client, refreshUserLists, userLists]
   );
 
-  const goBack = useCallback(async () => {
+  const goBack = useCallback(() => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
     const snapshot = navHistoryRef.current.pop();
     if (!snapshot) {
       setView("catalog");
@@ -298,7 +349,52 @@ export function App() {
       return;
     }
 
-    await restoreSnapshot(snapshot);
+    void restoreSnapshot(snapshot);
+  }, [restoreSnapshot]);
+
+  useEffect(() => {
+    if (!readHistorySnapshot(window.history.state)) {
+      replaceAppHistory(captureSnapshot());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!shouldCommitHistoryRef.current || isHistoryNavigationRef.current) {
+      return;
+    }
+
+    shouldCommitHistoryRef.current = false;
+    pushAppHistory(captureSnapshot());
+  }, [view, activeMenu, catalogMode, collectionId, selectedFilm, captureSnapshot]);
+
+  useEffect(() => {
+    const onPopState = (event: PopStateEvent) => {
+      isHistoryNavigationRef.current = true;
+
+      if (navHistoryRef.current.length > 0) {
+        navHistoryRef.current.pop();
+      }
+
+      const snapshot = readHistorySnapshot(event.state);
+      if (snapshot) {
+        void restoreSnapshot(snapshot);
+      } else {
+        setView("catalog");
+        setActiveMenu("Главная");
+        setCatalogMode("premieres");
+        setCollectionId(null);
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
+      }
+
+      window.requestAnimationFrame(() => {
+        isHistoryNavigationRef.current = false;
+      });
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, [restoreSnapshot]);
 
   const loadCatalogPage = useCallback(
@@ -437,18 +533,19 @@ export function App() {
       return;
     }
 
-    navHistoryRef.current.push(captureSnapshot());
+    beginHistoryEntry();
     setSelectedFilm(null);
     setView("catalog");
     setActiveMenu("Главная");
     setIsSearchOpen(false);
     await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
+    requestHistoryCommit();
   }
 
   async function openFilm(film: KinopoiskFilm, options?: { pushHistory?: boolean }) {
-    if (options?.pushHistory !== false) {
-      navHistoryRef.current.push(captureSnapshot());
-    }
+    const pushHistory = options?.pushHistory !== false;
+    beginHistoryEntry(pushHistory);
+    pendingWatchFilmIdRef.current = film.kinopoiskId;
 
     setError(null);
     setSelectedFilm(null);
@@ -465,6 +562,8 @@ export function App() {
     } catch (detailsError) {
       setError(getErrorMessage(detailsError));
       setDetailsStatus("error");
+    } finally {
+      requestHistoryCommit(pushHistory);
     }
   }
 
@@ -475,9 +574,8 @@ export function App() {
       return;
     }
 
-    if (options?.pushHistory !== false) {
-      navHistoryRef.current.push(captureSnapshot());
-    }
+    const pushHistory = options?.pushHistory !== false;
+    beginHistoryEntry(pushHistory);
 
     setCollectionId(id);
     setView("collection");
@@ -495,55 +593,63 @@ export function App() {
     } catch {
       setCollectionStatus("error");
     }
+
+    requestHistoryCommit(pushHistory);
   }
 
   async function handleMenuClick(item: MenuItem, options?: { pushHistory?: boolean }) {
-    if (options?.pushHistory !== false) {
-      navHistoryRef.current.push(captureSnapshot());
-    }
+    const pushHistory = options?.pushHistory !== false;
+    beginHistoryEntry(pushHistory);
+    pendingWatchFilmIdRef.current = null;
 
     setActiveMenu(item);
     setSelectedFilm(null);
     setDetailsStatus("idle");
     setIsSearchOpen(false);
 
-    if (item === "Подборки") {
-      setView("collections");
-      return;
-    }
-
-    if (item === "Профиль") {
-      setView("profile");
-      if (authUser) {
-        await refreshUserLists();
+    try {
+      if (item === "Подборки") {
+        setView("collections");
+        return;
       }
-      return;
-    }
 
-    setView("catalog");
+      if (item === "Профиль") {
+        setView("profile");
+        if (authUser) {
+          await refreshUserLists();
+        }
+        return;
+      }
 
-    if (item === "Главная") {
-      await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-      return;
-    }
+      setView("catalog");
 
-    if (item === "Фильмы") {
-      await loadCatalogPage({ mode: "films", nextPage: 1, replace: true });
-      return;
-    }
+      if (item === "Главная") {
+        await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+        return;
+      }
 
-    if (item === "Сериалы") {
-      await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true });
+      if (item === "Фильмы") {
+        await loadCatalogPage({ mode: "films", nextPage: 1, replace: true });
+        return;
+      }
+
+      if (item === "Сериалы") {
+        await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true });
+      }
+    } finally {
+      requestHistoryCommit(pushHistory);
     }
   }
 
   async function goHome() {
     navHistoryRef.current = [];
+    pendingWatchFilmIdRef.current = null;
     setView("catalog");
     setActiveMenu("Главная");
     setSelectedFilm(null);
     setDetailsStatus("idle");
     await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+    replaceAppHistory(captureSnapshot());
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -857,7 +963,9 @@ export function App() {
                 <MoviePlayers
                   players={players}
                   resolveOptions={{ allohaToken, hdvbToken, embedDomain }}
+                  trackProgress={Boolean(authUser)}
                   onPlaybackStarted={() => void markPlaybackStarted()}
+                  onPlayerProgress={(progress) => reportPosition(progress)}
                 />
                 {players.length === 0 ? (
                   <p className="hint">
