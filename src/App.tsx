@@ -484,6 +484,7 @@ export function App() {
         setStatus("success");
 
         if (shouldLoadAnotherPage && autoChaseDepth < 3) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -494,9 +495,11 @@ export function App() {
         }
       } catch (loadError) {
         setError(getErrorMessage(loadError));
-        setStatus("error");
-        setHasMore(false);
-        hasMoreRef.current = false;
+        if (replace) {
+          setStatus("error");
+          setHasMore(false);
+          hasMoreRef.current = false;
+        }
       } finally {
         setIsLoadingMore(false);
         isFetchingMoreRef.current = false;

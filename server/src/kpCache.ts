@@ -35,11 +35,23 @@ function deleteCacheKey(cacheKey: string): void {
   db.prepare("DELETE FROM kp_cache WHERE cache_key = ?").run(cacheKey);
 }
 
-export function readCache<T>(cacheKey: string, kind: CacheKind): T | null {
-  const row = db
+function readCacheRow(cacheKey: string): { payload: string; fetched_at: string } | undefined {
+  return db
     .prepare("SELECT payload, fetched_at FROM kp_cache WHERE cache_key = ?")
     .get(cacheKey) as { payload: string; fetched_at: string } | undefined;
+}
 
+function parseCachePayload<T>(cacheKey: string, payload: string): T | null {
+  try {
+    return JSON.parse(payload) as T;
+  } catch {
+    deleteCacheKey(cacheKey);
+    return null;
+  }
+}
+
+export function readCache<T>(cacheKey: string, kind: CacheKind): T | null {
+  const row = readCacheRow(cacheKey);
   if (!row) {
     return null;
   }
@@ -49,12 +61,16 @@ export function readCache<T>(cacheKey: string, kind: CacheKind): T | null {
     return null;
   }
 
-  try {
-    return JSON.parse(row.payload) as T;
-  } catch {
-    deleteCacheKey(cacheKey);
+  return parseCachePayload<T>(cacheKey, row.payload);
+}
+
+export function readCacheStale<T>(cacheKey: string): T | null {
+  const row = readCacheRow(cacheKey);
+  if (!row) {
     return null;
   }
+
+  return parseCachePayload<T>(cacheKey, row.payload);
 }
 
 export function writeCache(cacheKey: string, payload: unknown): void {
