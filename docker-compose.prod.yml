@@ -9,13 +9,13 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       DATABASE_PATH: /data/films.db
       CORS_ORIGIN: ${CORS_ORIGIN:-https://films.qzz.io,http://localhost:5173}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
-      KINOPOISK_API_KEY: ${KINOPOISK_API_KEY:-${VITE_KINOPOISK_API_KEY:-}}
-      KINOPOISK_API_BASE_URL: ${KINOPOISK_API_BASE_URL:-${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}}
     volumes:
       - films-db:/data
     healthcheck:

@@ -3,6 +3,8 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    env_file:
+      - .env
     ports:
       - "${API_HTTP_PORT:-3001}:3001"
     environment:
@@ -10,8 +12,6 @@ services:
       DATABASE_PATH: /data/films.db
       CORS_ORIGIN: ${CORS_ORIGIN:-https://films.qzz.io,http://localhost:5173}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      KINOPOISK_API_KEY: ${KINOPOISK_API_KEY:-${VITE_KINOPOISK_API_KEY:-}}
-      KINOPOISK_API_BASE_URL: ${KINOPOISK_API_BASE_URL:-${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}}
     volumes:
       - films-db:/data
     healthcheck:
