@@ -21,7 +21,7 @@ fi
 
 if [[ -z "$DEPLOY_SERVICES" ]]; then
   if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
-    DEPLOY_SERVICES="films"
+    DEPLOY_SERVICES="api films proxy"
   else
     DEPLOY_SERVICES="api films"
   fi
@@ -52,5 +52,17 @@ if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
   echo "  films/api proxy: ok"
 fi
 
+if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
+  curl -fsS "http://127.0.0.1/api/health" >/dev/null
+  echo "  proxy/api health: ok"
+fi
+
 compose -f "$COMPOSE_FILE" ps
+echo "→ Проверка Kinopoisk (нужен KINOPOISK_API_KEY в .env)"
+if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
+  curl -fsS "http://127.0.0.1/api/health/kp" >/dev/null && echo "  kinopoisk: ok" || echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+elif [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
+  films_port="${FILMS_HTTP_PORT:-8080}"
+  curl -fsS "http://127.0.0.1:${films_port}/api/health/kp" >/dev/null && echo "  kinopoisk: ok" || echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+fi
 echo "→ Деплой завершён"

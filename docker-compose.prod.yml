@@ -5,7 +5,33 @@
 #   ./deploy/bootstrap-ssl.sh
 
 services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      DATABASE_PATH: /data/films.db
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://films.qzz.io,http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      KINOPOISK_API_KEY: ${KINOPOISK_API_KEY:-${VITE_KINOPOISK_API_KEY:-}}
+      KINOPOISK_API_BASE_URL: ${KINOPOISK_API_BASE_URL:-${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}}
+    volumes:
+      - films-db:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - films-web
+    restart: unless-stopped
+
   films:
+    depends_on:
+      api:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile
@@ -15,7 +41,7 @@ services:
         VITE_KINOPOISK_API_BASE_URL: ${VITE_KINOPOISK_API_BASE_URL:-https://kinopoiskapiunofficial.tech/api}
         VITE_ALLOHA_TOKEN: ${VITE_ALLOHA_TOKEN:-}
         VITE_PLAYER_EMBED_DOMAIN: ${VITE_PLAYER_EMBED_DOMAIN:-nayteruz.github.io}
-        VITE_ENABLE_ALLOHA: ${VITE_ENABLE_ALOHA:-true}
+        VITE_ENABLE_ALLOHA: ${VITE_ENABLE_ALLOHA:-true}
         VITE_HDVB_TOKEN: ${VITE_HDVB_TOKEN:-}
         VITE_PLAYER_TEMPLATES: ${VITE_PLAYER_TEMPLATES:-}
     expose:
@@ -50,6 +76,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  films-db:
   certbot-www:
   certbot-conf:
 
