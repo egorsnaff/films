@@ -19,6 +19,7 @@ import {
   getRecentCatalog,
   getThemeList,
   getTopList,
+  probeKinopoisk,
   searchCatalog
 } from "./kinopoiskProxy.js";
 import { getRecommendations } from "./recommendations.js";
@@ -95,6 +96,18 @@ function requireUser(req: express.Request, res: express.Response, next: express.
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/health/kp", async (_req, res) => {
+  const result = await probeKinopoisk();
+
+  if (!result.ok) {
+    const status = result.keyConfigured ? 502 : 503;
+    res.status(status).json(result);
+    return;
+  }
+
+  res.json(result);
 });
 
 function handleKpError(error: unknown, res: express.Response) {
@@ -325,6 +338,17 @@ app.delete("/lists/:kinopoiskId", requireUser, (req, res) => {
 
   deleteUserFilm(user.id, kinopoiskId);
   res.status(204).send();
+});
+
+app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  console.error(error);
+  const message = error instanceof Error ? error.message : "Internal server error";
+  res.status(500).json({ error: message });
 });
 
 app.listen(port, () => {

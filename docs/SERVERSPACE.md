@@ -402,11 +402,26 @@ docker-compose logs --tail=100 api films
 ```bash
 cd /opt/films
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs films
-docker compose -f docker-compose.prod.yml logs proxy
+docker compose -f docker-compose.prod.yml logs api --tail=80
+docker compose -f docker-compose.prod.yml logs films --tail=40
+docker compose -f docker-compose.prod.yml logs proxy --tail=40
 ```
 
-Контейнер `films` должен быть в статусе `running`.
+Контейнеры `api` и `films` должны быть в статусе `running`.
+
+Если `/api/health` отвечает `{"ok":true}`, а `/api/kp/*` даёт 502:
+
+```bash
+grep KINOPOISK_API_KEY .env
+curl -s http://127.0.0.1/api/health/kp
+```
+
+| Симптом | Причина | Решение |
+|---------|---------|---------|
+| `keyConfigured: false` | ключ не передан в контейнер `api` | добавить `KINOPOISK_API_KEY=...` в `.env`, пересобрать `api` |
+| `Неверный Kinopoisk API ключ` | старый ключ в `.env` | вставить новый ключ, `docker compose -f docker-compose.prod.yml up -d --build api` |
+| `api` нет в `ps` | prod-стек без API | обновить репозиторий (в `docker-compose.prod.yml` есть сервис `api`), `./deploy/update.sh` |
+| `films` 502, `api` OK локально | nginx не видит `api` | `docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d --build` |
 
 ---
 

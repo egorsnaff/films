@@ -31,6 +31,10 @@ db.exec(`
   );
 `);
 
+function deleteCacheKey(cacheKey: string): void {
+  db.prepare("DELETE FROM kp_cache WHERE cache_key = ?").run(cacheKey);
+}
+
 export function readCache<T>(cacheKey: string, kind: CacheKind): T | null {
   const row = db
     .prepare("SELECT payload, fetched_at FROM kp_cache WHERE cache_key = ?")
@@ -45,7 +49,12 @@ export function readCache<T>(cacheKey: string, kind: CacheKind): T | null {
     return null;
   }
 
-  return JSON.parse(row.payload) as T;
+  try {
+    return JSON.parse(row.payload) as T;
+  } catch {
+    deleteCacheKey(cacheKey);
+    return null;
+  }
 }
 
 export function writeCache(cacheKey: string, payload: unknown): void {
@@ -110,8 +119,21 @@ export function readFilmCache(kinopoiskId: number): CachedFilm | null {
     rating: row.rating ?? undefined,
     description: row.description ?? undefined,
     filmLengthMinutes: row.film_length_minutes ?? undefined,
-    genres: row.genres ? (JSON.parse(row.genres) as string[]) : undefined
+    genres: parseGenresJson(row.genres)
   };
+}
+
+function parseGenresJson(value: string | null): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as string[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function writeFilmCache(film: CachedFilm): void {
@@ -179,7 +201,7 @@ export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
     rating: row.rating ?? undefined,
     description: row.description ?? undefined,
     filmLengthMinutes: row.film_length_minutes ?? undefined,
-    genres: row.genres ? (JSON.parse(row.genres) as string[]) : undefined
+    genres: parseGenresJson(row.genres)
   };
 }
 

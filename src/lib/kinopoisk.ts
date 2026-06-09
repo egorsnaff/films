@@ -70,7 +70,17 @@ export function createKinopoiskClient({
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(payload?.error ?? `Kinopoisk proxy failed with status ${response.status}`);
+      if (payload?.error) {
+        throw new Error(payload.error);
+      }
+
+      if (response.status === 502 || response.status === 503) {
+        throw new Error(
+          "Сервер не смог связаться с Kinopoisk API. Проверьте KINOPOISK_API_KEY на сервере и перезапустите контейнер api."
+        );
+      }
+
+      throw new Error(`Kinopoisk proxy failed with status ${response.status}`);
     }
 
     return (await response.json()) as T;

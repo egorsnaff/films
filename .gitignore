@@ -8,6 +8,7 @@ coverage/
 vite.config.d.ts
 vite.config.js
 deploy/proxy/active/*.conf
+data/
 server/data/
 server/node_modules/
 server/dist/

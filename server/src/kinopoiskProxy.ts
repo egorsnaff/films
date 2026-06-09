@@ -40,6 +40,15 @@ const THEME_TYPES = new Set([
   "TOP_POPULAR_SERIES"
 ]);
 
+export function isKinopoiskKeyConfigured(): boolean {
+  const apiKey =
+    process.env.KINOPOISK_API_KEY ??
+    process.env.VITE_KINOPOISK_API_KEY ??
+    "";
+
+  return Boolean(apiKey.trim());
+}
+
 function getApiKey(): string {
   const apiKey =
     process.env.KINOPOISK_API_KEY ??
@@ -71,7 +80,21 @@ async function requestKinopoisk<T>(path: string): Promise<T> {
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message ?? `Kinopoisk API failed with status ${response.status}`);
+    const details = payload?.message ?? `Kinopoisk API failed with status ${response.status}`;
+
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`Неверный Kinopoisk API ключ: ${details}`);
+    }
+
+    if (response.status === 402) {
+      throw new Error(`Лимит Kinopoisk API исчерпан: ${details}`);
+    }
+
+    if (response.status === 429) {
+      throw new Error(`Превышен лимит запросов Kinopoisk API: ${details}`);
+    }
+
+    throw new Error(details);
   }
 
   return (await response.json()) as T;
@@ -213,6 +236,38 @@ export async function getThemeList(
   }
 
   return { page: data, fromCache };
+}
+
+export async function probeKinopoisk(): Promise<{
+  ok: boolean;
+  keyConfigured: boolean;
+  fromCache: boolean;
+  error?: string;
+}> {
+  if (!isKinopoiskKeyConfigured()) {
+    return {
+      ok: false,
+      keyConfigured: false,
+      fromCache: false,
+      error: "KINOPOISK_API_KEY не настроен на сервере"
+    };
+  }
+
+  try {
+    const result = await getRecentCatalog(1, "FILM");
+    return {
+      ok: true,
+      keyConfigured: true,
+      fromCache: result.fromCache
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      keyConfigured: true,
+      fromCache: false,
+      error: error instanceof Error ? error.message : "Kinopoisk probe failed"
+    };
+  }
 }
 
 export async function ensureFilmsCached(
