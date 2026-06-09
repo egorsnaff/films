@@ -1,5 +1,6 @@
 import {
   readCache,
+  readCacheStale,
   readFilmCache,
   writeCache,
   writeFilmCache,
@@ -17,6 +18,7 @@ type KinopoiskCatalogPage = {
 type SearchFilmResponse = {
   films?: Array<Record<string, unknown>>;
   items?: Array<Record<string, unknown>>;
+  total?: number;
   totalPages?: number;
   pagesCount?: number;
 };
@@ -70,7 +72,16 @@ function getBaseUrl(): string {
   ).replace(/\/+$/, "");
 }
 
-async function requestKinopoisk<T>(path: string): Promise<T> {
+const KP_RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
+const KP_MAX_RETRIES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function requestKinopoisk<T>(path: string, attempt = 0): Promise<T> {
   const response = await fetch(`${getBaseUrl()}${path}`, {
     headers: {
       Accept: "application/json",
@@ -81,6 +92,11 @@ async function requestKinopoisk<T>(path: string): Promise<T> {
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;
     const details = payload?.message ?? `Kinopoisk API failed with status ${response.status}`;
+
+    if (KP_RETRYABLE_STATUSES.has(response.status) && attempt < KP_MAX_RETRIES) {
+      await sleep(800 * (attempt + 1));
+      return requestKinopoisk<T>(path, attempt + 1);
+    }
 
     if (response.status === 401 || response.status === 403) {
       throw new Error(`Неверный Kinopoisk API ключ: ${details}`);
@@ -110,9 +126,18 @@ async function cachedRequest<T>(
     return { data: cached, fromCache: true };
   }
 
-  const data = await fetcher();
-  writeCache(cacheKey, data);
-  return { data, fromCache: false };
+  try {
+    const data = await fetcher();
+    writeCache(cacheKey, data);
+    return { data, fromCache: false };
+  } catch (error) {
+    const stale = readCacheStale<T>(cacheKey);
+    if (stale) {
+      return { data: stale, fromCache: true };
+    }
+
+    throw error;
+  }
 }
 
 export async function getFilmDetails(kinopoiskId: number): Promise<{ film: CachedFilm; fromCache: boolean }> {
@@ -356,15 +381,39 @@ export async function ensureFilmsCached(
   return result;
 }
 
+export function resolveCatalogTotalPages(
+  data: SearchFilmResponse,
+  page: number,
+  itemCount: number
+): number {
+  return resolveTotalPages(data, page, itemCount);
+}
+
+function resolveTotalPages(data: SearchFilmResponse, page: number, itemCount: number): number {
+  const explicit = toNumber(data.totalPages ?? data.pagesCount);
+  if (explicit && explicit > 0) {
+    return explicit;
+  }
+
+  const totalItems = toNumber(data.total);
+  if (totalItems && itemCount > 0) {
+    return Math.max(1, Math.ceil(totalItems / itemCount));
+  }
+
+  return itemCount > 0 ? page : Math.max(1, page);
+}
+
 function mapCatalogPage(data: SearchFilmResponse, page: number): KinopoiskCatalogPage {
   const films = (data.items ?? data.films ?? [])
     .map((raw) => mapFilmSummary(raw))
     .filter((film): film is CachedFilm => film !== null);
 
+  const totalPages = resolveTotalPages(data, page, films.length);
+
   return {
     films,
     page,
-    totalPages: toNumber(data.totalPages ?? data.pagesCount) ?? 1
+    totalPages
   };
 }
 
