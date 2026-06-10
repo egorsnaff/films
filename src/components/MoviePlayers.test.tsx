@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { MoviePlayers } from "./MoviePlayers";
 
 describe("MoviePlayers", () => {
-  it("renders safe player tabs and switches the active iframe", async () => {
+  it("renders the primary player and switches through the fallback panel", async () => {
     const user = userEvent.setup();
 
     render(
@@ -30,22 +30,16 @@ describe("MoviePlayers", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Трейлер" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.getByText("Трейлер")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Bad" })).not.toBeInTheDocument();
     expect(screen.getByTitle("Трейлер")).toHaveAttribute(
       "src",
       "https://www.youtube.com/embed/abc"
     );
 
+    await user.click(screen.getByRole("button", { name: /Запасные плееры/i }));
     await user.click(screen.getByRole("button", { name: "Сервер" }));
 
-    expect(screen.getByRole("button", { name: "Сервер" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
     expect(screen.getByTitle("Сервер")).toHaveAttribute(
       "src",
       "https://video.sibnet.ru/shell.php?videoid=123"
@@ -65,7 +59,7 @@ describe("MoviePlayers", () => {
     expect(screen.getByText("Плееры пока недоступны")).toBeInTheDocument();
   });
 
-  it("loads async player iframe when its tab is selected", async () => {
+  it("loads async player iframe when a fallback player is selected", async () => {
     const user = userEvent.setup();
     let resolvePlayer!: (value: string) => void;
     const resolveEmbedUrl = vi.fn(
@@ -92,6 +86,7 @@ describe("MoviePlayers", () => {
       />
     );
 
+    await user.click(screen.getByRole("button", { name: /Запасные плееры/i }));
     await user.click(screen.getByRole("button", { name: "Coll" }));
 
     expect(screen.getByText("Загрузка плеера...")).toBeInTheDocument();

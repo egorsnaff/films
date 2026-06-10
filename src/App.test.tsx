@@ -127,7 +127,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.getByText("Новинки для вечера")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Загрузить ещё" })).toBeInTheDocument();
+    expect(screen.getByText("Листайте дальше")).toBeInTheDocument();
   });
 
   it("hides premieres without posters on the home page", async () => {
@@ -168,8 +168,29 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
-  it("loads the next catalog page when the load-more button is clicked", async () => {
-    const user = userEvent.setup();
+  it("loads the next catalog page when the sentinel enters the viewport", async () => {
+    class MockIntersectionObserver {
+      private readonly callback: IntersectionObserverCallback;
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+      }
+
+      observe() {
+        this.callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver
+        );
+      }
+
+      unobserve() {}
+      disconnect() {}
+    }
+
+    const originalIntersectionObserver = window.IntersectionObserver;
+    window.IntersectionObserver =
+      MockIntersectionObserver as unknown as typeof IntersectionObserver;
+
     const fetchMock = createFetchMock((url) => {
       if (url.includes("page=2")) {
         return catalogResponse(
@@ -205,12 +226,17 @@ describe("App", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<App />);
+    try {
+      render(<App />);
 
-    expect(await screen.findByText("Первая страница")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Загрузить ещё" }));
-    expect(await screen.findByText("Вторая страница")).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
+      expect(await screen.findByText("Первая страница")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Вторая страница")).toBeInTheDocument();
+      });
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
+    } finally {
+      window.IntersectionObserver = originalIntersectionObserver;
+    }
   });
 
   it("opens the collections page from the menu", async () => {
