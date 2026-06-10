@@ -5,6 +5,7 @@ const TTL_MS = {
   catalog: 6 * 60 * 60 * 1000,
   search: 2 * 60 * 60 * 1000,
   list: 24 * 60 * 60 * 1000,
+  filters: 30 * 24 * 60 * 60 * 1000,
   recommendations: 24 * 60 * 60 * 1000
 } as const;
 

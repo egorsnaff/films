@@ -42,7 +42,7 @@ export function useCatalogInfiniteScroll({
 
         onLoadMoreRef.current();
       },
-      { root: null, rootMargin: "0px", threshold: 1 }
+      { root: null, rootMargin: "480px 0px 240px 0px", threshold: 0 }
     );
 
     observer.observe(sentinel);

@@ -1,5 +1,7 @@
-export type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile";
-export type CatalogMode = "premieres" | "search" | "films" | "serials";
+import type { BrowseMedia, CatalogFilter } from "./catalogFilter";
+
+export type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile" | "browse";
+export type CatalogMode = "premieres" | "search" | "films" | "serials" | "filtered";
 export type MenuItem = "Главная" | "Фильмы" | "Сериалы" | "Подборки" | "Профиль";
 
 export type NavigationSnapshot = {
@@ -9,6 +11,8 @@ export type NavigationSnapshot = {
   collectionId: string | null;
   filmId: number | null;
   searchQuery?: string;
+  browseMedia?: BrowseMedia;
+  catalogFilter?: CatalogFilter | null;
   scrollY: number;
 };
 
@@ -26,7 +30,12 @@ export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
       return "К подборкам";
     case "profile":
       return "В кабинет";
+    case "browse":
+      return snapshot.browseMedia === "serials" ? "К сериалам" : "К фильмам";
     case "catalog":
+      if (snapshot.catalogMode === "filtered") {
+        return "К каталогу";
+      }
       if (snapshot.catalogMode === "search") {
         return "К результатам";
       }

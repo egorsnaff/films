@@ -291,6 +291,95 @@ async function fetchThemeList(
   return { page: data, fromCache };
 }
 
+type FiltersResponse = {
+  genres?: Array<{ id: number; genre: string }>;
+  countries?: Array<{ id: number; country: string }>;
+};
+
+export type FilterCatalogParams = {
+  type: "FILM" | "TV_SERIES";
+  page: number;
+  genreId?: number;
+  countryId?: number;
+  yearFrom?: number;
+  yearTo?: number;
+  order?: "RATING" | "YEAR" | "NUM_VOTE";
+};
+
+export async function getKinopoiskFilters(): Promise<{
+  genres: Array<{ id: number; genre: string }>;
+  countries: Array<{ id: number; country: string }>;
+  fromCache: boolean;
+}> {
+  const cacheKey = "filters:metadata";
+  const { data, fromCache } = await cachedRequest(cacheKey, "filters", async () => {
+    const response = await requestKinopoisk<FiltersResponse>("/v2.2/films/filters");
+    return {
+      genres: response.genres ?? [],
+      countries: response.countries ?? []
+    };
+  });
+
+  return {
+    genres: data.genres,
+    countries: data.countries,
+    fromCache
+  };
+}
+
+export async function getFilterCatalog(
+  params: FilterCatalogParams
+): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+  const order = params.order ?? "RATING";
+  const cacheKey = [
+    "filter",
+    params.type,
+    params.genreId ?? "-",
+    params.countryId ?? "-",
+    params.yearFrom ?? "-",
+    params.yearTo ?? "-",
+    order,
+    params.page
+  ].join(":");
+
+  const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () => {
+    const searchParams = new URLSearchParams({
+      type: params.type,
+      order,
+      page: String(params.page),
+      ratingFrom: "5",
+      ratingTo: "10"
+    });
+
+    if (params.genreId) {
+      searchParams.set("genres", String(params.genreId));
+    }
+
+    if (params.countryId) {
+      searchParams.set("countries", String(params.countryId));
+    }
+
+    if (params.yearFrom) {
+      searchParams.set("yearFrom", String(params.yearFrom));
+    }
+
+    if (params.yearTo) {
+      searchParams.set("yearTo", String(params.yearTo));
+    }
+
+    const response = await requestKinopoisk<SearchFilmResponse>(
+      `/v2.2/films?${searchParams.toString()}`
+    );
+    return mapCatalogPage(response, params.page);
+  });
+
+  for (const film of data.films) {
+    writeFilmCache(film);
+  }
+
+  return { page: data, fromCache };
+}
+
 export async function probeKinopoisk(): Promise<{
   ok: boolean;
   keyConfigured: boolean;
