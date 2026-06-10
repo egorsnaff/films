@@ -10,6 +10,7 @@ import { MoviePlayers } from "./components/MoviePlayers";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
+import { useCatalogInfiniteScroll } from "./hooks/useCatalogInfiniteScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
 import { filmCollections, getCollectionById } from "./data/collections";
 import {
@@ -63,23 +64,23 @@ const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы
 const catalogHeadings: Record<CatalogMode, { eyebrow: string; title: string; text: string }> = {
   premieres: {
     eyebrow: "сеанс",
-    title: "Новинки для вечера",
-    text: "Свежая подборка фильмов с хорошим рейтингом. Лента сама подгружает следующую пачку при скролле."
+    title: "Популярное сейчас",
+    text: "Лента как в HomeTV: подгружается сама, пока вы листаете вниз."
   },
   search: {
     eyebrow: "search results",
     title: "Результаты поиска",
-    text: "Подборка по вашему запросу. Откройте карточку, чтобы перейти к плеерам."
+    text: "Показываем первую страницу результатов. Уточните запрос, если нужен другой фильм."
   },
   films: {
     eyebrow: "films",
     title: "Фильмы",
-    text: "Подборка полнометражных новинок. Листайте вниз, чтобы загрузить ещё."
+    text: "Популярные полнометражные фильмы. Лента подгружается при скролле."
   },
   serials: {
     eyebrow: "series",
     title: "Сериалы",
-    text: "Свежие сериалы с высоким рейтингом. Добавляйте в «Жду продолжения» из страницы просмотра."
+    text: "Популярные сериалы. Лента подгружается при скролле."
   }
 };
 
@@ -114,7 +115,6 @@ export function App() {
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
-  const lastLoadMoreAtRef = useRef(0);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
   const hasMoreRef = useRef(hasMore);
@@ -389,7 +389,8 @@ export function App() {
             const page = await client.searchFilms(snapshot.searchQuery, 1);
             setFilms(page.films);
             setPage(page.page);
-            setHasMore(page.page < page.totalPages);
+            setHasMore(false);
+            hasMoreRef.current = false;
             setStatus("success");
           } catch (searchError) {
             setError(getErrorMessage(searchError));
@@ -506,13 +507,7 @@ export function App() {
       setError(null);
 
       try {
-        const catalogPage =
-          mode === "search"
-            ? await client.searchFilms(queryRef.current, nextPage)
-            : await client.getRecentFilms(
-                nextPage,
-                mode === "serials" ? "TV_SERIES" : "FILM"
-              );
+        const catalogPage = await fetchCatalogPage(client, mode, nextPage, queryRef.current);
 
         const previousFilms = filmsRef.current;
         const merged = replace ? catalogPage.films : mergeFilms(previousFilms, catalogPage.films);
@@ -533,7 +528,7 @@ export function App() {
         setTotalPages(catalogPage.totalPages);
         setCatalogMode(mode);
         catalogModeRef.current = mode;
-        const nextHasMore = catalogPage.page < catalogPage.totalPages;
+        const nextHasMore = mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
         setHasMore(nextHasMore);
         hasMoreRef.current = nextHasMore;
         setStatus("success");
@@ -564,7 +559,11 @@ export function App() {
   );
 
   const loadNextPage = useCallback(async () => {
-    if (!hasMoreRef.current || isFetchingMoreRef.current) {
+    if (
+      catalogModeRef.current === "search" ||
+      !hasMoreRef.current ||
+      isFetchingMoreRef.current
+    ) {
       return;
     }
 
@@ -579,55 +578,19 @@ export function App() {
   const loadNextPageRef = useRef(loadNextPage);
   loadNextPageRef.current = loadNextPage;
 
-  const maybeLoadMoreFromScroll = useCallback(() => {
-    if (view !== "catalog" || !hasMoreRef.current || isFetchingMoreRef.current) {
-      return;
-    }
-
-    const now = Date.now();
-    if (now - lastLoadMoreAtRef.current < 1200) {
-      return;
-    }
-
-    const target = loadMoreRef.current;
-    if (!target) {
-      return;
-    }
-
-    const rect = target.getBoundingClientRect();
-    if (rect.top <= window.innerHeight + 320) {
-      lastLoadMoreAtRef.current = now;
-      void loadNextPageRef.current();
-    }
-  }, [view]);
-
   useEffect(() => {
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
   }, [loadCatalogPage]);
 
-  useEffect(() => {
-    if (view !== "catalog") {
-      return;
-    }
-
-    const sentinel = loadMoreRef.current;
-    if (!sentinel) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          maybeLoadMoreFromScroll();
-        }
-      },
-      { root: null, rootMargin: "360px 0px", threshold: 0 }
-    );
-
-    observer.observe(sentinel);
-
-    return () => observer.disconnect();
-  }, [maybeLoadMoreFromScroll, view, catalogGridFilms.length, isLoadingMore, hasMore, page]);
+  useCatalogInfiniteScroll({
+    enabled: view === "catalog",
+    catalogMode,
+    hasMore,
+    isLoadingMore,
+    sentinelRef: loadMoreRef,
+    onLoadMore: () => void loadNextPageRef.current(),
+    resetKey: catalogGridFilms.length
+  });
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -915,22 +878,32 @@ export function App() {
             />
           ) : null}
 
-          <div
-            ref={loadMoreRef}
-            className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
-            aria-live="polite"
-          >
-            {isLoadingMore ? (
-              <>
-                <span className="load-more-sentinel__pulse" aria-hidden="true" />
-                <span>Загружаем следующую подборку...</span>
-              </>
-            ) : hasMore ? (
-              <span className="load-more-sentinel__hint">Листайте дальше</span>
-            ) : catalogGridFilms.length > 0 ? (
-              <span>Это всё на сейчас</span>
-            ) : null}
-          </div>
+          {isLoadingMore && catalogMode !== "search" && catalogGridFilms.length > 0 ? (
+            <div className="catalog-preload-row" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <span key={index} className="film-skeleton" />
+              ))}
+            </div>
+          ) : null}
+
+          {catalogMode !== "search" ? (
+            <div
+              ref={loadMoreRef}
+              className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
+              aria-live="polite"
+            >
+              {isLoadingMore ? (
+                <>
+                  <span className="load-more-sentinel__pulse" aria-hidden="true" />
+                  <span>Загружаем следующую подборку...</span>
+                </>
+              ) : hasMore ? (
+                <span className="load-more-sentinel__hint">Листайте дальше</span>
+              ) : catalogGridFilms.length > 0 ? (
+                <span>Это всё на сейчас</span>
+              ) : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -1143,6 +1116,26 @@ export function App() {
       </main>
     </>
   );
+}
+
+async function fetchCatalogPage(
+  client: ReturnType<typeof createKinopoiskClient>,
+  mode: CatalogMode,
+  nextPage: number,
+  keyword: string
+) {
+  if (mode === "search") {
+    return client.searchFilms(keyword, nextPage);
+  }
+
+  const collectionType =
+    mode === "premieres"
+      ? "TOP_POPULAR_ALL"
+      : mode === "films"
+        ? "TOP_POPULAR_MOVIES"
+        : "TOP_POPULAR_SERIES";
+
+  return client.getThemeFilms(collectionType, nextPage);
 }
 
 function countVisibleFilms(
