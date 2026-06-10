@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
 import { BackButton } from "./components/BackButton";
+import { BrandMark } from "./components/BrandMark";
+import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
@@ -59,7 +61,7 @@ const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы
 
 const catalogHeadings: Record<CatalogMode, { eyebrow: string; title: string; text: string }> = {
   premieres: {
-    eyebrow: "premieres",
+    eyebrow: "сеанс",
     title: "Новинки для вечера",
     text: "Свежая подборка фильмов с хорошим рейтингом. Лента сама подгружает следующую пачку при скролле."
   },
@@ -118,6 +120,7 @@ export function App() {
   const queryRef = useRef(query);
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   const pendingWatchFilmIdRef = useRef<number | null>(null);
+  const [topbarScrolled, setTopbarScrolled] = useState(false);
   const isHistoryNavigationRef = useRef(false);
   const shouldCommitHistoryRef = useRef(false);
   queryRef.current = query;
@@ -188,7 +191,17 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.title = "films";
+    document.title = "Сеанс — фильмы и сериалы";
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setTopbarScrolled(window.scrollY > 36);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -717,18 +730,17 @@ export function App() {
   const heading = catalogHeadings[catalogMode];
 
   return (
-    <main className="app-shell">
-      <div className="ambient ambient-left" aria-hidden="true" />
-      <div className="ambient ambient-right" aria-hidden="true" />
+    <>
+      <CursorGlow />
+      <main className="app-shell">
+        <div className="ambient ambient-left" aria-hidden="true" />
+        <div className="ambient ambient-right" aria-hidden="true" />
 
-      <header
-        className={`topbar${isSearchOpen ? " topbar--search-active" : ""}`}
-        aria-label="Навигация"
-      >
-        <button className="brand-mark" type="button" onClick={() => void goHome()}>
-          <span className="brand-mark__glyph">F</span>
-          <strong>films</strong>
-        </button>
+        <header
+          className={`topbar${isSearchOpen ? " topbar--search-active" : ""}${topbarScrolled ? " topbar--scrolled" : ""}`}
+          aria-label="Навигация"
+        >
+          <BrandMark onClick={() => void goHome()} />
         {isSearchOpen ? (
           <form
             className="topbar__search"
@@ -784,8 +796,9 @@ export function App() {
         </div>
       </header>
 
-      {error ? <p className="error-message">{error}</p> : null}
+        {error ? <p className="error-message">{error}</p> : null}
 
+        <div key={view} className="page-stage page-stage--enter">
       {view === "catalog" ? (
         <section className="home-view" id="main">
           <div className="section-heading section-heading--home">
@@ -828,7 +841,11 @@ export function App() {
           ) : null}
 
           {visibleFilms.length > 0 ? (
-            <FilmGrid films={visibleFilms} onSelect={(film) => void openFilm(film)} />
+            <FilmGrid
+              films={visibleFilms}
+              animate={status === "success"}
+              onSelect={(film) => void openFilm(film)}
+            />
           ) : null}
 
           <div ref={loadMoreRef} className="load-more-sentinel" aria-live="polite">
@@ -974,7 +991,7 @@ export function App() {
           ) : null}
           {selectedFilm ? (
             <article
-              className="watch-hero"
+              className="watch-hero watch-hero--parallax"
               style={
                 selectedFilm.posterUrl
                   ? ({ "--watch-poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
@@ -1055,7 +1072,9 @@ export function App() {
           ) : null}
         </section>
       ) : null}
-    </main>
+        </div>
+      </main>
+    </>
   );
 }
 

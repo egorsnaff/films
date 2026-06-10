@@ -22,7 +22,28 @@ export function WatchListControls({
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedPulse, setSavedPulse] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const pulseTimerRef = useRef<number | null>(null);
+
+  function flashSaved() {
+    setSavedPulse(true);
+    if (pulseTimerRef.current) {
+      window.clearTimeout(pulseTimerRef.current);
+    }
+    pulseTimerRef.current = window.setTimeout(() => {
+      setSavedPulse(false);
+      pulseTimerRef.current = null;
+    }, 900);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pulseTimerRef.current) {
+        window.clearTimeout(pulseTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     function handlePointer(event: MouseEvent) {
@@ -52,6 +73,7 @@ export function WatchListControls({
       });
       if (item) {
         onStatusChange?.(item.status);
+        flashSaved();
       }
       setIsOpen(false);
     } catch (saveError) {
@@ -72,6 +94,7 @@ export function WatchListControls({
       } else {
         const item = await siteApi.setFilmStatus(kinopoiskId, status);
         onStatusChange?.(item.status);
+        flashSaved();
       }
       setIsOpen(false);
     } catch (saveError) {
@@ -94,7 +117,7 @@ export function WatchListControls({
     <div className="watch-list-menu" ref={rootRef}>
       <button
         type="button"
-        className="watch-list-menu__trigger"
+        className={`watch-list-menu__trigger${savedPulse ? " watch-list-menu__trigger--saved" : ""}`}
         aria-label="Действия со списком"
         aria-expanded={isOpen}
         disabled={isSaving}
