@@ -7,6 +7,7 @@ import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
+import { PosterImage } from "./components/PosterImage";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
@@ -1039,10 +1040,11 @@ export function App() {
             >
               <header className="watch-hero__identity">
                 {selectedFilm.posterUrl ? (
-                  <img
+                  <PosterImage
                     className="watch-hero__poster"
                     src={selectedFilm.posterUrl}
                     alt={`Постер ${selectedFilm.title}`}
+                    loading="eager"
                   />
                 ) : null}
                 <div className="watch-hero__copy">

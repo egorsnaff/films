@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
+import { PosterImage } from "./PosterImage";
 
 type FilmShelfProps = {
   title: string;
@@ -49,7 +50,7 @@ export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: 
             >
               <span className="film-shelf__poster">
                 {film.posterUrl ? (
-                  <img src={film.posterUrl} alt="" loading="lazy" />
+                  <PosterImage src={film.posterUrl} alt={`Постер ${film.title}`} />
                 ) : (
                   <span className="poster-placeholder">Нет постера</span>
                 )}

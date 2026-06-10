@@ -658,11 +658,180 @@ h1 em {
   pointer-events: none;
 }
 
+.film-card__poster .poster-image,
+.film-shelf__poster .poster-image,
+.watch-hero__identity .poster-image {
+  position: absolute;
+  inset: 0;
+}
+
 .film-card__poster img,
+.film-shelf__poster img,
 .poster-placeholder {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.poster-image {
+  display: block;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 18%, rgb(240 183 91 / 14%), transparent 42%),
+    linear-gradient(165deg, rgb(28 24 20 / 96%), rgb(10 11 14 / 98%));
+}
+
+.poster-image__stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transition: opacity 360ms ease, visibility 360ms ease;
+}
+
+.poster-image__glow {
+  position: absolute;
+  inset: 18% 24%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(240 183 91 / 22%), transparent 68%);
+  filter: blur(18px);
+  animation: poster-glow 2.8s ease-in-out infinite;
+}
+
+.poster-image__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 4%) 1px, transparent 1px);
+  background-size: 3px 3px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.poster-image__shimmer {
+  position: absolute;
+  inset: -40% -70%;
+  background: linear-gradient(
+    108deg,
+    transparent 36%,
+    rgb(255 244 220 / 10%) 47%,
+    rgb(240 183 91 / 24%) 50%,
+    rgb(255 244 220 / 10%) 53%,
+    transparent 64%
+  );
+  animation: poster-shimmer 1.65s ease-in-out infinite;
+}
+
+.poster-image__perfs {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 10px;
+  opacity: 0.34;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0%) 0 5px,
+      rgb(255 255 255 / 72%) 5px 8px,
+      rgb(255 255 255 / 0%) 8px 13px
+    );
+}
+
+.poster-image__perfs--left {
+  left: 8px;
+}
+
+.poster-image__perfs--right {
+  right: 8px;
+}
+
+.poster-image__mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgb(240 183 91 / 72%);
+}
+
+.poster-image__mark svg {
+  width: 34px;
+  height: 34px;
+  filter: drop-shadow(0 0 18px rgb(240 183 91 / 28%));
+  animation: poster-mark 2.4s ease-in-out infinite;
+}
+
+.poster-image__img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.03);
+  transition:
+    opacity 520ms ease,
+    transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.poster-image--loaded .poster-image__stage {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.poster-image--loaded .poster-image__img {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.poster-image--error .poster-image__stage {
+  opacity: 1;
+  visibility: visible;
+}
+
+.poster-image--error .poster-image__shimmer {
+  animation: none;
+  opacity: 0.35;
+}
+
+.poster-image--error .poster-image__mark {
+  color: rgb(167 160 145 / 72%);
+}
+
+@keyframes poster-shimmer {
+  from {
+    transform: translateX(-12%);
+  }
+
+  to {
+    transform: translateX(12%);
+  }
+}
+
+@keyframes poster-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes poster-mark {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 0.95;
+    transform: translateY(-2px);
+  }
 }
 
 .poster-placeholder {
@@ -1535,13 +1704,21 @@ h1 em {
   align-items: start;
 }
 
-.watch-hero__poster {
+.watch-hero__identity > .poster-image {
+  position: relative;
+  inset: auto;
   width: 100%;
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 20px;
   aspect-ratio: 2 / 3;
-  object-fit: cover;
   box-shadow: 0 22px 44px rgb(0 0 0 / 42%);
+}
+
+.watch-hero__poster {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .watch-hero__eyebrow {

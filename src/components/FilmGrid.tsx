@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
+import { PosterImage } from "./PosterImage";
 
 type FilmGridProps = {
   films: KinopoiskFilm[];
@@ -23,7 +24,7 @@ export function FilmGrid({ films, animate = true, onSelect }: FilmGridProps) {
         >
           <span className="film-card__poster">
             {film.posterUrl ? (
-              <img src={film.posterUrl} alt={`Постер ${film.title}`} loading="lazy" />
+              <PosterImage src={film.posterUrl} alt={`Постер ${film.title}`} />
             ) : (
               <span className="poster-placeholder">Нет постера</span>
             )}
