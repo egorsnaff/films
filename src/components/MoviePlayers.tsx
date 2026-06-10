@@ -115,7 +115,7 @@ export function MoviePlayers({
             aria-controls="player-fallback-panel"
             onClick={() => setShowFallbacks((current) => !current)}
           >
-            Запасные плееры
+            Другие плееры
             <span className="player-fallback-toggle__count">{fallbackPlayers.length}</span>
           </button>
         ) : null}
@@ -126,7 +126,7 @@ export function MoviePlayers({
           id="player-fallback-panel"
           className="player-fallback-panel"
           role="group"
-          aria-label="Запасные плееры"
+          aria-label="Другие плееры"
         >
           {safePlayers.map((player) => (
             <button

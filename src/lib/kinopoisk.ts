@@ -7,6 +7,7 @@ export type KinopoiskFilm = {
   year?: string;
   posterUrl?: string;
   rating?: string;
+  imdbRating?: string;
 };
 
 export type KinopoiskFilmDetails = KinopoiskFilm & {

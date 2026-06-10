@@ -24,12 +24,19 @@ db.exec(`
     year TEXT,
     poster_url TEXT,
     rating TEXT,
+    imdb_rating TEXT,
     description TEXT,
     film_length_minutes INTEGER,
     genres TEXT,
     fetched_at TEXT NOT NULL
   );
 `);
+
+try {
+  db.exec("ALTER TABLE films_cache ADD COLUMN imdb_rating TEXT");
+} catch {
+  // Column already exists.
+}
 
 function deleteCacheKey(cacheKey: string): void {
   db.prepare("DELETE FROM kp_cache WHERE cache_key = ?").run(cacheKey);
@@ -90,6 +97,7 @@ export type CachedFilm = {
   year?: string;
   posterUrl?: string;
   rating?: string;
+  imdbRating?: string;
   description?: string;
   filmLengthMinutes?: number;
   genres?: string[];
@@ -98,7 +106,7 @@ export type CachedFilm = {
 export function readFilmCache(kinopoiskId: number): CachedFilm | null {
   const row = db
     .prepare(
-      `SELECT kinopoisk_id, title, original_title, year, poster_url, rating,
+      `SELECT kinopoisk_id, title, original_title, year, poster_url, rating, imdb_rating,
               description, film_length_minutes, genres, fetched_at
        FROM films_cache WHERE kinopoisk_id = ?`
     )
@@ -110,6 +118,7 @@ export function readFilmCache(kinopoiskId: number): CachedFilm | null {
         year: string | null;
         poster_url: string | null;
         rating: string | null;
+        imdb_rating: string | null;
         description: string | null;
         film_length_minutes: number | null;
         genres: string | null;
@@ -133,6 +142,7 @@ export function readFilmCache(kinopoiskId: number): CachedFilm | null {
     year: row.year ?? undefined,
     posterUrl: row.poster_url ?? undefined,
     rating: row.rating ?? undefined,
+    imdbRating: row.imdb_rating ?? undefined,
     description: row.description ?? undefined,
     filmLengthMinutes: row.film_length_minutes ?? undefined,
     genres: parseGenresJson(row.genres)
@@ -155,15 +165,16 @@ function parseGenresJson(value: string | null): string[] | undefined {
 export function writeFilmCache(film: CachedFilm): void {
   db.prepare(
     `INSERT INTO films_cache (
-       kinopoisk_id, title, original_title, year, poster_url, rating,
+       kinopoisk_id, title, original_title, year, poster_url, rating, imdb_rating,
        description, film_length_minutes, genres, fetched_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(kinopoisk_id) DO UPDATE SET
        title = excluded.title,
        original_title = excluded.original_title,
        year = excluded.year,
        poster_url = excluded.poster_url,
        rating = excluded.rating,
+       imdb_rating = excluded.imdb_rating,
        description = excluded.description,
        film_length_minutes = excluded.film_length_minutes,
        genres = excluded.genres,
@@ -175,6 +186,7 @@ export function writeFilmCache(film: CachedFilm): void {
     film.year ?? null,
     film.posterUrl ?? null,
     film.rating ?? null,
+    film.imdbRating ?? null,
     film.description ?? null,
     film.filmLengthMinutes ?? null,
     film.genres ? JSON.stringify(film.genres) : null,
@@ -185,7 +197,7 @@ export function writeFilmCache(film: CachedFilm): void {
 export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
   const row = db
     .prepare(
-      `SELECT kinopoisk_id, title, original_title, year, poster_url, rating,
+      `SELECT kinopoisk_id, title, original_title, year, poster_url, rating, imdb_rating,
               description, film_length_minutes, genres, fetched_at
        FROM films_cache WHERE kinopoisk_id = ?`
     )
@@ -197,6 +209,7 @@ export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
         year: string | null;
         poster_url: string | null;
         rating: string | null;
+        imdb_rating: string | null;
         description: string | null;
         film_length_minutes: number | null;
         genres: string | null;
@@ -215,6 +228,7 @@ export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
     year: row.year ?? undefined,
     posterUrl: row.poster_url ?? undefined,
     rating: row.rating ?? undefined,
+    imdbRating: row.imdb_rating ?? undefined,
     description: row.description ?? undefined,
     filmLengthMinutes: row.film_length_minutes ?? undefined,
     genres: parseGenresJson(row.genres)

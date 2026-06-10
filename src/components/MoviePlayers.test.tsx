@@ -37,7 +37,7 @@ describe("MoviePlayers", () => {
       "https://www.youtube.com/embed/abc"
     );
 
-    await user.click(screen.getByRole("button", { name: /Запасные плееры/i }));
+    await user.click(screen.getByRole("button", { name: /Другие плееры/i }));
     await user.click(screen.getByRole("button", { name: "Сервер" }));
 
     expect(screen.getByTitle("Сервер")).toHaveAttribute(
@@ -86,7 +86,7 @@ describe("MoviePlayers", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /Запасные плееры/i }));
+    await user.click(screen.getByRole("button", { name: /Другие плееры/i }));
     await user.click(screen.getByRole("button", { name: "Coll" }));
 
     expect(screen.getByText("Загрузка плеера...")).toBeInTheDocument();

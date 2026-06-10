@@ -352,4 +352,157 @@ describe("App", () => {
     expect(screen.getByLabelText("Плееры")).toBeInTheDocument();
     expect(screen.queryByText("Новинки для вечера")).not.toBeInTheDocument();
   });
+
+  it("returns to the home catalog from watch page back navigation", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.endsWith("/api/kp/films/301")) {
+        return filmResponse({
+          kinopoiskId: 301,
+          title: "Матрица",
+          year: "1999",
+          posterUrl: "https://example.test/matrix.jpg",
+          rating: "8.5",
+          description: "Фильм о выборе реальности."
+        });
+      }
+
+      if (url.includes("/api/kp/catalog/recent")) {
+        return catalogResponse([
+          {
+            kinopoiskId: 301,
+            title: "Матрица",
+            year: "1999",
+            posterUrl: "https://example.test/matrix.jpg",
+            rating: "8.5"
+          }
+        ]);
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: /Матрица/ }));
+    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "На главную" }));
+
+    expect(await screen.findByText("Новинки для вечера")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
+  });
+
+  it("returns to the profile shelf from watch page back navigation", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
+      const url = String(input);
+
+      if (url.includes("/api/auth/me")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ user: { id: 1, username: "viewer" } })
+        });
+      }
+
+      if (url.includes("/api/lists")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [{ kinopoiskId: 301, status: "plan" }],
+            films: {
+              301: {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg",
+                rating: "8.5"
+              }
+            }
+          })
+        });
+      }
+
+      if (url.includes("/api/kp/similars")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ films: [] })
+        });
+      }
+
+      if (url.endsWith("/api/kp/films/301")) {
+        return Promise.resolve(
+          filmResponse({
+            kinopoiskId: 301,
+            title: "Матрица",
+            year: "1999",
+            posterUrl: "https://example.test/matrix.jpg",
+            rating: "8.5",
+            description: "Фильм о выборе реальности."
+          })
+        );
+      }
+
+      if (url.includes("/api/kp/catalog/recent")) {
+        return Promise.resolve(catalogResponse([]));
+      }
+
+      return Promise.resolve(catalogResponse([]));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Профиль" }));
+    expect(await screen.findByText("Буду смотреть")).toBeInTheDocument();
+
+    const matrixTitle = await screen.findByText("Матрица");
+    await user.click(matrixTitle.closest("button")!);
+    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "В кабинет" }));
+
+    expect(await screen.findByText("Буду смотреть")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
+  });
+
+  it("shows IMDb rating on the watch page when it is available", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.endsWith("/api/kp/films/326")) {
+        return filmResponse({
+          kinopoiskId: 326,
+          title: "Побег из Шоушенка",
+          year: "1994",
+          posterUrl: "https://example.test/shawshank.jpg",
+          rating: "9.1",
+          imdbRating: "9.3",
+          description: "История надежды."
+        });
+      }
+
+      if (url.includes("/api/kp/catalog/recent")) {
+        return catalogResponse([
+          {
+            kinopoiskId: 326,
+            title: "Побег из Шоушенка",
+            year: "1994",
+            posterUrl: "https://example.test/shawshank.jpg",
+            rating: "9.1"
+          }
+        ]);
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: /Побег из Шоушенка/ }));
+
+    expect(await screen.findByText(/IMDb 9\.3/)).toBeInTheDocument();
+    expect(screen.getByText(/КП 9\.1/)).toBeInTheDocument();
+  });
 });

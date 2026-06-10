@@ -269,6 +269,16 @@ export function App() {
     onStatusChange: handleWatchTrackerStatusChange
   });
 
+  const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => ({
+    view: "catalog",
+    activeMenu: "Главная",
+    catalogMode: "premieres",
+    collectionId: null,
+    filmId: null,
+    searchQuery: "",
+    scrollY: 0
+  }));
+
   const captureSnapshot = useCallback((): NavigationSnapshot => {
     return {
       view,
@@ -283,6 +293,8 @@ export function App() {
       scrollY: window.scrollY
     };
   }, [activeMenu, catalogMode, collectionId, query, selectedFilm, view]);
+
+  captureSnapshotRef.current = captureSnapshot;
 
   const beginHistoryEntry = useCallback(
     (pushHistory = true) => {
@@ -383,22 +395,32 @@ export function App() {
   );
 
   const goBack = useCallback(() => {
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
     const snapshot = navHistoryRef.current.pop();
     if (!snapshot) {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+
       setView("catalog");
       setActiveMenu("Главная");
       setSelectedFilm(null);
       setWatchPreviewFilm(null);
       setDetailsStatus("idle");
+      replaceAppHistory(captureSnapshotRef.current());
       return;
     }
 
+    isHistoryNavigationRef.current = true;
     void restoreSnapshot(snapshot);
+
+    if (window.history.length > 1) {
+      window.history.back();
+    }
+
+    requestAnimationFrame(() => {
+      isHistoryNavigationRef.current = false;
+    });
   }, [restoreSnapshot]);
 
   useEffect(() => {
@@ -414,11 +436,15 @@ export function App() {
     }
 
     shouldCommitHistoryRef.current = false;
-    pushAppHistory(captureSnapshot());
-  }, [view, activeMenu, catalogMode, collectionId, selectedFilm, captureSnapshot]);
+    pushAppHistory(captureSnapshotRef.current());
+  }, [view, activeMenu, catalogMode, collectionId]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
+      if (isHistoryNavigationRef.current) {
+        return;
+      }
+
       isHistoryNavigationRef.current = true;
 
       if (navHistoryRef.current.length > 0) {
@@ -616,6 +642,7 @@ export function App() {
     setSelectedListStatus(
       userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.status ?? null
     );
+    requestHistoryCommit(pushHistory);
 
     try {
       const details = await client.getFilm(film.kinopoiskId);
@@ -626,8 +653,6 @@ export function App() {
       setError(getErrorMessage(detailsError));
       setWatchPreviewFilm(null);
       setDetailsStatus("error");
-    } finally {
-      requestHistoryCommit(pushHistory);
     }
   }
 
@@ -1029,6 +1054,7 @@ export function App() {
                     {[
                       selectedFilm.year,
                       selectedFilm.rating && `КП ${selectedFilm.rating}`,
+                      selectedFilm.imdbRating && `IMDb ${selectedFilm.imdbRating}`,
                       selectedFilm.originalTitle
                     ]
                       .filter(Boolean)

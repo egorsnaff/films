@@ -461,8 +461,22 @@ function mapFilmSummary(raw: Record<string, unknown>): CachedFilm | null {
     originalTitle: toStringValue(raw.nameEn ?? raw.nameOriginal),
     year: toStringValue(raw.year),
     posterUrl: normalizePosterUrl(raw.posterUrlPreview ?? raw.posterUrl),
-    rating: toStringValue(raw.rating ?? raw.ratingKinopoisk)
+    rating: toStringValue(raw.rating ?? raw.ratingKinopoisk),
+    imdbRating: formatRatingValue(raw.ratingImdb)
   };
+}
+
+function formatRatingValue(value: unknown): string | undefined {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number.parseFloat(toStringValue(value) ?? "");
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(1);
 }
 
 function mapNamedList(value: unknown): string[] | undefined {

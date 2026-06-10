@@ -45,6 +45,15 @@ describe("mapFilmDetails", () => {
         shortDescription: "Краткое описание бойцовского клуба"
       }).description
     ).toBe("Краткое описание бойцовского клуба");
+
+    expect(
+      mapFilmDetails({
+        filmId: 326,
+        nameRu: "Побег из Шоушенка",
+        ratingKinopoisk: 9.1,
+        ratingImdb: 9.3
+      }).imdbRating
+    ).toBe("9.3");
   });
 });
 
