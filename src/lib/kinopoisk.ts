@@ -35,7 +35,10 @@ export type ThemeCollectionType =
   | "COMICS_THEME"
   | "FAMILY"
   | "CATASTROPHE_THEME"
-  | "KIDS_ANIMATION_THEME";
+  | "KIDS_ANIMATION_THEME"
+  | "TOP_POPULAR_ALL"
+  | "TOP_POPULAR_MOVIES"
+  | "TOP_POPULAR_SERIES";
 
 type FetchLike = typeof fetch;
 

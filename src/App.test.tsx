@@ -53,7 +53,7 @@ function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
       return Promise.resolve(custom);
     }
 
-    if (url.includes("/api/kp/catalog/recent")) {
+    if (url.includes("/api/kp/collections") || url.includes("/api/kp/collections")) {
       return Promise.resolve(catalogResponse([]));
     }
 
@@ -68,14 +68,31 @@ function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
   });
 }
 
+class NoopIntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+
+  constructor(_callback: IntersectionObserverCallback) {}
+
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 describe("App", () => {
+  const originalIntersectionObserver = window.IntersectionObserver;
+
   beforeEach(() => {
     window.localStorage.clear();
+    window.IntersectionObserver =
+      NoopIntersectionObserver as unknown as typeof IntersectionObserver;
     vi.stubGlobal("fetch", createFetchMock(() => undefined));
   });
 
   afterEach(() => {
     window.localStorage.clear();
+    window.IntersectionObserver = originalIntersectionObserver;
     vi.restoreAllMocks();
   });
 
@@ -104,7 +121,7 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       createFetchMock((url) => {
-        if (url.includes("/api/kp/catalog/recent")) {
+        if (url.includes("/api/kp/collections")) {
           return catalogResponse(
             [
               {
@@ -127,7 +144,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
-    expect(screen.getByText("Новинки для вечера")).toBeInTheDocument();
+    expect(screen.getByText("Популярное сейчас")).toBeInTheDocument();
     expect(screen.getByText("Листайте дальше")).toBeInTheDocument();
   });
 
@@ -135,7 +152,7 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       createFetchMock((url) => {
-        if (url.includes("/api/kp/catalog/recent")) {
+        if (url.includes("/api/kp/collections")) {
           return catalogResponse([
             {
               kinopoiskId: 11,
@@ -188,7 +205,6 @@ describe("App", () => {
       disconnect() {}
     }
 
-    const originalIntersectionObserver = window.IntersectionObserver;
     window.IntersectionObserver =
       MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
@@ -208,7 +224,7 @@ describe("App", () => {
         );
       }
 
-      if (url.includes("/api/kp/catalog/recent")) {
+      if (url.includes("/api/kp/collections")) {
         return catalogResponse(
           [
             {
@@ -236,8 +252,68 @@ describe("App", () => {
       });
       expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
     } finally {
-      window.IntersectionObserver = originalIntersectionObserver;
+      window.IntersectionObserver =
+        NoopIntersectionObserver as unknown as typeof IntersectionObserver;
     }
+  });
+
+  it("does not paginate search results", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.includes("/api/kp/search")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 99,
+              title: "Поисковый фильм",
+              year: "2024",
+              posterUrl: "https://example.test/search.jpg"
+            }
+          ],
+          1,
+          3
+        );
+      }
+
+      if (url.includes("/api/kp/collections")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 1,
+              title: "Каталог",
+              year: "2026",
+              posterUrl: "https://example.test/catalog.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByText("Каталог")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
+    await user.type(screen.getByRole("searchbox", { name: "Поиск фильма" }), "тест");
+    await user.click(screen.getByRole("button", { name: "Найти" }));
+
+    expect(await screen.findByText("Поисковый фильм")).toBeInTheDocument();
+    expect(screen.queryByText("Листайте дальше")).not.toBeInTheDocument();
+
+    const searchCallsBefore = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes("/api/kp/search")
+    ).length;
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter((call) => String(call[0]).includes("/api/kp/search")).length
+      ).toBe(searchCallsBefore);
+    });
   });
 
   it("opens the collections page from the menu", async () => {
@@ -328,7 +404,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/catalog/recent")) {
+      if (url.includes("/api/kp/collections")) {
         return catalogResponse([
           {
             kinopoiskId: 301,
@@ -351,7 +427,7 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
     expect(screen.getByText("Фильм о выборе реальности.")).toBeInTheDocument();
     expect(screen.getByLabelText("Плееры")).toBeInTheDocument();
-    expect(screen.queryByText("Новинки для вечера")).not.toBeInTheDocument();
+    expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
   });
 
   it("returns to the home catalog from watch page back navigation", async () => {
@@ -368,7 +444,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/catalog/recent")) {
+      if (url.includes("/api/kp/collections")) {
         return catalogResponse([
           {
             kinopoiskId: 301,
@@ -391,7 +467,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "На главную" }));
 
-    expect(await screen.findByText("Новинки для вечера")).toBeInTheDocument();
+    expect(await screen.findByText("Популярное сейчас")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
   });
 
@@ -445,7 +521,7 @@ describe("App", () => {
         );
       }
 
-      if (url.includes("/api/kp/catalog/recent")) {
+      if (url.includes("/api/kp/collections")) {
         return Promise.resolve(catalogResponse([]));
       }
 
@@ -464,7 +540,9 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "В кабинет" }));
 
-    expect(await screen.findByText("Буду смотреть")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Буду смотреть")).toBeInTheDocument();
+    });
     expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
   });
 
@@ -483,7 +561,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/catalog/recent")) {
+      if (url.includes("/api/kp/collections")) {
         return catalogResponse([
           {
             kinopoiskId: 326,

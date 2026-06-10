@@ -39,7 +39,8 @@ const THEME_TYPES = new Set([
   "KIDS_ANIMATION_THEME",
   "CLOSES_RELEASES",
   "TOP_POPULAR_MOVIES",
-  "TOP_POPULAR_SERIES"
+  "TOP_POPULAR_SERIES",
+  "TOP_POPULAR_ALL"
 ]);
 
 export function isKinopoiskKeyConfigured(): boolean {
