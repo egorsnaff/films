@@ -1815,6 +1815,24 @@ h1 em {
   max-width: 52ch;
 }
 
+.recommendations-rail {
+  margin: 4px 0 18px;
+  padding: 14px 0 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.recommendations-rail .film-shelf {
+  margin-top: 0;
+}
+
+.recommendations-rail .film-shelf__track {
+  scroll-snap-type: x mandatory;
+}
+
+.recommendations-rail .film-shelf__card {
+  scroll-snap-align: start;
+}
+
 .home-view .film-shelf {
   margin-top: 4px;
 }
