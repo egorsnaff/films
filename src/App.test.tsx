@@ -10,6 +10,7 @@ type MockFilm = {
   year?: string;
   posterUrl?: string;
   rating?: string;
+  imdbRating?: string;
   description?: string;
 };
 
