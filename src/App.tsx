@@ -164,6 +164,19 @@ export function App() {
       : "На основе ваших интересов";
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
+  const recommendationFilmIds = useMemo(
+    () => new Set(recommendationFilms.map((film) => film.kinopoiskId)),
+    [recommendationFilms]
+  );
+  const recommendationFilmIdsRef = useRef(recommendationFilmIds);
+  recommendationFilmIdsRef.current = showRecommendations ? recommendationFilmIds : new Set<number>();
+  const catalogGridFilms = useMemo(() => {
+    if (recommendationFilmIds.size === 0) {
+      return visibleFilms;
+    }
+
+    return visibleFilms.filter((film) => !recommendationFilmIds.has(film.kinopoiskId));
+  }, [recommendationFilmIds, visibleFilms]);
   const visibleSimilarFilms = useMemo(
     () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [similarFilms]
@@ -503,12 +516,15 @@ export function App() {
 
         const previousFilms = filmsRef.current;
         const merged = replace ? catalogPage.films : mergeFilms(previousFilms, catalogPage.films);
-        const previousVisibleCount = countVisibleFilms(previousFilms, mode);
-        const nextVisibleCount = countVisibleFilms(merged, mode);
+        const excludeRecommendationIds =
+          mode === "premieres" ? recommendationFilmIdsRef.current : new Set<number>();
+        const previousVisibleCount = countVisibleFilms(previousFilms, mode, excludeRecommendationIds);
+        const nextVisibleCount = countVisibleFilms(merged, mode, excludeRecommendationIds);
         const shouldLoadAnotherPage =
           !replace &&
           catalogPage.page < catalogPage.totalPages &&
-          nextVisibleCount === previousVisibleCount;
+          nextVisibleCount === previousVisibleCount &&
+          catalogPage.films.length > 0;
 
         setFilms(merged);
         filmsRef.current = merged;
@@ -522,7 +538,7 @@ export function App() {
         hasMoreRef.current = nextHasMore;
         setStatus("success");
 
-        if (shouldLoadAnotherPage && autoChaseDepth < 3) {
+        if (shouldLoadAnotherPage && autoChaseDepth < 10) {
           await new Promise((resolve) => window.setTimeout(resolve, 500));
           await loadCatalogPage({
             mode,
@@ -611,7 +627,7 @@ export function App() {
     observer.observe(sentinel);
 
     return () => observer.disconnect();
-  }, [maybeLoadMoreFromScroll, view, visibleFilms.length, isLoadingMore, hasMore]);
+  }, [maybeLoadMoreFromScroll, view, catalogGridFilms.length, isLoadingMore, hasMore, page]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -858,12 +874,17 @@ export function App() {
           ) : null}
 
           {showRecommendations ? (
-            <FilmShelf
-              title={recommendationTitle}
-              subtitle={recommendations?.reason}
-              films={recommendationFilms}
-              onSelect={(film) => void openFilm(film)}
-            />
+            <aside className="recommendations-rail" aria-label="Рекомендации">
+              <FilmShelf
+                title={recommendationTitle}
+                subtitle={
+                  recommendations?.reason ??
+                  "Отдельная подборка — основная лента ниже подгружается независимо"
+                }
+                films={recommendationFilms}
+                onSelect={(film) => void openFilm(film)}
+              />
+            </aside>
           ) : null}
 
           {status === "loading" ? (
@@ -882,9 +903,13 @@ export function App() {
             </div>
           ) : null}
 
-          {visibleFilms.length > 0 ? (
+          {visibleFilms.length > 0 && catalogGridFilms.length === 0 && isLoadingMore ? (
+            <p className="player-status home-view__catalog-status">Подбираем фильмы для ленты...</p>
+          ) : null}
+
+          {catalogGridFilms.length > 0 ? (
             <FilmGrid
-              films={visibleFilms}
+              films={catalogGridFilms}
               animate={status === "success"}
               onSelect={(film) => void openFilm(film)}
             />
@@ -902,7 +927,7 @@ export function App() {
               </>
             ) : hasMore ? (
               <span className="load-more-sentinel__hint">Листайте дальше</span>
-            ) : visibleFilms.length > 0 ? (
+            ) : catalogGridFilms.length > 0 ? (
               <span>Это всё на сейчас</span>
             ) : null}
           </div>
@@ -1120,12 +1145,21 @@ export function App() {
   );
 }
 
-function countVisibleFilms(films: KinopoiskFilm[], mode: CatalogMode): number {
-  if (mode === "search") {
-    return films.length;
+function countVisibleFilms(
+  films: KinopoiskFilm[],
+  mode: CatalogMode,
+  excludeIds: ReadonlySet<number> = new Set()
+): number {
+  const candidates =
+    mode === "search"
+      ? films
+      : films.filter((film) => hasValidPosterUrl(film.posterUrl));
+
+  if (excludeIds.size === 0) {
+    return candidates.length;
   }
 
-  return films.filter((film) => hasValidPosterUrl(film.posterUrl)).length;
+  return candidates.filter((film) => !excludeIds.has(film.kinopoiskId)).length;
 }
 
 function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {
