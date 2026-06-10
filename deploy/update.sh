@@ -104,7 +104,15 @@ deploy_services() {
     return
   fi
 
-  export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
+  if [[ -z "${DOCKER_BUILDKIT:-}" ]]; then
+    if docker buildx version >/dev/null 2>&1; then
+      export DOCKER_BUILDKIT=1
+    else
+      export DOCKER_BUILDKIT=0
+      export COMPOSE_DOCKER_CLI_BUILD=0
+    fi
+  fi
+
   # shellcheck disable=SC2086
   compose -f "$COMPOSE_FILE" up -d --build "${services[@]}"
 }
