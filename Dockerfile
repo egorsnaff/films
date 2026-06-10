@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:22-alpine AS build
 
 WORKDIR /app
@@ -17,6 +15,7 @@ ARG VITE_PLAYER_EMBED_DOMAIN=nayteruz.github.io
 ARG VITE_ENABLE_ALLOHA=true
 ARG VITE_HDVB_TOKEN
 ARG VITE_PLAYER_TEMPLATES
+ARG GIT_SHA=unknown
 
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 ENV VITE_KINOPOISK_API_KEY=$VITE_KINOPOISK_API_KEY
@@ -27,7 +26,9 @@ ENV VITE_ENABLE_ALLOHA=$VITE_ENABLE_ALLOHA
 ENV VITE_HDVB_TOKEN=$VITE_HDVB_TOKEN
 ENV VITE_PLAYER_TEMPLATES=$VITE_PLAYER_TEMPLATES
 
-RUN npm run build:selfhost
+RUN printf '%s\n' "$GIT_SHA" > build-id.txt \
+  && npm run build:selfhost \
+  && cp build-id.txt dist/build-id.txt
 
 FROM nginx:1.27-alpine
 
