@@ -973,8 +973,54 @@ export function App() {
             </div>
           ) : null}
           {selectedFilm ? (
-            <article className="watch-layout">
-              <div className="watch-stage">
+            <article
+              className="watch-hero"
+              style={
+                selectedFilm.posterUrl
+                  ? ({ "--watch-poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
+                  : undefined
+              }
+            >
+              <header className="watch-hero__identity">
+                {selectedFilm.posterUrl ? (
+                  <img
+                    className="watch-hero__poster"
+                    src={selectedFilm.posterUrl}
+                    alt={`Постер ${selectedFilm.title}`}
+                  />
+                ) : null}
+                <div className="watch-hero__copy">
+                  <p className="watch-hero__eyebrow">Сейчас смотрите</p>
+                  <h1>{selectedFilm.title}</h1>
+                  <p className="watch-hero__facts">
+                    {[
+                      selectedFilm.year,
+                      selectedFilm.rating && `КП ${selectedFilm.rating}`,
+                      selectedFilm.originalTitle
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                  {selectedFilm.genres && selectedFilm.genres.length > 0 ? (
+                    <div className="watch-hero__genres" aria-label="Жанры">
+                      {selectedFilm.genres.map((genre) => (
+                        <span key={genre} className="watch-hero__genre">
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {selectedFilm.description ? (
+                    <p className="watch-hero__description">{selectedFilm.description}</p>
+                  ) : detailsStatus === "success" ? (
+                    <p className="watch-hero__description watch-hero__description--empty">
+                      Описание пока недоступно.
+                    </p>
+                  ) : null}
+                </div>
+              </header>
+
+              <div className="watch-hero__stage">
                 <MoviePlayers
                   players={players}
                   resolveOptions={{ allohaToken, hdvbToken, embedDomain }}
@@ -983,51 +1029,11 @@ export function App() {
                   onPlayerProgress={(progress) => reportPosition(progress)}
                 />
                 {players.length === 0 ? (
-                  <p className="hint watch-stage__hint">
+                  <p className="hint watch-hero__hint">
                     Добавьте <code>VITE_PLAYER_TEMPLATES</code>, чтобы подключить свои
                     embed-плееры или будущий сервер.
                   </p>
                 ) : null}
-              </div>
-
-              <div className="watch-meta">
-                <div className="watch-meta__head">
-                  {selectedFilm.posterUrl ? (
-                    <img
-                      className="watch-meta__poster"
-                      src={selectedFilm.posterUrl}
-                      alt={`Постер ${selectedFilm.title}`}
-                    />
-                  ) : null}
-                  <div className="watch-meta__copy">
-                    <h1>{selectedFilm.title}</h1>
-                    <p className="watch-meta__facts">
-                      {[
-                        selectedFilm.year,
-                        selectedFilm.rating && `КП ${selectedFilm.rating}`,
-                        selectedFilm.originalTitle
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                </div>
-                {selectedFilm.genres && selectedFilm.genres.length > 0 ? (
-                  <div className="watch-meta__genres" aria-label="Жанры">
-                    {selectedFilm.genres.map((genre) => (
-                      <span key={genre} className="watch-meta__genre">
-                        {genre}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {selectedFilm.description ? (
-                  <p className="watch-meta__description">{selectedFilm.description}</p>
-                ) : (
-                  <p className="watch-meta__description watch-meta__description--empty">
-                    Описание пока недоступно.
-                  </p>
-                )}
               </div>
             </article>
           ) : detailsStatus !== "loading" ? (
