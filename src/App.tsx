@@ -65,16 +65,16 @@ const playerTemplates =
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Подборки", "Профиль"];
+const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Подборки", "Профиль"];
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
   { eyebrow: string; title: string; text: string }
 > = {
   premieres: {
-    eyebrow: "сеанс",
-    title: "Популярное сейчас",
-    text: "Лента как в HomeTV: подгружается сама, пока вы листаете вниз."
+    eyebrow: "",
+    title: "",
+    text: ""
   },
   search: {
     eyebrow: "search results",
@@ -184,6 +184,8 @@ export function App() {
     recommendations?.mode === "cold"
       ? "250 лучших, которые вы ещё не смотрели"
       : "На основе ваших интересов";
+  const recommendationsPending =
+    Boolean(authUser) && catalogMode === "premieres" && recommendationsStatus === "loading";
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
   const recommendationFilmIds = useMemo(
@@ -448,12 +450,39 @@ export function App() {
           try {
             const page = await client.searchFilms(snapshot.searchQuery, 1);
             setFilms(page.films);
+            filmsRef.current = page.films;
             setPage(page.page);
+            pageRef.current = page.page;
             setHasMore(false);
             hasMoreRef.current = false;
             setStatus("success");
           } catch (searchError) {
             setError(getErrorMessage(searchError));
+            setStatus("error");
+          }
+        } else if (
+          snapshot.catalogMode === "premieres" ||
+          snapshot.catalogMode === "films" ||
+          snapshot.catalogMode === "serials"
+        ) {
+          setCatalogFilter(null);
+          catalogFilterRef.current = null;
+          setStatus("loading");
+          setError(null);
+
+          try {
+            const page = await fetchCatalogPage(client, snapshot.catalogMode, 1, "", null);
+            setFilms(page.films);
+            filmsRef.current = page.films;
+            setPage(page.page);
+            pageRef.current = page.page;
+            setTotalPages(page.totalPages);
+            const nextHasMore = page.page < page.totalPages;
+            setHasMore(nextHasMore);
+            hasMoreRef.current = nextHasMore;
+            setStatus("success");
+          } catch (catalogError) {
+            setError(getErrorMessage(catalogError));
             setStatus("error");
           }
         }
@@ -625,7 +654,6 @@ export function App() {
         setStatus("success");
 
         if (shouldLoadAnotherPage && autoChaseDepth < 10) {
-          await new Promise((resolve) => window.setTimeout(resolve, 500));
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -784,6 +812,11 @@ export function App() {
         return;
       }
 
+      if (item === "Каталог") {
+        await openBrowse(browseMedia, { pushHistory, activeMenu: "Каталог" });
+        return;
+      }
+
       setCatalogFilter(null);
       catalogFilterRef.current = null;
       setView("catalog");
@@ -806,13 +839,16 @@ export function App() {
     }
   }
 
-  async function openBrowse(media: BrowseMedia, options?: { pushHistory?: boolean }) {
+  async function openBrowse(
+    media: BrowseMedia,
+    options?: { pushHistory?: boolean; activeMenu?: MenuItem }
+  ) {
     const pushHistory = options?.pushHistory !== false;
     beginHistoryEntry(pushHistory);
     pendingWatchFilmIdRef.current = null;
     setBrowseMedia(media);
     setView("browse");
-    setActiveMenu(media === "serials" ? "Сериалы" : "Фильмы");
+    setActiveMenu(options?.activeMenu ?? (media === "serials" ? "Сериалы" : "Фильмы"));
     setSelectedFilm(null);
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
@@ -882,11 +918,12 @@ export function App() {
   const heading =
     catalogMode === "filtered" && catalogFilter
       ? {
-          eyebrow: "filtered",
+          eyebrow: "",
           title: catalogFilter.title,
-          text: "Сортировка по рейтингу Кинопоиска. Листайте вниз — лента подгрузится сама."
+          text: ""
         }
       : catalogHeadings[catalogMode as Exclude<CatalogMode, "filtered">];
+  const showCatalogHeading = Boolean(heading.eyebrow || heading.title || heading.text);
 
   return (
     <>
@@ -960,41 +997,22 @@ export function App() {
         <div key={view} className="page-stage page-stage--enter">
       {view === "catalog" ? (
         <section className="home-view" id="main">
-          <div className="section-heading section-heading--home">
-            <p className="eyebrow">{heading.eyebrow}</p>
-            <h1>{heading.title}</h1>
-            <p>{heading.text}</p>
-            {catalogMode === "films" || catalogMode === "serials" ? (
-              <div className="catalog-toolbar">
-                <button
-                  type="button"
-                  className="catalog-toolbar__button"
-                  onClick={() => void openBrowse(catalogMode === "serials" ? "serials" : "films")}
-                >
-                  Каталог и фильтры
-                </button>
-              </div>
-            ) : null}
-            {catalogMode === "filtered" ? (
-              <div className="catalog-toolbar">
-                <button
-                  type="button"
-                  className="catalog-toolbar__button catalog-toolbar__button--ghost"
-                  onClick={() =>
-                    void openBrowse(catalogFilter?.media ?? "films", { pushHistory: false })
-                  }
-                >
-                  Все разделы каталога
-                </button>
-              </div>
-            ) : null}
-          </div>
+          {showCatalogHeading ? (
+            <div className="section-heading section-heading--home">
+              {heading.eyebrow ? <p className="eyebrow">{heading.eyebrow}</p> : null}
+              {heading.title ? <h1>{heading.title}</h1> : null}
+              {heading.text ? <p>{heading.text}</p> : null}
+            </div>
+          ) : null}
 
-          {authUser && catalogMode === "premieres" && recommendationsStatus === "loading" ? (
+          {recommendationsPending ? (
             <div className="recommendations-shelf-skeleton" aria-label="Загрузка рекомендаций">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <span key={index} className="film-skeleton film-skeleton--shelf" />
-              ))}
+              <span className="recommendations-shelf-skeleton__head" />
+              <div className="recommendations-shelf-skeleton__track">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <span key={index} className="film-skeleton film-skeleton--shelf" />
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -1012,7 +1030,7 @@ export function App() {
             </aside>
           ) : null}
 
-          {status === "loading" ? (
+          {!recommendationsPending && status === "loading" ? (
             <div className="skeleton-grid" aria-label="Загрузка результатов">
               {Array.from({ length: 10 }).map((_, index) => (
                 <span key={index} className="film-skeleton" />
@@ -1020,7 +1038,7 @@ export function App() {
             </div>
           ) : null}
 
-          {visibleFilms.length === 0 && status !== "loading" ? (
+          {!recommendationsPending && visibleFilms.length === 0 && status !== "loading" ? (
             <div className="empty-state empty-state--composed">
               <span className="empty-state__marker">01</span>
               <strong>Пока ничего не найдено.</strong>
@@ -1028,39 +1046,32 @@ export function App() {
             </div>
           ) : null}
 
-          {visibleFilms.length > 0 && catalogGridFilms.length === 0 && isLoadingMore ? (
-            <p className="player-status home-view__catalog-status">Подбираем фильмы для ленты...</p>
+          {!recommendationsPending ? (
+            <div className="catalog-feed">
+              {catalogGridFilms.length > 0 ? (
+                <FilmGrid
+                  films={catalogGridFilms}
+                  animate={status === "success"}
+                  onSelect={(film) => void openFilm(film)}
+                />
+              ) : null}
+
+              {isLoadingMore && catalogMode !== "search" ? (
+                <CatalogSkeletonGrid count={10} variant="inline" />
+              ) : null}
+            </div>
           ) : null}
 
-          {catalogGridFilms.length > 0 ? (
-            <FilmGrid
-              films={catalogGridFilms}
-              animate={status === "success"}
-              onSelect={(film) => void openFilm(film)}
-            />
-          ) : null}
-
-          {isLoadingMore && catalogMode !== "search" ? (
-            <CatalogSkeletonGrid
-              count={catalogGridFilms.length > 0 ? 10 : 10}
-              variant={catalogGridFilms.length > 0 ? "inline" : "grid"}
-            />
-          ) : null}
-
-          {catalogMode !== "search" ? (
+          {catalogMode !== "search" && !recommendationsPending ? (
             <div
               ref={loadMoreRef}
               className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
               aria-live="polite"
             >
-              {isLoadingMore ? (
-                <>
-                  <span className="load-more-sentinel__pulse" aria-hidden="true" />
-                  <span>Загружаем следующую подборку...</span>
-                </>
-              ) : hasMore ? (
+              {!isLoadingMore && hasMore ? (
                 <span className="load-more-sentinel__hint">Листайте дальше</span>
-              ) : catalogGridFilms.length > 0 ? (
+              ) : null}
+              {!isLoadingMore && !hasMore && catalogGridFilms.length > 0 ? (
                 <span>Это всё на сейчас</span>
               ) : null}
             </div>
@@ -1069,14 +1080,20 @@ export function App() {
       ) : null}
 
       {view === "browse" ? (
-        <BrowseMenu
-          media={browseMedia}
-          sections={browseSections}
-          isLoading={filtersStatus === "loading"}
-          error={filtersStatus === "error" ? error : null}
-          onRetry={() => void loadKinopoiskFilters()}
-          onSelect={(filter) => void openFilteredCatalog(filter)}
-        />
+        <>
+          <div className="browse-view__toolbar">
+            <BackButton label={backLabel} onClick={() => void goBack()} />
+          </div>
+          <BrowseMenu
+            media={browseMedia}
+            sections={browseSections}
+            isLoading={filtersStatus === "loading"}
+            error={filtersStatus === "error" ? error : null}
+            onMediaChange={setBrowseMedia}
+            onRetry={() => void loadKinopoiskFilters()}
+            onSelect={(filter) => void openFilteredCatalog(filter)}
+          />
+        </>
       ) : null}
 
       {view === "collections" ? (
@@ -1317,7 +1334,7 @@ async function fetchCatalogPage(
         genreId: filter.genreId,
         countryId: filter.countryId,
         year: filter.year,
-        order: "RATING"
+        order: "NUM_VOTE"
       },
       nextPage
     );
