@@ -1,0 +1,429 @@
+:root {
+  --cursor-x: 50%;
+  --cursor-y: 42%;
+  --cursor-x-px: 50vw;
+  --cursor-y-px: 42vh;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.cursor-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 520ms ease;
+}
+
+html.cursor-active .cursor-glow {
+  opacity: 1;
+}
+
+.cursor-glow--ambient {
+  background: radial-gradient(
+    circle 520px at var(--cursor-x) var(--cursor-y),
+    rgb(240 183 91 / 16%),
+    rgb(240 107 66 / 7%) 38%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+}
+
+.cursor-glow--core {
+  background: radial-gradient(
+    circle 220px at var(--cursor-x) var(--cursor-y),
+    rgb(255 230 170 / 12%),
+    rgb(240 107 66 / 8%) 42%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  mix-blend-mode: plus-lighter;
+}
+
+.ambient-left,
+.ambient-right {
+  animation: ambient-drift 24s ease-in-out infinite alternate;
+}
+
+.ambient-right {
+  animation-delay: -9s;
+  animation-duration: 28s;
+}
+
+@keyframes ambient-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(28px, -22px, 0) scale(1.06);
+  }
+}
+
+.brand-mark__glyph {
+  position: relative;
+  overflow: hidden;
+  color: #150c07;
+}
+
+.brand-mark__glyph svg {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-mark__glyph::after {
+  position: absolute;
+  inset: -30%;
+  content: "";
+  background: radial-gradient(circle, rgb(255 255 255 / 42%), transparent 62%);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.brand-mark:hover .brand-mark__glyph,
+.brand-mark:focus-visible .brand-mark__glyph {
+  animation: brand-glow 2.4s ease-in-out infinite;
+}
+
+.brand-mark:hover .brand-mark__glyph::after,
+.brand-mark:focus-visible .brand-mark__glyph::after {
+  opacity: 1;
+}
+
+@keyframes brand-glow {
+  0%,
+  100% {
+    box-shadow: 0 12px 30px rgb(240 107 66 / 28%);
+  }
+
+  50% {
+    box-shadow:
+      0 14px 34px rgb(240 107 66 / 38%),
+      0 0 28px rgb(240 183 91 / 22%);
+  }
+}
+
+.brand-mark__copy {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.brand-mark__copy small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topbar--scrolled {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(9 10 13 / 88%);
+  box-shadow: 0 22px 70px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(28px);
+}
+
+.page-stage--enter {
+  animation: page-enter 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-heading--home h1 {
+  animation: heading-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.section-heading--home .eyebrow,
+.section-heading--home p {
+  animation: heading-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.section-heading--home .eyebrow {
+  animation-delay: 60ms;
+}
+
+.section-heading--home p {
+  animation-delay: 120ms;
+}
+
+@keyframes heading-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.film-grid--revealed .film-card--interactive {
+  animation: card-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 42ms);
+}
+
+@keyframes card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.film-card--interactive,
+.film-shelf__card--interactive,
+.collection-card,
+.load-more-button,
+.topbar__nav-link,
+.search-toggle,
+.topbar-auth-button {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background 200ms ease;
+}
+
+.film-card--interactive:active,
+.film-shelf__card--interactive:active,
+.collection-card:active,
+.load-more-button:active,
+.topbar__nav-link:active,
+.search-toggle:active,
+.topbar-auth-button:active {
+  transform: scale(0.98);
+}
+
+.film-card--interactive:hover .film-card__poster,
+.film-card--interactive:focus-visible .film-card__poster {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 24px 48px rgb(0 0 0 / 50%),
+    0 0 0 5px rgb(240 183 91 / 10%),
+    0 0 42px rgb(240 183 91 / 14%);
+}
+
+.film-rating-badge {
+  transform: scale(0.72);
+  opacity: 0;
+  transition:
+    transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 320ms ease;
+}
+
+.film-rating-badge--visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.skeleton-grid {
+  animation: skeleton-fade 320ms ease both;
+}
+
+.film-grid--revealed {
+  animation: content-reveal 520ms ease both;
+}
+
+@keyframes skeleton-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes content-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.film-shelf__track {
+  scroll-behavior: smooth;
+}
+
+.watch-hero--parallax::before {
+  transition: transform 120ms linear;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .watch-hero--parallax::before {
+    transform: scale(1.08)
+      translate3d(
+        calc((var(--cursor-x) - 50%) * 0.03),
+        calc((var(--cursor-y) - 50%) * 0.02),
+        0
+      );
+  }
+}
+
+.topbar--search-active .topbar__search {
+  animation: search-expand 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes search-expand {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.watch-list-menu__dropdown {
+  animation: menu-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top right;
+}
+
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.watch-list-menu__trigger--saved {
+  animation: saved-pulse 900ms ease;
+}
+
+@keyframes saved-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(240 183 91 / 0%);
+  }
+
+  35% {
+    box-shadow: 0 0 0 8px rgb(240 183 91 / 24%);
+    border-color: rgb(240 183 91 / 60%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 14px rgb(240 183 91 / 0%);
+  }
+}
+
+.collection-card:hover,
+.collection-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px rgb(0 0 0 / 34%), 0 0 36px rgb(240 183 91 / 10%);
+}
+
+.interactive-surface {
+  position: relative;
+  isolation: isolate;
+}
+
+.interactive-surface::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  background: radial-gradient(
+    220px circle at var(--cursor-x-px) var(--cursor-y-px),
+    rgb(240 183 91 / 14%),
+    transparent 68%
+  );
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+
+html.cursor-active .interactive-surface:hover::after,
+html.cursor-active .interactive-surface:focus-within::after {
+  opacity: 1;
+}
+
+.topbar,
+.film-card,
+.film-shelf__card,
+.collection-card,
+.watch-hero,
+.load-more-button {
+  position: relative;
+}
+
+.topbar::after,
+.film-card::after,
+.film-shelf__card::after,
+.collection-card::after,
+.watch-hero::after,
+.load-more-button::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  background: radial-gradient(
+    260px circle at var(--cursor-x-px) var(--cursor-y-px),
+    rgb(240 183 91 / 12%),
+    transparent 70%
+  );
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+
+html.cursor-active .topbar:hover::after,
+html.cursor-active .film-card:hover::after,
+html.cursor-active .film-card:focus-visible::after,
+html.cursor-active .film-shelf__card:hover::after,
+html.cursor-active .film-shelf__card:focus-visible::after,
+html.cursor-active .collection-card:hover::after,
+html.cursor-active .collection-card:focus-visible::after,
+html.cursor-active .watch-hero:hover::after,
+html.cursor-active .load-more-button:hover::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-glow,
+  .ambient-left,
+  .ambient-right {
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,8 +1,11 @@
+import { useInView } from "../hooks/useInView";
+
 type FilmRatingBadgeProps = {
   rating?: string;
 };
 
 export function FilmRatingBadge({ rating }: FilmRatingBadgeProps) {
+  const { ref, isInView } = useInView<HTMLSpanElement>();
   const normalized = rating?.trim();
 
   if (!normalized) {
@@ -10,7 +13,11 @@ export function FilmRatingBadge({ rating }: FilmRatingBadgeProps) {
   }
 
   return (
-    <span className="film-rating-badge" aria-label={`Рейтинг Кинопоиска ${normalized}`}>
+    <span
+      ref={ref}
+      className={`film-rating-badge${isInView ? " film-rating-badge--visible" : ""}`}
+      aria-label={`Рейтинг Кинопоиска ${normalized}`}
+    >
       {normalized}
     </span>
   );

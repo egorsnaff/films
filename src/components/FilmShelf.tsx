@@ -43,7 +43,7 @@ export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: 
             <button
               key={film.kinopoiskId}
               type="button"
-              className="film-shelf__card"
+              className="film-shelf__card film-shelf__card--interactive"
               role="listitem"
               onClick={() => onSelect(film)}
             >
