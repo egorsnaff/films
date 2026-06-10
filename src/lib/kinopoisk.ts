@@ -89,10 +89,12 @@ export function createKinopoiskClient({
       }
 
       if (response.status === 502 || response.status === 503) {
-        throw new Error(
-          rawBody.trim() ||
-            "Сервер не смог связаться с Kinopoisk API. Проверьте KINOPOISK_API_KEY на сервере и перезапустите контейнер api."
-        );
+        const fallback =
+          response.status === 503
+            ? "Сервер не смог связаться с Kinopoisk API. Проверьте KINOPOISK_API_KEY на сервере и перезапустите контейнер api."
+            : "Kinopoisk API временно недоступен. Попробуйте обновить страницу чуть позже.";
+
+        throw new Error(rawBody.trim() || fallback);
       }
 
       throw new Error(
