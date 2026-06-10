@@ -3,6 +3,8 @@ import type { CSSProperties, FormEvent } from "react";
 
 import { BackButton } from "./components/BackButton";
 import { BrandMark } from "./components/BrandMark";
+import { BrowseMenu } from "./components/BrowseMenu";
+import { CatalogSkeletonGrid } from "./components/CatalogSkeletonGrid";
 import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
@@ -13,7 +15,10 @@ import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
 import { useCatalogInfiniteScroll } from "./hooks/useCatalogInfiniteScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
+import { buildBrowseSections } from "./data/browseSections";
 import { filmCollections, getCollectionById } from "./data/collections";
+import type { BrowseMedia, CatalogFilter, KinopoiskFilters } from "./lib/catalogFilter";
+import { getCatalogFilterMediaType } from "./lib/catalogFilter";
 import {
   KinopoiskFilm,
   KinopoiskFilmDetails,
@@ -62,7 +67,10 @@ type LoadState = "idle" | "loading" | "success" | "error";
 
 const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Подборки", "Профиль"];
 
-const catalogHeadings: Record<CatalogMode, { eyebrow: string; title: string; text: string }> = {
+const catalogHeadings: Record<
+  Exclude<CatalogMode, "filtered">,
+  { eyebrow: string; title: string; text: string }
+> = {
   premieres: {
     eyebrow: "сеанс",
     title: "Популярное сейчас",
@@ -114,12 +122,17 @@ export function App() {
   const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
+  const [browseMedia, setBrowseMedia] = useState<BrowseMedia>("films");
+  const [catalogFilter, setCatalogFilter] = useState<CatalogFilter | null>(null);
+  const [kinopoiskFilters, setKinopoiskFilters] = useState<KinopoiskFilters | null>(null);
+  const [filtersStatus, setFiltersStatus] = useState<LoadState>("idle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
   const hasMoreRef = useRef(hasMore);
   const catalogModeRef = useRef(catalogMode);
+  const catalogFilterRef = useRef<CatalogFilter | null>(null);
   const queryRef = useRef(query);
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   const pendingWatchFilmIdRef = useRef<number | null>(null);
@@ -130,8 +143,16 @@ export function App() {
   filmsRef.current = films;
   hasMoreRef.current = hasMore;
   catalogModeRef.current = catalogMode;
+  catalogFilterRef.current = catalogFilter;
 
   const client = useMemo(() => createKinopoiskClient(), []);
+  const browseSections = useMemo(() => {
+    if (!kinopoiskFilters) {
+      return [];
+    }
+
+    return buildBrowseSections(browseMedia, kinopoiskFilters);
+  }, [browseMedia, kinopoiskFilters]);
   const players = selectedFilm ? createPlayerSources(selectedFilm, playerTemplates) : [];
   const visibleFilms = useMemo(
     () =>
@@ -304,9 +325,11 @@ export function App() {
           ? (selectedFilm?.kinopoiskId ?? pendingWatchFilmIdRef.current)
           : null,
       searchQuery: catalogMode === "search" ? query : "",
+      browseMedia,
+      catalogFilter: catalogMode === "filtered" ? catalogFilter : null,
       scrollY: window.scrollY
     };
-  }, [activeMenu, catalogMode, collectionId, query, selectedFilm, view]);
+  }, [activeMenu, browseMedia, catalogFilter, catalogMode, collectionId, query, selectedFilm, view]);
 
   captureSnapshotRef.current = captureSnapshot;
 
@@ -376,12 +399,48 @@ export function App() {
         if (authUser) {
           await refreshUserLists();
         }
+      } else if (snapshot.view === "browse") {
+        setView("browse");
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
+        setBrowseMedia(snapshot.browseMedia ?? "films");
+        setFiltersStatus(kinopoiskFilters ? "success" : "idle");
+        if (!kinopoiskFilters) {
+          try {
+            setFiltersStatus("loading");
+            const filters = await client.getFilters();
+            setKinopoiskFilters(filters);
+            setFiltersStatus("success");
+          } catch (filtersError) {
+            setError(getErrorMessage(filtersError));
+            setFiltersStatus("error");
+          }
+        }
       } else {
         setView("catalog");
         setSelectedFilm(null);
         setDetailsStatus("idle");
 
-        if (snapshot.catalogMode === "search" && snapshot.searchQuery) {
+        if (snapshot.catalogMode === "filtered" && snapshot.catalogFilter) {
+          setCatalogFilter(snapshot.catalogFilter);
+          catalogFilterRef.current = snapshot.catalogFilter;
+          setStatus("loading");
+          setError(null);
+
+          try {
+            const page = await fetchCatalogPage(client, "filtered", 1, "", snapshot.catalogFilter);
+            setFilms(page.films);
+            filmsRef.current = page.films;
+            setPage(page.page);
+            setTotalPages(page.totalPages);
+            setHasMore(page.page < page.totalPages);
+            hasMoreRef.current = page.page < page.totalPages;
+            setStatus("success");
+          } catch (filteredError) {
+            setError(getErrorMessage(filteredError));
+            setStatus("error");
+          }
+        } else if (snapshot.catalogMode === "search" && snapshot.searchQuery) {
           setQuery(snapshot.searchQuery);
           setStatus("loading");
           setError(null);
@@ -452,7 +511,7 @@ export function App() {
 
     shouldCommitHistoryRef.current = false;
     pushAppHistory(captureSnapshotRef.current());
-  }, [view, activeMenu, catalogMode, collectionId]);
+  }, [view, activeMenu, catalogMode, collectionId, catalogFilter, browseMedia]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
@@ -487,16 +546,39 @@ export function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [restoreSnapshot]);
 
+  const loadKinopoiskFilters = useCallback(async () => {
+    if (kinopoiskFilters) {
+      setFiltersStatus("success");
+      return kinopoiskFilters;
+    }
+
+    setFiltersStatus("loading");
+    setError(null);
+
+    try {
+      const filters = await client.getFilters();
+      setKinopoiskFilters(filters);
+      setFiltersStatus("success");
+      return filters;
+    } catch (filtersError) {
+      setFiltersStatus("error");
+      setError(getErrorMessage(filtersError));
+      return null;
+    }
+  }, [client, kinopoiskFilters]);
+
   const loadCatalogPage = useCallback(
     async ({
       mode,
       nextPage,
       replace,
+      filter,
       autoChaseDepth = 0
     }: {
       mode: CatalogMode;
       nextPage: number;
       replace: boolean;
+      filter?: CatalogFilter | null;
       autoChaseDepth?: number;
     }) => {
       if (replace) {
@@ -508,7 +590,14 @@ export function App() {
       setError(null);
 
       try {
-        const catalogPage = await fetchCatalogPage(client, mode, nextPage, queryRef.current);
+        const activeFilter = filter ?? catalogFilterRef.current;
+        const catalogPage = await fetchCatalogPage(
+          client,
+          mode,
+          nextPage,
+          queryRef.current,
+          activeFilter
+        );
 
         const previousFilms = filmsRef.current;
         const merged = replace ? catalogPage.films : mergeFilms(previousFilms, catalogPage.films);
@@ -529,7 +618,8 @@ export function App() {
         setTotalPages(catalogPage.totalPages);
         setCatalogMode(mode);
         catalogModeRef.current = mode;
-        const nextHasMore = mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
+        const nextHasMore =
+          mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
         setHasMore(nextHasMore);
         hasMoreRef.current = nextHasMore;
         setStatus("success");
@@ -540,6 +630,7 @@ export function App() {
             mode,
             nextPage: catalogPage.page + 1,
             replace: false,
+            filter: activeFilter,
             autoChaseDepth: autoChaseDepth + 1
           });
           return;
@@ -569,10 +660,12 @@ export function App() {
     }
 
     isFetchingMoreRef.current = true;
+    setIsLoadingMore(true);
     await loadCatalogPage({
       mode: catalogModeRef.current,
       nextPage: pageRef.current + 1,
-      replace: false
+      replace: false,
+      filter: catalogFilterRef.current
     });
   }, [loadCatalogPage]);
 
@@ -691,6 +784,8 @@ export function App() {
         return;
       }
 
+      setCatalogFilter(null);
+      catalogFilterRef.current = null;
       setView("catalog");
 
       if (item === "Главная") {
@@ -711,9 +806,44 @@ export function App() {
     }
   }
 
+  async function openBrowse(media: BrowseMedia, options?: { pushHistory?: boolean }) {
+    const pushHistory = options?.pushHistory !== false;
+    beginHistoryEntry(pushHistory);
+    pendingWatchFilmIdRef.current = null;
+    setBrowseMedia(media);
+    setView("browse");
+    setActiveMenu(media === "serials" ? "Сериалы" : "Фильмы");
+    setSelectedFilm(null);
+    setWatchPreviewFilm(null);
+    setDetailsStatus("idle");
+    setIsSearchOpen(false);
+    await loadKinopoiskFilters();
+    requestHistoryCommit(pushHistory);
+  }
+
+  async function openFilteredCatalog(filter: CatalogFilter, options?: { pushHistory?: boolean }) {
+    const pushHistory = options?.pushHistory !== false;
+    beginHistoryEntry(pushHistory);
+    pendingWatchFilmIdRef.current = null;
+    setCatalogFilter(filter);
+    catalogFilterRef.current = filter;
+    setView("catalog");
+    setActiveMenu(filter.media === "serials" ? "Сериалы" : "Фильмы");
+    setCatalogMode("filtered");
+    catalogModeRef.current = "filtered";
+    setSelectedFilm(null);
+    setWatchPreviewFilm(null);
+    setDetailsStatus("idle");
+    setIsSearchOpen(false);
+    await loadCatalogPage({ mode: "filtered", nextPage: 1, replace: true, filter });
+    requestHistoryCommit(pushHistory);
+  }
+
   async function goHome() {
     navHistoryRef.current = [];
     pendingWatchFilmIdRef.current = null;
+    setCatalogFilter(null);
+    catalogFilterRef.current = null;
     setView("catalog");
     setActiveMenu("Главная");
     setSelectedFilm(null);
@@ -749,7 +879,14 @@ export function App() {
     setRecommendationsStatus("idle");
   }
 
-  const heading = catalogHeadings[catalogMode];
+  const heading =
+    catalogMode === "filtered" && catalogFilter
+      ? {
+          eyebrow: "filtered",
+          title: catalogFilter.title,
+          text: "Сортировка по рейтингу Кинопоиска. Листайте вниз — лента подгрузится сама."
+        }
+      : catalogHeadings[catalogMode as Exclude<CatalogMode, "filtered">];
 
   return (
     <>
@@ -827,6 +964,30 @@ export function App() {
             <p className="eyebrow">{heading.eyebrow}</p>
             <h1>{heading.title}</h1>
             <p>{heading.text}</p>
+            {catalogMode === "films" || catalogMode === "serials" ? (
+              <div className="catalog-toolbar">
+                <button
+                  type="button"
+                  className="catalog-toolbar__button"
+                  onClick={() => void openBrowse(catalogMode === "serials" ? "serials" : "films")}
+                >
+                  Каталог и фильтры
+                </button>
+              </div>
+            ) : null}
+            {catalogMode === "filtered" ? (
+              <div className="catalog-toolbar">
+                <button
+                  type="button"
+                  className="catalog-toolbar__button catalog-toolbar__button--ghost"
+                  onClick={() =>
+                    void openBrowse(catalogFilter?.media ?? "films", { pushHistory: false })
+                  }
+                >
+                  Все разделы каталога
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {authUser && catalogMode === "premieres" && recommendationsStatus === "loading" ? (
@@ -879,12 +1040,11 @@ export function App() {
             />
           ) : null}
 
-          {isLoadingMore && catalogMode !== "search" && catalogGridFilms.length > 0 ? (
-            <div className="catalog-preload-row" aria-hidden="true">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <span key={index} className="film-skeleton" />
-              ))}
-            </div>
+          {isLoadingMore && catalogMode !== "search" ? (
+            <CatalogSkeletonGrid
+              count={catalogGridFilms.length > 0 ? 10 : 10}
+              variant={catalogGridFilms.length > 0 ? "inline" : "grid"}
+            />
           ) : null}
 
           {catalogMode !== "search" ? (
@@ -906,6 +1066,17 @@ export function App() {
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {view === "browse" ? (
+        <BrowseMenu
+          media={browseMedia}
+          sections={browseSections}
+          isLoading={filtersStatus === "loading"}
+          error={filtersStatus === "error" ? error : null}
+          onRetry={() => void loadKinopoiskFilters()}
+          onSelect={(filter) => void openFilteredCatalog(filter)}
+        />
       ) : null}
 
       {view === "collections" ? (
@@ -1124,10 +1295,32 @@ async function fetchCatalogPage(
   client: ReturnType<typeof createKinopoiskClient>,
   mode: CatalogMode,
   nextPage: number,
-  keyword: string
+  keyword: string,
+  filter?: CatalogFilter | null
 ) {
   if (mode === "search") {
     return client.searchFilms(keyword, nextPage);
+  }
+
+  if (mode === "filtered" && filter) {
+    if (filter.kind === "theme" && filter.themeType) {
+      return client.getThemeFilms(filter.themeType, nextPage);
+    }
+
+    if (filter.kind === "top" && filter.topType) {
+      return client.getTopFilms(filter.topType, nextPage);
+    }
+
+    return client.getFilteredFilms(
+      {
+        type: getCatalogFilterMediaType(filter),
+        genreId: filter.genreId,
+        countryId: filter.countryId,
+        year: filter.year,
+        order: "RATING"
+      },
+      nextPage
+    );
   }
 
   if (mode === "premieres") {

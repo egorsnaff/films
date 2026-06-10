@@ -36,9 +36,23 @@ export type ThemeCollectionType =
   | "FAMILY"
   | "CATASTROPHE_THEME"
   | "KIDS_ANIMATION_THEME"
+  | "CLOSES_RELEASES"
   | "TOP_POPULAR_ALL"
   | "TOP_POPULAR_MOVIES"
   | "TOP_POPULAR_SERIES";
+
+export type FilterCatalogQuery = {
+  type: "FILM" | "TV_SERIES";
+  genreId?: number;
+  countryId?: number;
+  year?: number;
+  order?: "RATING" | "YEAR" | "NUM_VOTE";
+};
+
+export type KinopoiskFiltersPayload = {
+  genres: Array<{ id: number; genre: string }>;
+  countries: Array<{ id: number; country: string }>;
+};
 
 type FetchLike = typeof fetch;
 
@@ -159,6 +173,52 @@ export function createKinopoiskClient({
       });
 
       return getCachedCatalogPage(`top:${type}:${page}`, "list", `/top?${params.toString()}`);
+    },
+
+    async getFilters(): Promise<KinopoiskFiltersPayload> {
+      const local = readLocalCache<KinopoiskFiltersPayload>("filters:metadata", "list");
+      if (local) {
+        return local;
+      }
+
+      const result = await proxyRequest<KinopoiskFiltersPayload>("/filters");
+      writeLocalCache("filters:metadata", result);
+      return result;
+    },
+
+    async getFilteredFilms(
+      query: FilterCatalogQuery,
+      page = 1
+    ): Promise<KinopoiskCatalogPage> {
+      const params = new URLSearchParams({
+        type: query.type,
+        page: String(page),
+        order: query.order ?? "RATING"
+      });
+
+      if (query.genreId) {
+        params.set("genreId", String(query.genreId));
+      }
+
+      if (query.countryId) {
+        params.set("countryId", String(query.countryId));
+      }
+
+      if (query.year) {
+        params.set("year", String(query.year));
+      }
+
+      const cacheKey = [
+        "filter",
+        query.type,
+        query.genreId ?? "-",
+        query.countryId ?? "-",
+        query.year ?? "-",
+        query.order ?? "RATING",
+        page
+      ].join(":");
+
+      return getCachedCatalogPage(cacheKey, "catalog", `/catalog/filter?${params.toString()}`);
     },
 
     async getThemeFilms(type: ThemeCollectionType, page = 1): Promise<KinopoiskCatalogPage> {

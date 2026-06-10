@@ -16,6 +16,8 @@ import {
 import {
   ensureFilmsCached,
   getFilmDetails,
+  getFilterCatalog,
+  getKinopoiskFilters,
   getRecentCatalog,
   getSimilarFilms,
   getThemeList,
@@ -189,6 +191,49 @@ app.get("/kp/collections", async (req, res) => {
 
   try {
     const result = await getThemeList(type, page);
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/filters", async (_req, res) => {
+  try {
+    const result = await getKinopoiskFilters();
+    res.json(result);
+  } catch (error) {
+    handleKpError(error, res);
+  }
+});
+
+app.get("/kp/catalog/filter", async (req, res) => {
+  const page = Math.max(1, Number(req.query.page ?? 1));
+  const type = req.query.type === "TV_SERIES" ? "TV_SERIES" : "FILM";
+  const genreId = Number(req.query.genreId);
+  const countryId = Number(req.query.countryId);
+  const year = Number(req.query.year);
+  const yearFrom = Number(req.query.yearFrom);
+  const yearTo = Number(req.query.yearTo);
+  const order = req.query.order === "YEAR" || req.query.order === "NUM_VOTE" ? req.query.order : "RATING";
+
+  try {
+    const result = await getFilterCatalog({
+      type,
+      page,
+      genreId: Number.isFinite(genreId) ? genreId : undefined,
+      countryId: Number.isFinite(countryId) ? countryId : undefined,
+      yearFrom: Number.isFinite(yearFrom)
+        ? yearFrom
+        : Number.isFinite(year)
+          ? year
+          : undefined,
+      yearTo: Number.isFinite(yearTo)
+        ? yearTo
+        : Number.isFinite(year)
+          ? year
+          : undefined,
+      order
+    });
     res.json(result);
   } catch (error) {
     handleKpError(error, res);
