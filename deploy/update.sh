@@ -189,6 +189,7 @@ PREVIOUS_REV=$(git rev-parse HEAD)
 git fetch origin "$DEPLOY_BRANCH"
 git reset --hard "origin/${DEPLOY_BRANCH}"
 CURRENT_REV=$(git rev-parse HEAD)
+chmod +x deploy/*.sh 2>/dev/null || true
 
 TARGETS=$(detect_deploy_services "$PREVIOUS_REV" "$CURRENT_REV")
 
