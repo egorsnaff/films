@@ -135,18 +135,38 @@ detect_deploy_services() {
   printf '%s' "${services[*]}"
 }
 
-ensure_films_matches_git() {
+ensure_deploy_matches_git() {
   local current_rev="$1"
   local -n services_ref=$2
   local deployed_rev
+  local changed_files
 
   deployed_rev=$(read_deployed_films_rev)
   if [[ "$deployed_rev" == "$current_rev" ]]; then
     return
   fi
 
-  echo "→ films на сервере: ${deployed_rev:-<старая сборка>}, в git: ${current_rev:0:12} — пересобираем films" >&2
+  echo "→ films на сервере: ${deployed_rev:-<старая сборка>}, в git: ${current_rev:0:12}" >&2
   append_service "films" services_ref
+
+  if [[ -z "$deployed_rev" ]] || ! git cat-file -e "${deployed_rev}^{commit}" 2>/dev/null; then
+    echo "→ предыдущая сборка неизвестна — пересобираем api" >&2
+    append_service "api" services_ref
+    return
+  fi
+
+  changed_files=$(git diff --name-only "$deployed_rev" "$current_rev")
+
+  if grep -q '^server/' <<< "$changed_files"; then
+    echo "→ server изменился с последнего деплоя — пересобираем api" >&2
+    append_service "api" services_ref
+  fi
+
+  if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]] \
+    && grep -qE '^(docker-compose\.prod\.yml|deploy/proxy/)' <<< "$changed_files"; then
+    echo "→ proxy-конфиг изменился — пересобираем proxy" >&2
+    append_service "proxy" services_ref
+  fi
 }
 
 deploy_services() {
@@ -200,7 +220,7 @@ else
   SERVICE_LIST=($TARGETS)
 fi
 
-ensure_films_matches_git "$CURRENT_REV" SERVICE_LIST
+ensure_deploy_matches_git "$CURRENT_REV" SERVICE_LIST
 
 if ! service_is_running "$COMPOSE_FILE" films; then
   echo "→ films контейнер не запущен, добавляем в деплой" >&2
