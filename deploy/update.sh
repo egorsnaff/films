@@ -151,23 +151,21 @@ deploy_services() {
   export GIT_SHA="${CURRENT_REV}"
   configure_docker_builder
 
-  if [[ "${DEPLOY_NO_CACHE:-}" == "1" || "${DEPLOY_NO_CACHE:-}" == "true" ]]; then
-    echo "  режим DEPLOY_NO_CACHE: полная пересборка без кэша Docker" >&2
-    # shellcheck disable=SC2086
-    compose -f "$COMPOSE_FILE" build --no-cache "${services[@]}"
-    # shellcheck disable=SC2086
-    compose -f "$COMPOSE_FILE" up -d --no-deps "${services[@]}"
-    compose -f "$COMPOSE_FILE" up -d
-    return
-  fi
-
   local service
   for service in "${services[@]}"; do
-    # shellcheck disable=SC2086
-    compose -f "$COMPOSE_FILE" up -d --build --no-deps "$service"
+    if [[ "$service" == "proxy" ]]; then
+      restart_image_service "$COMPOSE_FILE" "$service"
+      continue
+    fi
+
+    if [[ "${DEPLOY_NO_CACHE:-}" == "1" || "${DEPLOY_NO_CACHE:-}" == "true" ]]; then
+      replace_service "$COMPOSE_FILE" "$service" --no-cache
+    else
+      replace_service "$COMPOSE_FILE" "$service"
+    fi
   done
 
-  compose -f "$COMPOSE_FILE" up -d
+  ensure_stack_running "$COMPOSE_FILE"
 }
 
 echo "→ Обновление из origin/${DEPLOY_BRANCH}"
@@ -189,7 +187,7 @@ ensure_films_matches_git "$CURRENT_REV" SERVICE_LIST
 
 if [[ ${#SERVICE_LIST[@]} -eq 0 ]]; then
   echo "→ Образы актуальны, перезапускаем контейнеры" >&2
-  compose -f "$COMPOSE_FILE" up -d
+  ensure_stack_running "$COMPOSE_FILE"
 else
   deploy_services "${SERVICE_LIST[@]}"
 fi
