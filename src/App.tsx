@@ -4,7 +4,6 @@ import type { CSSProperties, FormEvent } from "react";
 import { BackButton } from "./components/BackButton";
 import { BrandMark } from "./components/BrandMark";
 import { BrowseMenu } from "./components/BrowseMenu";
-import { CatalogSkeletonGrid } from "./components/CatalogSkeletonGrid";
 import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
@@ -84,12 +83,12 @@ const catalogHeadings: Record<
   films: {
     eyebrow: "films",
     title: "Фильмы",
-    text: "Популярные полнометражные фильмы. Лента подгружается при скролле."
+    text: ""
   },
   serials: {
     eyebrow: "series",
     title: "Сериалы",
-    text: "Популярные сериалы. Лента подгружается при скролле."
+    text: ""
   }
 };
 
@@ -185,7 +184,10 @@ export function App() {
       ? "250 лучших, которые вы ещё не смотрели"
       : "На основе ваших интересов";
   const recommendationsPending =
-    Boolean(authUser) && catalogMode === "premieres" && recommendationsStatus === "loading";
+    Boolean(authUser) &&
+    catalogMode === "premieres" &&
+    recommendationsStatus === "loading" &&
+    recommendations === null;
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
   const recommendationFilmIds = useMemo(
@@ -612,11 +614,14 @@ export function App() {
     }) => {
       if (replace) {
         setStatus("loading");
-      } else {
+      } else if (autoChaseDepth === 0) {
         setIsLoadingMore(true);
+        isFetchingMoreRef.current = true;
       }
 
       setError(null);
+
+      let shouldChaseNextPage = false;
 
       try {
         const activeFilter = filter ?? catalogFilterRef.current;
@@ -634,11 +639,11 @@ export function App() {
           mode === "premieres" ? recommendationFilmIdsRef.current : new Set<number>();
         const previousVisibleCount = countVisibleFilms(previousFilms, mode, excludeRecommendationIds);
         const nextVisibleCount = countVisibleFilms(merged, mode, excludeRecommendationIds);
-        const shouldLoadAnotherPage =
+        shouldChaseNextPage =
           !replace &&
           catalogPage.page < catalogPage.totalPages &&
           nextVisibleCount === previousVisibleCount &&
-          catalogPage.films.length > 0;
+          autoChaseDepth < 30;
 
         setFilms(merged);
         filmsRef.current = merged;
@@ -653,7 +658,7 @@ export function App() {
         hasMoreRef.current = nextHasMore;
         setStatus("success");
 
-        if (shouldLoadAnotherPage && autoChaseDepth < 10) {
+        if (shouldChaseNextPage) {
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -661,7 +666,6 @@ export function App() {
             filter: activeFilter,
             autoChaseDepth: autoChaseDepth + 1
           });
-          return;
         }
       } catch (loadError) {
         setError(getErrorMessage(loadError));
@@ -671,8 +675,10 @@ export function App() {
           hasMoreRef.current = false;
         }
       } finally {
-        setIsLoadingMore(false);
-        isFetchingMoreRef.current = false;
+        if (autoChaseDepth === 0) {
+          setIsLoadingMore(false);
+          isFetchingMoreRef.current = false;
+        }
       }
     },
     [client]
@@ -1020,10 +1026,7 @@ export function App() {
             <aside className="recommendations-rail" aria-label="Рекомендации">
               <FilmShelf
                 title={recommendationTitle}
-                subtitle={
-                  recommendations?.reason ??
-                  "Отдельная подборка — основная лента ниже подгружается независимо"
-                }
+                subtitle={recommendations?.reason}
                 films={recommendationFilms}
                 onSelect={(film) => void openFilm(film)}
               />
@@ -1046,20 +1049,16 @@ export function App() {
             </div>
           ) : null}
 
-          {!recommendationsPending ? (
-            <div className="catalog-feed">
-              {catalogGridFilms.length > 0 ? (
-                <FilmGrid
-                  films={catalogGridFilms}
-                  animate={status === "success"}
-                  onSelect={(film) => void openFilm(film)}
-                />
-              ) : null}
-
-              {isLoadingMore && catalogMode !== "search" ? (
-                <CatalogSkeletonGrid count={10} variant="inline" />
-              ) : null}
-            </div>
+          {!recommendationsPending &&
+          (catalogGridFilms.length > 0 || (isLoadingMore && catalogMode !== "search")) ? (
+            <FilmGrid
+              films={catalogGridFilms}
+              animate={status === "success"}
+              loadingSkeletonCount={
+                isLoadingMore && catalogMode !== "search" ? 10 : 0
+              }
+              onSelect={(film) => void openFilm(film)}
+            />
           ) : null}
 
           {catalogMode !== "search" && !recommendationsPending ? (
@@ -1068,8 +1067,8 @@ export function App() {
               className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
               aria-live="polite"
             >
-              {!isLoadingMore && hasMore ? (
-                <span className="load-more-sentinel__hint">Листайте дальше</span>
+              {isLoadingMore ? (
+                <span className="load-more-sentinel__hint">Подгружаем...</span>
               ) : null}
               {!isLoadingMore && !hasMore && catalogGridFilms.length > 0 ? (
                 <span>Это всё на сейчас</span>
@@ -1080,20 +1079,15 @@ export function App() {
       ) : null}
 
       {view === "browse" ? (
-        <>
-          <div className="browse-view__toolbar">
-            <BackButton label={backLabel} onClick={() => void goBack()} />
-          </div>
-          <BrowseMenu
-            media={browseMedia}
-            sections={browseSections}
-            isLoading={filtersStatus === "loading"}
-            error={filtersStatus === "error" ? error : null}
-            onMediaChange={setBrowseMedia}
-            onRetry={() => void loadKinopoiskFilters()}
-            onSelect={(filter) => void openFilteredCatalog(filter)}
-          />
-        </>
+        <BrowseMenu
+          media={browseMedia}
+          sections={browseSections}
+          isLoading={filtersStatus === "loading"}
+          error={filtersStatus === "error" ? error : null}
+          onMediaChange={setBrowseMedia}
+          onRetry={() => void loadKinopoiskFilters()}
+          onSelect={(filter) => void openFilteredCatalog(filter)}
+        />
       ) : null}
 
       {view === "collections" ? (

@@ -14,6 +14,23 @@ const sampleFilters = {
 };
 
 describe("buildBrowseSections", () => {
+  it("filters empty genre and country labels", () => {
+    const sections = buildBrowseSections("films", {
+      genres: [
+        { id: 1, genre: "" },
+        { id: 8, genre: "драмы" }
+      ],
+      countries: [
+        { id: 1, country: "   " },
+        { id: 2, country: "Россия" }
+      ]
+    });
+
+    expect(sections.find((section) => section.id === "genres")?.items).toHaveLength(1);
+    expect(sections.find((section) => section.id === "countries")?.items).toHaveLength(1);
+    expect(sections.find((section) => section.id === "tops")?.items).toHaveLength(2);
+  });
+
   it("builds film sections with genres, tops and years", () => {
     const sections = buildBrowseSections("films", sampleFilters);
 

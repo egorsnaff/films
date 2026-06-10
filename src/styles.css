@@ -606,6 +606,10 @@ h1 em {
   text-align: left;
 }
 
+.film-card--skeleton {
+  pointer-events: none;
+}
+
 .film-card:hover,
 .film-card:focus-visible,
 .film-card--active {
