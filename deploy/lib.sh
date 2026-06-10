@@ -32,3 +32,40 @@ EOF
 compose() {
   "${COMPOSE[@]}" "$@"
 }
+
+uses_compose_v1() {
+  [[ "${COMPOSE[0]}" == "docker-compose" ]]
+}
+
+# docker-compose 1.29 + new Docker Engine breaks on `up` recreate (KeyError: ContainerConfig).
+# Replacing the container avoids the broken recreate path.
+replace_service() {
+  local compose_file="$1"
+  local service="$2"
+  shift 2
+
+  if [[ $# -gt 0 ]]; then
+    # shellcheck disable=SC2086
+    compose -f "$compose_file" build "$@" "$service"
+  else
+    compose -f "$compose_file" build "$service"
+  fi
+
+  compose -f "$compose_file" stop "$service" 2>/dev/null || true
+  compose -f "$compose_file" rm -f "$service" 2>/dev/null || true
+  compose -f "$compose_file" up -d --no-deps "$service"
+}
+
+restart_image_service() {
+  local compose_file="$1"
+  local service="$2"
+
+  compose -f "$compose_file" stop "$service" 2>/dev/null || true
+  compose -f "$compose_file" rm -f "$service" 2>/dev/null || true
+  compose -f "$compose_file" up -d --no-deps "$service"
+}
+
+ensure_stack_running() {
+  local compose_file="$1"
+  compose -f "$compose_file" up -d --no-recreate
+}
