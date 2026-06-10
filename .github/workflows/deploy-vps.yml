@@ -27,5 +27,10 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.VPS_DEPLOY_PATH || '/opt/films' }}"
-            chmod +x deploy/update.sh
+            if ! docker compose version >/dev/null 2>&1; then
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y -qq docker-compose-plugin || true
+            fi
+            chmod +x deploy/update.sh deploy/recover.sh
             ./deploy/update.sh
