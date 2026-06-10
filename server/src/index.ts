@@ -13,6 +13,7 @@ import {
   upsertUserFilm,
   type WatchStatus
 } from "./db.js";
+import { getKinopoiskApiStats } from "./kpApiStats.js";
 import {
   ensureFilmsCached,
   getFilmDetails,
@@ -101,16 +102,24 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/health/kp/stats", (_req, res) => {
+  res.json({
+    ok: true,
+    api: getKinopoiskApiStats()
+  });
+});
+
 app.get("/health/kp", async (_req, res) => {
+  const api = getKinopoiskApiStats();
   const result = await probeKinopoisk();
 
   if (!result.ok) {
     const status = result.keyConfigured ? 502 : 503;
-    res.status(status).json(result);
+    res.status(status).json({ ...result, api });
     return;
   }
 
-  res.json(result);
+  res.json({ ...result, api });
 });
 
 function handleKpError(error: unknown, res: express.Response) {

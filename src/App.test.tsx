@@ -471,7 +471,9 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "На главную" }));
 
-    expect(await screen.findByText("Популярное сейчас")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Популярное сейчас")).toBeInTheDocument();
+    });
     expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
   });
 
