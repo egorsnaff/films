@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePlayerProgressMessage } from "./playerProgress";
+import { isPlayerPlaybackStartMessage, parsePlayerProgressMessage } from "./playerProgress";
 
 describe("parsePlayerProgressMessage", () => {
   it("parses Alloha timeupdate JSON messages", () => {
@@ -64,5 +64,26 @@ describe("parsePlayerProgressMessage", () => {
       duration: 5400,
       ended: true
     });
+  });
+});
+
+describe("isPlayerPlaybackStartMessage", () => {
+  it("detects generic play events", () => {
+    expect(isPlayerPlaybackStartMessage(JSON.stringify({ event: "play" }))).toBe(true);
+    expect(isPlayerPlaybackStartMessage(JSON.stringify({ type: "playing" }))).toBe(true);
+  });
+
+  it("detects player.js play events", () => {
+    expect(
+      isPlayerPlaybackStartMessage(
+        JSON.stringify({ context: "player.js", event: "play", value: { seconds: 0 } })
+      )
+    ).toBe(true);
+  });
+
+  it("ignores timeupdate events", () => {
+    expect(isPlayerPlaybackStartMessage(JSON.stringify({ event: "timeupdate", time: 120 }))).toBe(
+      false
+    );
   });
 });

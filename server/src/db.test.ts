@@ -12,14 +12,14 @@ describe("resolveProgressStatus", () => {
     updated_at: "2026-01-01T00:00:00.000Z"
   };
 
-  it("keeps existing status when watch time is under one minute", () => {
-    expect(resolveProgressStatus(existingPlan, 30, 1, "watching")).toBe("plan");
-    expect(resolveProgressStatus(undefined, 30, 1, "watching")).toBeNull();
+  it("keeps existing status when watch time is under five minutes", () => {
+    expect(resolveProgressStatus(existingPlan, 120, 1, "watching")).toBe("plan");
+    expect(resolveProgressStatus(undefined, 120, 1, "watching")).toBeNull();
   });
 
-  it("switches to watching after one minute", () => {
-    expect(resolveProgressStatus(existingPlan, 60, 2)).toBe("watching");
-    expect(resolveProgressStatus(undefined, 60, 2)).toBe("watching");
+  it("switches to watching after five minutes", () => {
+    expect(resolveProgressStatus(existingPlan, 300, 2)).toBe("watching");
+    expect(resolveProgressStatus(undefined, 300, 2)).toBe("watching");
   });
 
   it("marks watched at ninety percent regardless of elapsed time", () => {

@@ -103,7 +103,7 @@ export function upsertUserFilm(userId: number, kinopoiskId: number, status: Watc
   return getUserFilm(userId, kinopoiskId)!;
 }
 
-export const MIN_WATCH_SECONDS_FOR_WATCHING = 60;
+export const MIN_WATCH_SECONDS_FOR_WATCHING = 300;
 
 export function resolveProgressStatus(
   existing: DbUserFilm | undefined,
