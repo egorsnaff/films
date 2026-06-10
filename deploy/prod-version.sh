@@ -17,6 +17,12 @@ if html=$(curl -fsS "$SITE_URL"); then
   else
     echo "  favicon: нет (старая сборка)"
   fi
+  build_id=$(curl -fsS "${SITE_URL%/}/build-id.txt" 2>/dev/null | tr -d '\r\n' || true)
+  if [[ -n "$build_id" ]]; then
+    echo "  build-id: ${build_id}"
+  else
+    echo "  build-id: <missing>"
+  fi
 else
   echo "  ошибка: не удалось загрузить HTML"
 fi

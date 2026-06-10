@@ -41,6 +41,7 @@ services:
         VITE_ENABLE_ALOHA: ${VITE_ENABLE_ALOHA:-true}
         VITE_HDVB_TOKEN: ${VITE_HDVB_TOKEN:-}
         VITE_PLAYER_TEMPLATES: ${VITE_PLAYER_TEMPLATES:-}
+        GIT_SHA: ${GIT_SHA:-unknown}
     ports:
       - "${FILMS_HTTP_PORT:-8080}:80"
     networks:

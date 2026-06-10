@@ -46,6 +46,7 @@ services:
         VITE_ENABLE_ALLOHA: ${VITE_ENABLE_ALLOHA:-true}
         VITE_HDVB_TOKEN: ${VITE_HDVB_TOKEN:-}
         VITE_PLAYER_TEMPLATES: ${VITE_PLAYER_TEMPLATES:-}
+        GIT_SHA: ${GIT_SHA:-unknown}
     expose:
       - "80"
     networks:
