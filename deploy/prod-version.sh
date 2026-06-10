@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 SITE_URL="${SITE_URL:-https://films.qzz.io}"
 API_URL="${API_URL:-${SITE_URL%/}/api/health}"
+BUILD_ID_URL="${BUILD_ID_URL:-${SITE_URL%/}/build-id.txt}"
 
 echo "→ Сайт: ${SITE_URL}"
 if html=$(curl -fsS "$SITE_URL"); then
@@ -17,7 +18,7 @@ if html=$(curl -fsS "$SITE_URL"); then
   else
     echo "  favicon: нет (старая сборка)"
   fi
-  build_id=$(curl -fsS "${SITE_URL%/}/build-id.txt" 2>/dev/null | tr -d '\r\n' || true)
+  build_id=$(curl -fsS "$BUILD_ID_URL" 2>/dev/null | tr -d '\r\n' || true)
   if [[ -n "$build_id" ]]; then
     echo "  build-id: ${build_id}"
   else

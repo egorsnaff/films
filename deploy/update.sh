@@ -8,7 +8,6 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/deploy/lib.sh"
 resolve_compose
 
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 DEPLOY_SERVICES="${DEPLOY_SERVICES:-}"
 
@@ -19,9 +18,30 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+COMPOSE_FILE="$(resolve_compose_file)"
+echo "→ Compose file: ${COMPOSE_FILE}" >&2
+
 read_deployed_films_rev() {
+  if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
+    curl -fsS "http://127.0.0.1/build-id.txt" 2>/dev/null | tr -d '\r\n' || true
+    return
+  fi
+
   local films_port="${FILMS_HTTP_PORT:-8080}"
   curl -fsS "http://127.0.0.1:${films_port}/build-id.txt" 2>/dev/null | tr -d '\r\n' || true
+}
+
+check_stack_health() {
+  if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
+    curl -fsS "http://127.0.0.1/api/health" >/dev/null
+    curl -fsS "http://127.0.0.1/build-id.txt" >/dev/null
+    return
+  fi
+
+  local api_port="${API_HTTP_PORT:-3001}"
+  local films_port="${FILMS_HTTP_PORT:-8080}"
+  curl -fsS "http://127.0.0.1:${api_port}/health" >/dev/null
+  curl -fsS "http://127.0.0.1:${films_port}/api/health" >/dev/null
 }
 
 contains_service() {
@@ -45,7 +65,6 @@ append_service() {
   fi
 }
 
-# Returns a space-separated service list, or "__SKIP_BUILD__" when images are unchanged.
 detect_deploy_services() {
   local previous_rev="$1"
   local current_rev="$2"
@@ -130,26 +149,11 @@ ensure_films_matches_git() {
   append_service "films" services_ref
 }
 
-configure_docker_builder() {
-  if [[ -n "${DOCKER_BUILDKIT:-}" ]]; then
-    return
-  fi
-
-  if docker buildx version >/dev/null 2>&1; then
-    export DOCKER_BUILDKIT=1
-    return
-  fi
-
-  export DOCKER_BUILDKIT=0
-  export COMPOSE_DOCKER_CLI_BUILD=0
-}
-
 deploy_services() {
   local services=("$@")
 
   echo "→ Деплой (${COMPOSE_FILE}: ${services[*]})"
   export GIT_SHA="${CURRENT_REV}"
-  configure_docker_builder
 
   local service
   for service in "${services[@]}"; do
@@ -166,6 +170,18 @@ deploy_services() {
   done
 
   ensure_stack_running "$COMPOSE_FILE"
+}
+
+verify_deploy() {
+  check_stack_health
+
+  local deployed_rev
+  deployed_rev=$(read_deployed_films_rev)
+  echo "  films build-id: ${deployed_rev:-<missing>}"
+  if [[ "$deployed_rev" != "$CURRENT_REV" ]]; then
+    echo "  films build-id mismatch — деплой не обновил фронтенд" >&2
+    return 1
+  fi
 }
 
 echo "→ Обновление из origin/${DEPLOY_BRANCH}"
@@ -185,6 +201,11 @@ fi
 
 ensure_films_matches_git "$CURRENT_REV" SERVICE_LIST
 
+if ! service_is_running "$COMPOSE_FILE" films; then
+  echo "→ films контейнер не запущен, добавляем в деплой" >&2
+  append_service "films" SERVICE_LIST
+fi
+
 if [[ ${#SERVICE_LIST[@]} -eq 0 ]]; then
   echo "→ Образы актуальны, перезапускаем контейнеры" >&2
   ensure_stack_running "$COMPOSE_FILE"
@@ -195,33 +216,11 @@ fi
 echo "→ Проверка health"
 sleep 3
 
-if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
-  api_port="${API_HTTP_PORT:-3001}"
-  curl -fsS "http://127.0.0.1:${api_port}/health" >/dev/null
-  echo "  api: ok"
-fi
-
-if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
-  films_port="${FILMS_HTTP_PORT:-8080}"
-  curl -fsS "http://127.0.0.1:${films_port}/api/health" >/dev/null
-  echo "  films/api proxy: ok"
-  deployed_rev=$(read_deployed_films_rev)
-  echo "  films build-id: ${deployed_rev:-<missing>}"
-  if [[ "$deployed_rev" != "$CURRENT_REV" ]]; then
-    echo "  films build-id mismatch — деплой не обновил фронтенд" >&2
-    exit 1
-  fi
-fi
-
-if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
-  curl -fsS "http://127.0.0.1/api/health" >/dev/null
-  echo "  proxy/api health: ok"
-  deployed_rev=$(curl -fsS "http://127.0.0.1/build-id.txt" 2>/dev/null | tr -d '\r\n' || true)
-  echo "  films build-id: ${deployed_rev:-<missing>}"
-  if [[ "$deployed_rev" != "$CURRENT_REV" ]]; then
-    echo "  films build-id mismatch — деплой не обновил фронтенд" >&2
-    exit 1
-  fi
+if ! verify_deploy; then
+  echo "→ Пробуем восстановить стек" >&2
+  recover_stack "$COMPOSE_FILE" "$CURRENT_REV"
+  sleep 3
+  verify_deploy
 fi
 
 compose -f "$COMPOSE_FILE" ps
