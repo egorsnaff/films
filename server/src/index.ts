@@ -332,6 +332,11 @@ app.patch("/lists/progress", requireUser, (req, res) => {
     forceStatus
   );
 
+  if (!item) {
+    res.status(204).send();
+    return;
+  }
+
   res.json({
     item: {
       kinopoiskId: item.kinopoisk_id,

@@ -103,28 +103,46 @@ export function upsertUserFilm(userId: number, kinopoiskId: number, status: Watc
   return getUserFilm(userId, kinopoiskId)!;
 }
 
+export const MIN_WATCH_SECONDS_FOR_WATCHING = 60;
+
+export function resolveProgressStatus(
+  existing: DbUserFilm | undefined,
+  watchSeconds: number,
+  progressPercent: number,
+  forceStatus?: WatchStatus
+): WatchStatus | null {
+  if (progressPercent >= 90 || forceStatus === "watched") {
+    return "watched";
+  }
+
+  if (forceStatus && forceStatus !== "watching") {
+    return forceStatus;
+  }
+
+  if (watchSeconds < MIN_WATCH_SECONDS_FOR_WATCHING) {
+    return existing?.status ?? null;
+  }
+
+  if (existing?.status === "watched") {
+    return "watched";
+  }
+
+  return "watching";
+}
+
 export function updateUserFilmProgress(
   userId: number,
   kinopoiskId: number,
   watchSeconds: number,
   progressPercent: number,
   forceStatus?: WatchStatus
-): DbUserFilm {
+): DbUserFilm | null {
   const updatedAt = new Date().toISOString();
   const existing = getUserFilm(userId, kinopoiskId);
-  let nextStatus: WatchStatus =
-    forceStatus ?? existing?.status ?? (progressPercent >= 90 ? "watched" : "watching");
+  const nextStatus = resolveProgressStatus(existing, watchSeconds, progressPercent, forceStatus);
 
-  if (!forceStatus && existing?.status === "plan") {
-    nextStatus = progressPercent >= 90 ? "watched" : "watching";
-  }
-
-  if (!forceStatus && existing?.status === "waiting") {
-    nextStatus = progressPercent >= 90 ? "watched" : "watching";
-  }
-
-  if (progressPercent >= 90) {
-    nextStatus = "watched";
+  if (!nextStatus) {
+    return existing ?? null;
   }
 
   db.prepare(
