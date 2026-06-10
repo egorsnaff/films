@@ -2069,6 +2069,58 @@ h1 em {
   background: rgb(255 255 255 / 4%);
 }
 
+.browse-view__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.browse-view__tab {
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 4%);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease,
+    background 180ms ease;
+}
+
+.browse-view__tab--active {
+  border-color: rgb(240 183 91 / 58%);
+  background: rgb(240 183 91 / 10%);
+  color: var(--gold);
+}
+
+.browse-view__toolbar {
+  margin-bottom: 14px;
+}
+
+.recommendations-shelf-skeleton__head {
+  width: min(320px, 72%);
+  height: 22px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+  animation: shimmer 1.25s infinite linear;
+  background-size: 220% 100%;
+}
+
+.catalog-feed {
+  display: grid;
+  gap: 0;
+}
+
+.catalog-feed .catalog-skeleton-grid--inline {
+  margin-top: 16px;
+}
+
 .browse-view {
   display: grid;
   gap: 28px;
@@ -2186,6 +2238,14 @@ h1 em {
 }
 
 .recommendations-shelf-skeleton {
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 18px;
+  padding: 14px 0 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.recommendations-shelf-skeleton__track {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(148px, 172px);

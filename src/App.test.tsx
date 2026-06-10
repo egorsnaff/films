@@ -109,6 +109,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Главная" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Фильмы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Каталог" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Подборки" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Войти" })).toBeInTheDocument();
@@ -148,7 +149,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
-    expect(screen.getByText("Популярное сейчас")).toBeInTheDocument();
+    expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
     expect(screen.getByText("Листайте дальше")).toBeInTheDocument();
   });
 
@@ -472,7 +473,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "На главную" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Популярное сейчас")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Матрица/ })).toBeInTheDocument();
     });
     expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
   });

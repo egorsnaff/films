@@ -533,10 +533,30 @@ function resolveTotalPages(data: SearchFilmResponse, page: number, itemCount: nu
   return Math.max(1, page);
 }
 
+function parseImdbRating(film: CachedFilm): number {
+  const parsed = Number.parseFloat(film.imdbRating ?? "");
+  return Number.isFinite(parsed) ? parsed : -1;
+}
+
+export function sortFilmsByImdbRating<T extends CachedFilm>(films: T[]): T[] {
+  return [...films].sort((left, right) => {
+    const imdbDiff = parseImdbRating(right) - parseImdbRating(left);
+    if (imdbDiff !== 0) {
+      return imdbDiff;
+    }
+
+    const kpLeft = Number.parseFloat(left.rating ?? "") || 0;
+    const kpRight = Number.parseFloat(right.rating ?? "") || 0;
+    return kpRight - kpLeft;
+  });
+}
+
 function mapCatalogPage(data: SearchFilmResponse, page: number): KinopoiskCatalogPage {
-  const films = (data.items ?? data.films ?? [])
-    .map((raw) => mapFilmSummary(raw))
-    .filter((film): film is CachedFilm => film !== null);
+  const films = sortFilmsByImdbRating(
+    (data.items ?? data.films ?? [])
+      .map((raw) => mapFilmSummary(raw))
+      .filter((film): film is CachedFilm => film !== null)
+  );
 
   const totalPages = resolveTotalPages(data, page, films.length);
 

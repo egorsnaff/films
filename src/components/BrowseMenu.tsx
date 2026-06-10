@@ -6,6 +6,7 @@ type BrowseMenuProps = {
   sections: BrowseSection[];
   isLoading: boolean;
   error?: string | null;
+  onMediaChange: (media: BrowseMedia) => void;
   onSelect: (filter: CatalogFilter) => void;
   onRetry?: () => void;
 };
@@ -15,21 +16,31 @@ export function BrowseMenu({
   sections,
   isLoading,
   error,
+  onMediaChange,
   onSelect,
   onRetry
 }: BrowseMenuProps) {
-  const title = media === "films" ? "Каталог фильмов" : "Каталог сериалов";
-  const subtitle =
-    media === "films"
-      ? "Жанры, подборки, годы и страны — каждый пункт открывает отдельную ленту с сортировкой по рейтингу."
-      : "Категории, жанры и страны — отдельная лента для каждого раздела.";
-
   return (
     <section className="browse-view" id="main">
-      <div className="section-heading section-heading--browse">
-        <p className="eyebrow">{media === "films" ? "films" : "series"}</p>
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
+      <div className="browse-view__tabs" role="tablist" aria-label="Тип каталога">
+        <button
+          type="button"
+          role="tab"
+          className={`browse-view__tab${media === "films" ? " browse-view__tab--active" : ""}`}
+          aria-selected={media === "films"}
+          onClick={() => onMediaChange("films")}
+        >
+          Фильмы
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`browse-view__tab${media === "serials" ? " browse-view__tab--active" : ""}`}
+          aria-selected={media === "serials"}
+          onClick={() => onMediaChange("serials")}
+        >
+          Сериалы
+        </button>
       </div>
 
       {isLoading ? (

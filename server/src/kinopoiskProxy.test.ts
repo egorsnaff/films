@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   isFilmDetailsCacheComplete,
   mapFilmDetails,
-  resolveCatalogTotalPages
+  resolveCatalogTotalPages,
+  sortFilmsByImdbRating
 } from "./kinopoiskProxy.js";
 
 describe("resolveCatalogTotalPages", () => {
@@ -54,6 +55,18 @@ describe("mapFilmDetails", () => {
         ratingImdb: 9.3
       }).imdbRating
     ).toBe("9.3");
+  });
+});
+
+describe("sortFilmsByImdbRating", () => {
+  it("orders films by imdb rating descending", () => {
+    expect(
+      sortFilmsByImdbRating([
+        { kinopoiskId: 1, title: "A", imdbRating: "7.1" },
+        { kinopoiskId: 2, title: "B", imdbRating: "8.8" },
+        { kinopoiskId: 3, title: "C", imdbRating: "8.2" }
+      ]).map((film) => film.kinopoiskId)
+    ).toEqual([2, 3, 1]);
   });
 });
 
