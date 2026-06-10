@@ -1,4 +1,4 @@
-const PLAYER_JS_LISTENERS = ["timeupdate", "ended", "finish"] as const;
+const PLAYER_JS_LISTENERS = ["play", "timeupdate", "ended", "finish"] as const;
 
 export function subscribeIframeToPlayerEvents(iframe: HTMLIFrameElement): void {
   const target = iframe.contentWindow;

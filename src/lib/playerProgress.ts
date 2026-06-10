@@ -4,6 +4,8 @@ export type PlayerProgressEvent = {
   ended?: boolean;
 };
 
+export const MIN_WATCH_SECONDS = 300;
+
 function toNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -157,4 +159,25 @@ export function parsePlayerProgressMessage(data: unknown): PlayerProgressEvent |
   }
 
   return null;
+}
+
+export function isPlayerPlaybackStartMessage(data: unknown): boolean {
+  const message = parseJsonMessage(data);
+  if (!message) {
+    return false;
+  }
+
+  const event = typeof message.event === "string" ? message.event.toLowerCase() : "";
+  const type = typeof message.type === "string" ? message.type.toLowerCase() : "";
+  const method = typeof message.method === "string" ? message.method.toLowerCase() : "";
+
+  if (event === "play" || type === "play" || event === "playing" || type === "playing") {
+    return true;
+  }
+
+  if (message.context === "player.js" && (event === "play" || method === "play")) {
+    return true;
+  }
+
+  return false;
 }

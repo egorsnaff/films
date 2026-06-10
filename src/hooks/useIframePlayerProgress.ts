@@ -1,18 +1,20 @@
 import { useEffect } from "react";
 
 import { isAllowedPlayerMessageOrigin } from "../lib/playerOrigins";
-import { parsePlayerProgressMessage } from "../lib/playerProgress";
+import { isPlayerPlaybackStartMessage, parsePlayerProgressMessage } from "../lib/playerProgress";
 import { subscribeIframeToPlayerEvents } from "../lib/playerSubscriptions";
 
 type UseIframePlayerProgressOptions = {
   enabled: boolean;
   iframe: HTMLIFrameElement | null;
+  onPlaybackStarted?: () => void;
   onProgress: (input: { currentTime: number; duration?: number; ended?: boolean }) => void;
 };
 
 export function useIframePlayerProgress({
   enabled,
   iframe,
+  onPlaybackStarted,
   onProgress
 }: UseIframePlayerProgressOptions): void {
   useEffect(() => {
@@ -28,6 +30,10 @@ export function useIframePlayerProgress({
 
       if (!fromDirectIframe && !fromAllowedOrigin) {
         return;
+      }
+
+      if (isPlayerPlaybackStartMessage(event.data)) {
+        onPlaybackStarted?.();
       }
 
       const progress = parsePlayerProgressMessage(event.data);
@@ -48,5 +54,5 @@ export function useIframePlayerProgress({
       window.clearInterval(retryTimer);
       window.removeEventListener("message", handleMessage);
     };
-  }, [enabled, iframe, onProgress]);
+  }, [enabled, iframe, onPlaybackStarted, onProgress]);
 }

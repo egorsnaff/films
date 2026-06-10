@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { MIN_WATCH_SECONDS } from "../lib/playerProgress";
 import { siteApi, type WatchStatus } from "../lib/siteApi";
 
-const TICK_MS = 30_000;
 const PLAYER_SYNC_MS = 12_000;
 const WATCHED_THRESHOLD = 90;
-const MIN_WATCH_SECONDS = 60;
 
 type UseWatchTrackerOptions = {
   enabled: boolean;
@@ -75,7 +74,7 @@ export function useWatchTracker({
   const currentStatusRef = useRef(currentStatus);
   const lastSyncedAtRef = useRef(0);
   const lastSyncedPercentRef = useRef(0);
-  const hasPlayerSignalRef = useRef(false);
+  const playbackStartedRef = useRef(false);
   const [playbackStarted, setPlaybackStarted] = useState(false);
 
   useEffect(() => {
@@ -91,7 +90,7 @@ export function useWatchTracker({
     durationSecondsRef.current = Math.max((filmLengthMinutes ?? 90) * 60, 60);
     lastSyncedAtRef.current = 0;
     lastSyncedPercentRef.current = 0;
-    hasPlayerSignalRef.current = false;
+    playbackStartedRef.current = false;
     setPlaybackStarted(false);
   }, [filmLengthMinutes, kinopoiskId]);
 
@@ -102,7 +101,7 @@ export function useWatchTracker({
 
   const syncProgress = useCallback(
     async (forceStatus?: WatchStatus) => {
-      if (!kinopoiskId) {
+      if (!kinopoiskId || !playbackStartedRef.current) {
         return;
       }
 
@@ -138,6 +137,10 @@ export function useWatchTracker({
 
   const maybeSyncProgress = useCallback(
     (forceStatus?: WatchStatus) => {
+      if (!playbackStartedRef.current) {
+        return;
+      }
+
       const watchSeconds = Math.floor(watchSecondsRef.current);
       const progressPercent = getProgressPercent();
       const now = Date.now();
@@ -159,19 +162,14 @@ export function useWatchTracker({
 
   const reportPosition = useCallback(
     ({ currentTime, duration, ended }: ReportPositionInput) => {
-      if (!enabled || !kinopoiskId || currentTime < 0) {
+      if (!enabled || !kinopoiskId || !playbackStartedRef.current || currentTime < 0) {
         return;
       }
 
-      hasPlayerSignalRef.current = true;
       watchSecondsRef.current = Math.max(watchSecondsRef.current, currentTime);
 
       if (duration && duration > 0) {
         durationSecondsRef.current = duration;
-      }
-
-      if (!playbackStarted) {
-        setPlaybackStarted(true);
       }
 
       const watchSeconds = Math.floor(watchSecondsRef.current);
@@ -185,34 +183,17 @@ export function useWatchTracker({
 
       maybeSyncProgress(nextStatus);
     },
-    [enabled, getProgressPercent, kinopoiskId, maybeSyncProgress, playbackStarted]
+    [enabled, getProgressPercent, kinopoiskId, maybeSyncProgress]
   );
 
   const markPlaybackStarted = useCallback(() => {
-    if (!enabled || !kinopoiskId || playbackStarted) {
+    if (!enabled || !kinopoiskId || playbackStartedRef.current) {
       return;
     }
 
+    playbackStartedRef.current = true;
     setPlaybackStarted(true);
-  }, [enabled, kinopoiskId, playbackStarted]);
-
-  useEffect(() => {
-    if (!enabled || !kinopoiskId || !playbackStarted || hasPlayerSignalRef.current) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      watchSecondsRef.current += TICK_MS / 1000;
-      const progressPercent = getProgressPercent();
-      maybeSyncProgress(progressPercent >= WATCHED_THRESHOLD ? "watched" : undefined);
-    }, TICK_MS);
-
-    return () => window.clearInterval(timer);
-  }, [enabled, getProgressPercent, kinopoiskId, maybeSyncProgress, playbackStarted]);
+  }, [enabled, kinopoiskId]);
 
   useEffect(() => {
     if (!enabled || !kinopoiskId || !playbackStarted) {

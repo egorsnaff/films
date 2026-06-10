@@ -23,6 +23,7 @@ export function PlayerFrame({
   useIframePlayerProgress({
     enabled: trackProgress,
     iframe: iframeElement,
+    onPlaybackStarted,
     onProgress: (progress) => onPlayerProgress?.(progress)
   });
 
@@ -37,7 +38,6 @@ export function PlayerFrame({
       src={src}
       allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
       allowFullScreen
-      onLoad={() => onPlaybackStarted?.()}
     />
   );
 }
