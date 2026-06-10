@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { siteApi, watchStatusLabels, type WatchStatus } from "../lib/siteApi";
 
@@ -19,8 +19,21 @@ export function WatchListControls({
   isAuthenticated,
   onStatusChange
 }: WatchListControlsProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointer);
+    return () => document.removeEventListener("mousedown", handlePointer);
+  }, []);
 
   if (!isAuthenticated) {
     return null;
@@ -40,6 +53,7 @@ export function WatchListControls({
       if (item) {
         onStatusChange?.(item.status);
       }
+      setIsOpen(false);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
     } finally {
@@ -59,6 +73,7 @@ export function WatchListControls({
         const item = await siteApi.setFilmStatus(kinopoiskId, status);
         onStatusChange?.(item.status);
       }
+      setIsOpen(false);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
     } finally {
@@ -66,35 +81,58 @@ export function WatchListControls({
     }
   }
 
+  const statusLabel =
+    currentStatus === "watched"
+      ? "Просмотрено"
+      : currentStatus === "watching"
+        ? "Смотрите сейчас"
+        : currentStatus
+          ? watchStatusLabels[currentStatus]
+          : null;
+
   return (
-    <div className="watch-list-controls">
-      {currentStatus === "watching" || currentStatus === "watched" ? (
-        <p className="watch-list-controls__auto">
-          {currentStatus === "watched" ? "Просмотрено" : "Смотрите сейчас"}
-          {typeof progressPercent === "number" && progressPercent > 0 ? (
-            <span className="watch-list-controls__progress">{progressPercent}%</span>
+    <div className="watch-list-menu" ref={rootRef}>
+      <button
+        type="button"
+        className="watch-list-menu__trigger"
+        aria-label="Действия со списком"
+        aria-expanded={isOpen}
+        disabled={isSaving}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span aria-hidden="true">⋯</span>
+      </button>
+      {isOpen ? (
+        <div className="watch-list-menu__dropdown" role="menu">
+          {statusLabel ? (
+            <p className="watch-list-menu__status" role="presentation">
+              {statusLabel}
+              {typeof progressPercent === "number" && progressPercent > 0 ? (
+                <span className="watch-list-menu__progress">{progressPercent}%</span>
+              ) : null}
+            </p>
           ) : null}
-        </p>
+          {currentStatus === "watching" ? (
+            <button type="button" role="menuitem" disabled={isSaving} onClick={() => void handleMarkWatched()}>
+              Отметить просмотренным
+            </button>
+          ) : null}
+          {manualStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              role="menuitem"
+              className={currentStatus === status ? "is-active" : undefined}
+              disabled={isSaving}
+              onClick={() => void handleSelect(status)}
+            >
+              {watchStatusLabels[status]}
+              {currentStatus === status ? <span className="watch-list-menu__check">✓</span> : null}
+            </button>
+          ))}
+          {error ? <p className="watch-list-menu__error">{error}</p> : null}
+        </div>
       ) : null}
-      <div className="watch-list-controls__buttons">
-        {currentStatus === "watching" ? (
-          <button type="button" disabled={isSaving} onClick={() => void handleMarkWatched()}>
-            Отметить просмотренным
-          </button>
-        ) : null}
-        {manualStatuses.map((status) => (
-          <button
-            key={status}
-            type="button"
-            className={currentStatus === status ? "is-active" : undefined}
-            disabled={isSaving}
-            onClick={() => void handleSelect(status)}
-          >
-            {watchStatusLabels[status]}
-          </button>
-        ))}
-      </div>
-      {error ? <p className="error-message">{error}</p> : null}
     </div>
   );
 }

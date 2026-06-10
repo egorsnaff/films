@@ -134,9 +134,6 @@ export function App() {
         : films.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [catalogMode, films]
   );
-  const detailsStyle = selectedFilm?.posterUrl
-    ? ({ "--poster": `url(${selectedFilm.posterUrl})` } as CSSProperties)
-    : undefined;
   const activeCollection = collectionId ? getCollectionById(collectionId) : undefined;
   const selectedListEntry = selectedFilm
     ? userLists.find((item) => item.kinopoiskId === selectedFilm.kinopoiskId)
@@ -484,6 +481,7 @@ export function App() {
         setStatus("success");
 
         if (shouldLoadAnotherPage && autoChaseDepth < 3) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -494,9 +492,11 @@ export function App() {
         }
       } catch (loadError) {
         setError(getErrorMessage(loadError));
-        setStatus("error");
-        setHasMore(false);
-        hasMoreRef.current = false;
+        if (replace) {
+          setStatus("error");
+          setHasMore(false);
+          hasMoreRef.current = false;
+        }
       } finally {
         setIsLoadingMore(false);
         isFetchingMoreRef.current = false;
@@ -949,8 +949,23 @@ export function App() {
 
       {view === "watch" ? (
         <section className="watch-page" id="main">
-          <BackButton label={backLabel} onClick={() => void goBack()} />
-          <p className="eyebrow">Страница просмотра</p>
+          <div className="watch-page__toolbar">
+            <BackButton label={backLabel} onClick={() => void goBack()} />
+            {selectedFilm ? (
+              <WatchListControls
+                kinopoiskId={selectedFilm.kinopoiskId}
+                currentStatus={selectedListStatus ?? undefined}
+                progressPercent={selectedListEntry?.progressPercent}
+                isAuthenticated={Boolean(authUser)}
+                onStatusChange={(nextStatus) => {
+                  setSelectedListStatus(nextStatus);
+                  if (authUser) {
+                    void refreshUserLists();
+                  }
+                }}
+              />
+            ) : null}
+          </div>
           {detailsStatus === "loading" ? (
             <div className="details-loading">
               <span />
@@ -958,44 +973,8 @@ export function App() {
             </div>
           ) : null}
           {selectedFilm ? (
-            <article className="watch-card details-panel--active" style={detailsStyle}>
-              <div className="watch-card__info">
-                <div className="details-hero">
-                  {selectedFilm.posterUrl ? (
-                    <img src={selectedFilm.posterUrl} alt={`Постер ${selectedFilm.title}`} />
-                  ) : null}
-                  <div>
-                    <h1>{selectedFilm.title}</h1>
-                    <p className="meta">
-                      {[
-                        selectedFilm.originalTitle,
-                        selectedFilm.year,
-                        selectedFilm.rating && `КП ${selectedFilm.rating}`,
-                        selectedFilm.genres?.join(", ")
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                </div>
-                {selectedFilm.description ? (
-                  <p className="description">{selectedFilm.description}</p>
-                ) : null}
-                <WatchListControls
-                  kinopoiskId={selectedFilm.kinopoiskId}
-                  currentStatus={selectedListStatus ?? undefined}
-                  progressPercent={selectedListEntry?.progressPercent}
-                  isAuthenticated={Boolean(authUser)}
-                  onStatusChange={(nextStatus) => {
-                    setSelectedListStatus(nextStatus);
-                    if (authUser) {
-                      void refreshUserLists();
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="watch-card__player">
+            <article className="watch-layout">
+              <div className="watch-stage">
                 <MoviePlayers
                   players={players}
                   resolveOptions={{ allohaToken, hdvbToken, embedDomain }}
@@ -1004,11 +983,51 @@ export function App() {
                   onPlayerProgress={(progress) => reportPosition(progress)}
                 />
                 {players.length === 0 ? (
-                  <p className="hint">
+                  <p className="hint watch-stage__hint">
                     Добавьте <code>VITE_PLAYER_TEMPLATES</code>, чтобы подключить свои
                     embed-плееры или будущий сервер.
                   </p>
                 ) : null}
+              </div>
+
+              <div className="watch-meta">
+                <div className="watch-meta__head">
+                  {selectedFilm.posterUrl ? (
+                    <img
+                      className="watch-meta__poster"
+                      src={selectedFilm.posterUrl}
+                      alt={`Постер ${selectedFilm.title}`}
+                    />
+                  ) : null}
+                  <div className="watch-meta__copy">
+                    <h1>{selectedFilm.title}</h1>
+                    <p className="watch-meta__facts">
+                      {[
+                        selectedFilm.year,
+                        selectedFilm.rating && `КП ${selectedFilm.rating}`,
+                        selectedFilm.originalTitle
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                </div>
+                {selectedFilm.genres && selectedFilm.genres.length > 0 ? (
+                  <div className="watch-meta__genres" aria-label="Жанры">
+                    {selectedFilm.genres.map((genre) => (
+                      <span key={genre} className="watch-meta__genre">
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {selectedFilm.description ? (
+                  <p className="watch-meta__description">{selectedFilm.description}</p>
+                ) : (
+                  <p className="watch-meta__description watch-meta__description--empty">
+                    Описание пока недоступно.
+                  </p>
+                )}
               </div>
             </article>
           ) : detailsStatus !== "loading" ? (

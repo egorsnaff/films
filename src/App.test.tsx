@@ -322,7 +322,7 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: /Матрица/ }));
 
     expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
-    expect(screen.getByText("Страница просмотра")).toBeInTheDocument();
+    expect(screen.getByText("Фильм о выборе реальности.")).toBeInTheDocument();
     expect(screen.getByLabelText("Плееры")).toBeInTheDocument();
     expect(screen.queryByText("Новинки для вечера")).not.toBeInTheDocument();
   });
