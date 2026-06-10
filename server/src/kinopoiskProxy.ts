@@ -140,9 +140,17 @@ async function cachedRequest<T>(
   }
 }
 
+export function isFilmDetailsCacheComplete(film: CachedFilm): boolean {
+  return (
+    Boolean(film.description) ||
+    Boolean(film.genres?.length) ||
+    film.filmLengthMinutes !== undefined
+  );
+}
+
 export async function getFilmDetails(kinopoiskId: number): Promise<{ film: CachedFilm; fromCache: boolean }> {
   const cached = readFilmCache(kinopoiskId);
-  if (cached) {
+  if (cached && isFilmDetailsCacheComplete(cached)) {
     return { film: cached, fromCache: true };
   }
 
@@ -417,7 +425,7 @@ function mapCatalogPage(data: SearchFilmResponse, page: number): KinopoiskCatalo
   };
 }
 
-function mapFilmDetails(raw: Record<string, unknown>): CachedFilm {
+export function mapFilmDetails(raw: Record<string, unknown>): CachedFilm {
   const summary = mapFilmSummary(raw);
   if (!summary) {
     throw new Error("Kinopoisk API returned film without id");
@@ -425,7 +433,7 @@ function mapFilmDetails(raw: Record<string, unknown>): CachedFilm {
 
   return {
     ...summary,
-    description: toStringValue(raw.description),
+    description: toStringValue(raw.description ?? raw.shortDescription),
     genres: mapNamedList(raw.genres),
     filmLengthMinutes: toNumber(raw.filmLength)
   };
