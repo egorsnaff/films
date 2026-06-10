@@ -20,23 +20,24 @@ export function MoviePlayers({
   onPlayerProgress
 }: MoviePlayersProps) {
   const safePlayers = useMemo(() => players.filter(hasSafeEmbedUrl), [players]);
-  const [activePlayerId, setActivePlayerId] = useState<string | undefined>(
-    safePlayers.at(0)?.id
-  );
+  const primaryPlayer = safePlayers.at(0);
+  const fallbackPlayers = safePlayers.slice(1);
+  const [activePlayerId, setActivePlayerId] = useState<string | undefined>(primaryPlayer?.id);
+  const [showFallbacks, setShowFallbacks] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [loadingPlayerId, setLoadingPlayerId] = useState<string | null>(null);
   const [failedPlayerIds, setFailedPlayerIds] = useState<Record<string, true>>({});
   const activePlayer =
-    safePlayers.find((player) => player.id === activePlayerId) ?? safePlayers.at(0);
+    safePlayers.find((player) => player.id === activePlayerId) ?? primaryPlayer;
   const activeEmbedUrl = activePlayer
     ? activePlayer.embedUrl ?? resolvedUrls[activePlayer.id]
     : undefined;
 
   useEffect(() => {
     if (!safePlayers.some((player) => player.id === activePlayerId)) {
-      setActivePlayerId(safePlayers.at(0)?.id);
+      setActivePlayerId(primaryPlayer?.id);
     }
-  }, [activePlayerId, safePlayers]);
+  }, [activePlayerId, primaryPlayer?.id, safePlayers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,25 +91,57 @@ export function MoviePlayers({
     };
   }, [activePlayer, failedPlayerIds, resolveOptions, resolvedUrls]);
 
+  function selectPlayer(playerId: string) {
+    setActivePlayerId(playerId);
+    setShowFallbacks(false);
+  }
+
   if (!activePlayer) {
     return <p className="empty-state">Плееры пока недоступны</p>;
   }
 
   return (
     <section className="players" aria-label="Плееры">
-      <div className="player-tabs" role="group" aria-label="Выбор плеера">
-        {safePlayers.map((player) => (
+      <div className="player-toolbar">
+        <span className="player-toolbar__active">
+          <span className="player-toolbar__label">Плеер</span>
+          <strong>{activePlayer.title}</strong>
+        </span>
+        {fallbackPlayers.length > 0 ? (
           <button
-            key={player.id}
             type="button"
-            className="player-tab"
-            aria-pressed={player.id === activePlayer.id}
-            onClick={() => setActivePlayerId(player.id)}
+            className="player-fallback-toggle"
+            aria-expanded={showFallbacks}
+            aria-controls="player-fallback-panel"
+            onClick={() => setShowFallbacks((current) => !current)}
           >
-            {player.title}
+            Другие плееры
+            <span className="player-fallback-toggle__count">{fallbackPlayers.length}</span>
           </button>
-        ))}
+        ) : null}
       </div>
+
+      {showFallbacks && fallbackPlayers.length > 0 ? (
+        <div
+          id="player-fallback-panel"
+          className="player-fallback-panel"
+          role="group"
+          aria-label="Другие плееры"
+        >
+          {safePlayers.map((player) => (
+            <button
+              key={player.id}
+              type="button"
+              className="player-tab player-tab--fallback"
+              aria-pressed={player.id === activePlayer.id}
+              onClick={() => selectPlayer(player.id)}
+            >
+              {player.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="player-frame-wrap">
         {activePlayer.resolveKinoboxPlayers ? (
           <KinoboxPlayerPanel

@@ -397,6 +397,8 @@ export function resolveCatalogTotalPages(
   return resolveTotalPages(data, page, itemCount);
 }
 
+const CATALOG_PAGE_SIZE = 20;
+
 function resolveTotalPages(data: SearchFilmResponse, page: number, itemCount: number): number {
   const explicit = toNumber(data.totalPages ?? data.pagesCount);
   if (explicit && explicit > 0) {
@@ -408,7 +410,15 @@ function resolveTotalPages(data: SearchFilmResponse, page: number, itemCount: nu
     return Math.max(1, Math.ceil(totalItems / itemCount));
   }
 
-  return itemCount > 0 ? page : Math.max(1, page);
+  if (itemCount === 0) {
+    return Math.max(1, page - 1);
+  }
+
+  if (itemCount >= CATALOG_PAGE_SIZE) {
+    return page + 1;
+  }
+
+  return Math.max(1, page);
 }
 
 function mapCatalogPage(data: SearchFilmResponse, page: number): KinopoiskCatalogPage {
@@ -451,8 +461,22 @@ function mapFilmSummary(raw: Record<string, unknown>): CachedFilm | null {
     originalTitle: toStringValue(raw.nameEn ?? raw.nameOriginal),
     year: toStringValue(raw.year),
     posterUrl: normalizePosterUrl(raw.posterUrlPreview ?? raw.posterUrl),
-    rating: toStringValue(raw.rating ?? raw.ratingKinopoisk)
+    rating: toStringValue(raw.rating ?? raw.ratingKinopoisk),
+    imdbRating: formatRatingValue(raw.ratingImdb)
   };
+}
+
+function formatRatingValue(value: unknown): string | undefined {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number.parseFloat(toStringValue(value) ?? "");
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(1);
 }
 
 function mapNamedList(value: unknown): string[] | undefined {

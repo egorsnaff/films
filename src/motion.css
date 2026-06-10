@@ -193,7 +193,7 @@ html.cursor-active .cursor-glow {
 .film-card--interactive,
 .film-shelf__card--interactive,
 .collection-card,
-.load-more-button,
+.player-fallback-toggle,
 .topbar__nav-link,
 .search-toggle,
 .topbar-auth-button {
@@ -207,7 +207,7 @@ html.cursor-active .cursor-glow {
 .film-card--interactive:active,
 .film-shelf__card--interactive:active,
 .collection-card:active,
-.load-more-button:active,
+.player-fallback-toggle:active,
 .topbar__nav-link:active,
 .search-toggle:active,
 .topbar-auth-button:active {
@@ -409,6 +409,80 @@ html.cursor-active .collection-card:focus-visible::after,
 html.cursor-active .watch-hero:hover::after,
 html.cursor-active .load-more-button:hover::after {
   opacity: 1;
+}
+
+@keyframes watch-curtain-breathe {
+  from {
+    transform: scaleX(1);
+    opacity: 0.88;
+  }
+
+  to {
+    transform: scaleX(0.94);
+    opacity: 1;
+  }
+}
+
+@keyframes watch-halo-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes watch-frame-shimmer {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 6%) inset,
+      0 0 18px rgb(240 183 91 / 12%);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 10%) inset,
+      0 0 34px rgb(240 183 91 / 28%);
+  }
+}
+
+@keyframes watch-glyph-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes watch-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes load-more-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.88);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

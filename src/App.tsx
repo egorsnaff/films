@@ -7,6 +7,7 @@ import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
+import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
 import { useWatchTracker } from "./hooks/useWatchTracker";
@@ -86,6 +87,7 @@ export function App() {
   const [query, setQuery] = useState("");
   const [films, setFilms] = useState<KinopoiskFilm[]>([]);
   const [selectedFilm, setSelectedFilm] = useState<KinopoiskFilmDetails | null>(null);
+  const [watchPreviewFilm, setWatchPreviewFilm] = useState<KinopoiskFilm | null>(null);
   const [status, setStatus] = useState<LoadState>("idle");
   const [detailsStatus, setDetailsStatus] = useState<LoadState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -267,6 +269,16 @@ export function App() {
     onStatusChange: handleWatchTrackerStatusChange
   });
 
+  const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => ({
+    view: "catalog",
+    activeMenu: "Главная",
+    catalogMode: "premieres",
+    collectionId: null,
+    filmId: null,
+    searchQuery: "",
+    scrollY: 0
+  }));
+
   const captureSnapshot = useCallback((): NavigationSnapshot => {
     return {
       view,
@@ -281,6 +293,8 @@ export function App() {
       scrollY: window.scrollY
     };
   }, [activeMenu, catalogMode, collectionId, query, selectedFilm, view]);
+
+  captureSnapshotRef.current = captureSnapshot;
 
   const beginHistoryEntry = useCallback(
     (pushHistory = true) => {
@@ -381,21 +395,32 @@ export function App() {
   );
 
   const goBack = useCallback(() => {
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
     const snapshot = navHistoryRef.current.pop();
     if (!snapshot) {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+
       setView("catalog");
       setActiveMenu("Главная");
       setSelectedFilm(null);
+      setWatchPreviewFilm(null);
       setDetailsStatus("idle");
+      replaceAppHistory(captureSnapshotRef.current());
       return;
     }
 
+    isHistoryNavigationRef.current = true;
     void restoreSnapshot(snapshot);
+
+    if (window.history.length > 1) {
+      window.history.back();
+    }
+
+    requestAnimationFrame(() => {
+      isHistoryNavigationRef.current = false;
+    });
   }, [restoreSnapshot]);
 
   useEffect(() => {
@@ -411,11 +436,15 @@ export function App() {
     }
 
     shouldCommitHistoryRef.current = false;
-    pushAppHistory(captureSnapshot());
-  }, [view, activeMenu, catalogMode, collectionId, selectedFilm, captureSnapshot]);
+    pushAppHistory(captureSnapshotRef.current());
+  }, [view, activeMenu, catalogMode, collectionId]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
+      if (isHistoryNavigationRef.current) {
+        return;
+      }
+
       isHistoryNavigationRef.current = true;
 
       if (navHistoryRef.current.length > 0) {
@@ -565,15 +594,24 @@ export function App() {
       return;
     }
 
-    const onScroll = () => maybeLoadMoreFromScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) {
+      return;
+    }
 
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, [maybeLoadMoreFromScroll, view]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          maybeLoadMoreFromScroll();
+        }
+      },
+      { root: null, rootMargin: "360px 0px", threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [maybeLoadMoreFromScroll, view, visibleFilms.length, isLoadingMore, hasMore]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -597,22 +635,24 @@ export function App() {
     pendingWatchFilmIdRef.current = film.kinopoiskId;
 
     setError(null);
+    setWatchPreviewFilm(film);
     setSelectedFilm(null);
     setDetailsStatus("loading");
     setView("watch");
     setSelectedListStatus(
       userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.status ?? null
     );
+    requestHistoryCommit(pushHistory);
 
     try {
       const details = await client.getFilm(film.kinopoiskId);
       setSelectedFilm(details);
+      setWatchPreviewFilm(null);
       setDetailsStatus("success");
     } catch (detailsError) {
       setError(getErrorMessage(detailsError));
+      setWatchPreviewFilm(null);
       setDetailsStatus("error");
-    } finally {
-      requestHistoryCommit(pushHistory);
     }
   }
 
@@ -653,6 +693,7 @@ export function App() {
 
     setActiveMenu(item);
     setSelectedFilm(null);
+    setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     setIsSearchOpen(false);
 
@@ -696,6 +737,7 @@ export function App() {
     setView("catalog");
     setActiveMenu("Главная");
     setSelectedFilm(null);
+    setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
     replaceAppHistory(captureSnapshot());
@@ -848,16 +890,20 @@ export function App() {
             />
           ) : null}
 
-          <div ref={loadMoreRef} className="load-more-sentinel" aria-live="polite">
-            {isLoadingMore
-              ? "Загружаем следующую подборку..."
-              : hasMore
-                ? `Листайте дальше · страница ${page} из ${totalPages}`
-                : "Это всё на сейчас"}
-            {hasMore && !isLoadingMore ? (
-              <button type="button" className="load-more-button" onClick={() => void loadNextPage()}>
-                Загрузить ещё
-              </button>
+          <div
+            ref={loadMoreRef}
+            className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
+            aria-live="polite"
+          >
+            {isLoadingMore ? (
+              <>
+                <span className="load-more-sentinel__pulse" aria-hidden="true" />
+                <span>Загружаем следующую подборку...</span>
+              </>
+            ) : hasMore ? (
+              <span className="load-more-sentinel__hint">Листайте дальше</span>
+            ) : visibleFilms.length > 0 ? (
+              <span>Это всё на сейчас</span>
             ) : null}
           </div>
         </section>
@@ -983,12 +1029,7 @@ export function App() {
               />
             ) : null}
           </div>
-          {detailsStatus === "loading" ? (
-            <div className="details-loading">
-              <span />
-              <p>Загружаем детали...</p>
-            </div>
-          ) : null}
+          {detailsStatus === "loading" ? <WatchDetailsPreloader film={watchPreviewFilm} /> : null}
           {selectedFilm ? (
             <article
               className="watch-hero watch-hero--parallax"
@@ -1013,6 +1054,7 @@ export function App() {
                     {[
                       selectedFilm.year,
                       selectedFilm.rating && `КП ${selectedFilm.rating}`,
+                      selectedFilm.imdbRating && `IMDb ${selectedFilm.imdbRating}`,
                       selectedFilm.originalTitle
                     ]
                       .filter(Boolean)

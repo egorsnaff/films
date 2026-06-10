@@ -15,8 +15,16 @@ describe("resolveCatalogTotalPages", () => {
     expect(resolveCatalogTotalPages({ total: 95, items: [] }, 1, 20)).toBe(5);
   });
 
-  it("falls back to the current page when metadata is missing", () => {
-    expect(resolveCatalogTotalPages({ items: [] }, 3, 20)).toBe(3);
+  it("assumes another page exists when a full page is returned without metadata", () => {
+    expect(resolveCatalogTotalPages({ items: [] }, 3, 20)).toBe(4);
+  });
+
+  it("treats a partial page as the last page when metadata is missing", () => {
+    expect(resolveCatalogTotalPages({ items: [] }, 5, 12)).toBe(5);
+  });
+
+  it("steps back when an empty page is returned without metadata", () => {
+    expect(resolveCatalogTotalPages({ items: [] }, 6, 0)).toBe(5);
   });
 });
 
@@ -37,6 +45,15 @@ describe("mapFilmDetails", () => {
         shortDescription: "Краткое описание бойцовского клуба"
       }).description
     ).toBe("Краткое описание бойцовского клуба");
+
+    expect(
+      mapFilmDetails({
+        filmId: 326,
+        nameRu: "Побег из Шоушенка",
+        ratingKinopoisk: 9.1,
+        ratingImdb: 9.3
+      }).imdbRating
+    ).toBe("9.3");
   });
 });
 
