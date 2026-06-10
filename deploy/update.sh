@@ -227,9 +227,19 @@ fi
 compose -f "$COMPOSE_FILE" ps
 echo "→ Проверка Kinopoisk (нужен KINOPOISK_API_KEY в .env)"
 if [[ "$COMPOSE_FILE" == "docker-compose.prod.yml" ]]; then
-  curl -fsS "http://127.0.0.1/api/health/kp" >/dev/null && echo "  kinopoisk: ok" || echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+  if curl -fsS "http://127.0.0.1/api/health/kp" >/dev/null; then
+    echo "  kinopoisk: ok"
+    curl -fsS "http://127.0.0.1/api/health/kp/stats" 2>/dev/null | sed -n '1p' || true
+  else
+    echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+  fi
 elif [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
   films_port="${FILMS_HTTP_PORT:-8080}"
-  curl -fsS "http://127.0.0.1:${films_port}/api/health/kp" >/dev/null && echo "  kinopoisk: ok" || echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+  if curl -fsS "http://127.0.0.1:${films_port}/api/health/kp" >/dev/null; then
+    echo "  kinopoisk: ok"
+    curl -fsS "http://127.0.0.1:${films_port}/api/health/kp/stats" 2>/dev/null | sed -n '1p' || true
+  else
+    echo "  kinopoisk: FAIL — проверьте KINOPOISK_API_KEY и docker compose logs api"
+  fi
 fi
 echo "→ Деплой завершён"

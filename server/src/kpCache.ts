@@ -9,7 +9,7 @@ const TTL_MS = {
   recommendations: 24 * 60 * 60 * 1000
 } as const;
 
-type CacheKind = keyof typeof TTL_MS;
+export type CacheKind = keyof typeof TTL_MS;
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kp_cache (

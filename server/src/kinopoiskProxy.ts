@@ -1,9 +1,11 @@
+import { recordKinopoiskApiCall } from "./kpApiStats.js";
 import {
   readCache,
   readCacheStale,
   readFilmCache,
   writeCache,
   writeFilmCache,
+  type CacheKind,
   type CachedFilm
 } from "./kpCache.js";
 
@@ -83,6 +85,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function requestKinopoisk<T>(path: string, attempt = 0): Promise<T> {
+  recordKinopoiskApiCall();
   const response = await fetch(`${getBaseUrl()}${path}`, {
     headers: {
       Accept: "application/json",
@@ -119,7 +122,7 @@ async function requestKinopoisk<T>(path: string, attempt = 0): Promise<T> {
 
 async function cachedRequest<T>(
   cacheKey: string,
-  kind: "film" | "catalog" | "search" | "list",
+  kind: CacheKind,
   fetcher: () => Promise<T>
 ): Promise<{ data: T; fromCache: boolean }> {
   const cached = readCache<T>(cacheKey, kind);
