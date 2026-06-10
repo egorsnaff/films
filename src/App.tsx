@@ -1128,14 +1128,15 @@ async function fetchCatalogPage(
     return client.searchFilms(keyword, nextPage);
   }
 
-  const collectionType =
-    mode === "premieres"
-      ? "TOP_POPULAR_ALL"
-      : mode === "films"
-        ? "TOP_POPULAR_MOVIES"
-        : "TOP_POPULAR_SERIES";
+  if (mode === "premieres") {
+    return client.getTopFilms("TOP_100_POPULAR_FILMS", nextPage);
+  }
 
-  return client.getThemeFilms(collectionType, nextPage);
+  if (mode === "films") {
+    return client.getThemeFilms("TOP_POPULAR_MOVIES", nextPage);
+  }
+
+  return client.getRecentFilms(nextPage, "TV_SERIES");
 }
 
 function countVisibleFilms(

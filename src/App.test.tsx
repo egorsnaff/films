@@ -53,7 +53,11 @@ function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
       return Promise.resolve(custom);
     }
 
-    if (url.includes("/api/kp/collections") || url.includes("/api/kp/collections")) {
+    if (
+      url.includes("/api/kp/collections") ||
+      url.includes("/api/kp/top") ||
+      url.includes("/api/kp/catalog/recent")
+    ) {
       return Promise.resolve(catalogResponse([]));
     }
 
@@ -121,7 +125,7 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       createFetchMock((url) => {
-        if (url.includes("/api/kp/collections")) {
+        if (url.includes("/api/kp/top")) {
           return catalogResponse(
             [
               {
@@ -152,7 +156,7 @@ describe("App", () => {
     vi.stubGlobal(
       "fetch",
       createFetchMock((url) => {
-        if (url.includes("/api/kp/collections")) {
+        if (url.includes("/api/kp/top")) {
           return catalogResponse([
             {
               kinopoiskId: 11,
@@ -224,7 +228,7 @@ describe("App", () => {
         );
       }
 
-      if (url.includes("/api/kp/collections")) {
+      if (url.includes("/api/kp/top")) {
         return catalogResponse(
           [
             {
@@ -275,7 +279,7 @@ describe("App", () => {
         );
       }
 
-      if (url.includes("/api/kp/collections")) {
+      if (url.includes("/api/kp/top")) {
         return catalogResponse(
           [
             {
@@ -404,7 +408,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/collections")) {
+      if (url.includes("/api/kp/top")) {
         return catalogResponse([
           {
             kinopoiskId: 301,
@@ -444,7 +448,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/collections")) {
+      if (url.includes("/api/kp/top")) {
         return catalogResponse([
           {
             kinopoiskId: 301,
@@ -561,7 +565,7 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/collections")) {
+      if (url.includes("/api/kp/top")) {
         return catalogResponse([
           {
             kinopoiskId: 326,

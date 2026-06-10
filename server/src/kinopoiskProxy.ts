@@ -256,6 +256,25 @@ export async function getThemeList(
     throw new Error("Некорректный тип подборки");
   }
 
+  try {
+    return await fetchThemeList(type, page);
+  } catch (error) {
+    if (type === "TOP_POPULAR_ALL") {
+      return getTopList("TOP_100_POPULAR_FILMS", page);
+    }
+
+    if (type === "TOP_POPULAR_SERIES") {
+      return getRecentCatalog(page, "TV_SERIES");
+    }
+
+    throw error;
+  }
+}
+
+async function fetchThemeList(
+  type: string,
+  page: number
+): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
   const cacheKey = `theme:${type}:${page}`;
   const { data, fromCache } = await cachedRequest(cacheKey, "list", async () => {
     const params = new URLSearchParams({ type, page: String(page) });
