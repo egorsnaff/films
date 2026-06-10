@@ -129,7 +129,13 @@ export function useWatchTracker({
       lastSyncedPercentRef.current = progressPercent;
 
       if (item) {
-        onStatusChangeRef.current?.(item.status);
+        const nextStatus =
+          item.lists.find((status) => status === "watched") ??
+          item.lists.find((status) => status === "watching");
+
+        if (nextStatus) {
+          onStatusChangeRef.current?.(nextStatus);
+        }
       }
     },
     [getProgressPercent, kinopoiskId]

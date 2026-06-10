@@ -4,20 +4,26 @@ import { siteApi, watchStatusLabels, type WatchStatus } from "../lib/siteApi";
 
 type WatchListControlsProps = {
   kinopoiskId: number;
-  currentStatus?: WatchStatus;
+  activeLists: WatchStatus[];
   progressPercent?: number;
   isAuthenticated: boolean;
-  onStatusChange?: (status: WatchStatus | null) => void;
+  onListsChange?: (lists: WatchStatus[]) => void;
 };
 
-const manualStatuses: WatchStatus[] = ["plan", "waiting"];
+const toggleableStatuses: WatchStatus[] = [
+  "favorite",
+  "plan",
+  "waiting",
+  "watching",
+  "watched"
+];
 
 export function WatchListControls({
   kinopoiskId,
-  currentStatus,
+  activeLists,
   progressPercent,
   isAuthenticated,
-  onStatusChange
+  onListsChange
 }: WatchListControlsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,65 +66,29 @@ export function WatchListControls({
     return null;
   }
 
-  async function handleMarkWatched() {
+  async function handleToggle(status: WatchStatus) {
+    const enabled = !activeLists.includes(status);
     setIsSaving(true);
     setError(null);
 
     try {
-      const item = await siteApi.updateWatchProgress({
-        kinopoiskId,
-        watchSeconds: Math.max(progressPercent ?? 0, 100),
-        progressPercent: 100,
-        forceStatus: "watched"
-      });
-      if (item) {
-        onStatusChange?.(item.status);
-        flashSaved();
-      }
-      setIsOpen(false);
+      const item = await siteApi.toggleFilmList(kinopoiskId, status, enabled);
+      const nextLists = item?.lists ?? activeLists.filter((entry) => entry !== status);
+      onListsChange?.(nextLists);
+      flashSaved();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
     } finally {
       setIsSaving(false);
     }
   }
-
-  async function handleSelect(status: WatchStatus) {
-    setIsSaving(true);
-    setError(null);
-
-    try {
-      if (currentStatus === status) {
-        await siteApi.removeFilm(kinopoiskId);
-        onStatusChange?.(null);
-      } else {
-        const item = await siteApi.setFilmStatus(kinopoiskId, status);
-        onStatusChange?.(item.status);
-        flashSaved();
-      }
-      setIsOpen(false);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  const statusLabel =
-    currentStatus === "watched"
-      ? "Просмотрено"
-      : currentStatus === "watching"
-        ? "Смотрите сейчас"
-        : currentStatus
-          ? watchStatusLabels[currentStatus]
-          : null;
 
   return (
     <div className="watch-list-menu" ref={rootRef}>
       <button
         type="button"
         className={`watch-list-menu__trigger${savedPulse ? " watch-list-menu__trigger--saved" : ""}`}
-        aria-label="Действия со списком"
+        aria-label="Списки и коллекции"
         aria-expanded={isOpen}
         disabled={isSaving}
         onClick={() => setIsOpen((current) => !current)}
@@ -127,32 +97,33 @@ export function WatchListControls({
       </button>
       {isOpen ? (
         <div className="watch-list-menu__dropdown" role="menu">
-          {statusLabel ? (
-            <p className="watch-list-menu__status" role="presentation">
-              {statusLabel}
-              {typeof progressPercent === "number" && progressPercent > 0 ? (
-                <span className="watch-list-menu__progress">{progressPercent}%</span>
-              ) : null}
-            </p>
+          {toggleableStatuses.map((status) => {
+            const isActive = activeLists.includes(status);
+            return (
+              <button
+                key={status}
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={isActive}
+                className={isActive ? "is-active" : undefined}
+                disabled={isSaving}
+                onClick={() => void handleToggle(status)}
+              >
+                <span className="watch-list-menu__label">
+                  {status === "favorite" ? (
+                    <span className="watch-list-menu__favorite" aria-hidden="true">
+                      ♥
+                    </span>
+                  ) : null}
+                  {watchStatusLabels[status]}
+                </span>
+                {isActive ? <span className="watch-list-menu__check">✓</span> : null}
+              </button>
+            );
+          })}
+          {typeof progressPercent === "number" && progressPercent > 0 ? (
+            <p className="watch-list-menu__progress-note">Прогресс просмотра: {progressPercent}%</p>
           ) : null}
-          {currentStatus === "watching" ? (
-            <button type="button" role="menuitem" disabled={isSaving} onClick={() => void handleMarkWatched()}>
-              Отметить просмотренным
-            </button>
-          ) : null}
-          {manualStatuses.map((status) => (
-            <button
-              key={status}
-              type="button"
-              role="menuitem"
-              className={currentStatus === status ? "is-active" : undefined}
-              disabled={isSaving}
-              onClick={() => void handleSelect(status)}
-            >
-              {watchStatusLabels[status]}
-              {currentStatus === status ? <span className="watch-list-menu__check">✓</span> : null}
-            </button>
-          ))}
           {error ? <p className="watch-list-menu__error">{error}</p> : null}
         </div>
       ) : null}

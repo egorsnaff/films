@@ -4,7 +4,6 @@ import type { CSSProperties, FormEvent } from "react";
 import { BackButton } from "./components/BackButton";
 import { BrandMark } from "./components/BrandMark";
 import { BrowseMenu } from "./components/BrowseMenu";
-import { CatalogSkeletonGrid } from "./components/CatalogSkeletonGrid";
 import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
@@ -12,6 +11,7 @@ import { MoviePlayers } from "./components/MoviePlayers";
 import { PosterImage } from "./components/PosterImage";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
+import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
 import { useCatalogInfiniteScroll } from "./hooks/useCatalogInfiniteScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
@@ -65,7 +65,7 @@ const playerTemplates =
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Подборки", "Профиль"];
+const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Профиль"];
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
@@ -84,12 +84,12 @@ const catalogHeadings: Record<
   films: {
     eyebrow: "films",
     title: "Фильмы",
-    text: "Популярные полнометражные фильмы. Лента подгружается при скролле."
+    text: ""
   },
   serials: {
     eyebrow: "series",
     title: "Сериалы",
-    text: "Популярные сериалы. Лента подгружается при скролле."
+    text: ""
   }
 };
 
@@ -117,7 +117,7 @@ export function App() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
-  const [selectedListStatus, setSelectedListStatus] = useState<WatchStatus | null>(null);
+  const [selectedLists, setSelectedLists] = useState<WatchStatus[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
@@ -185,7 +185,10 @@ export function App() {
       ? "250 лучших, которые вы ещё не смотрели"
       : "На основе ваших интересов";
   const recommendationsPending =
-    Boolean(authUser) && catalogMode === "premieres" && recommendationsStatus === "loading";
+    Boolean(authUser) &&
+    catalogMode === "premieres" &&
+    recommendationsStatus === "loading" &&
+    recommendations === null;
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
   const recommendationFilmIds = useMemo(
@@ -292,17 +295,19 @@ export function App() {
 
   const handleWatchTrackerStatusChange = useCallback(
     (status: WatchStatus) => {
-      setSelectedListStatus(status);
+      setSelectedLists((current) => (current.includes(status) ? current : [...current, status]));
       void refreshUserLists();
     },
     [refreshUserLists]
   );
 
+  const playbackStatus = resolvePlaybackStatus(selectedLists);
+
   const { markPlaybackStarted, reportPosition } = useWatchTracker({
     enabled: Boolean(authUser && view === "watch" && selectedFilm),
     kinopoiskId: selectedFilm?.kinopoiskId,
     filmLengthMinutes: selectedFilm?.filmLengthMinutes,
-    currentStatus: selectedListStatus,
+    currentStatus: playbackStatus,
     onStatusChange: handleWatchTrackerStatusChange
   });
 
@@ -362,8 +367,8 @@ export function App() {
         setView("watch");
         setSelectedFilm(null);
         setDetailsStatus("loading");
-        setSelectedListStatus(
-          userLists.find((item) => item.kinopoiskId === snapshot.filmId)?.status ?? null
+        setSelectedLists(
+          userLists.find((item) => item.kinopoiskId === snapshot.filmId)?.lists ?? []
         );
 
         try {
@@ -612,11 +617,14 @@ export function App() {
     }) => {
       if (replace) {
         setStatus("loading");
-      } else {
+      } else if (autoChaseDepth === 0) {
         setIsLoadingMore(true);
+        isFetchingMoreRef.current = true;
       }
 
       setError(null);
+
+      let shouldChaseNextPage = false;
 
       try {
         const activeFilter = filter ?? catalogFilterRef.current;
@@ -634,11 +642,11 @@ export function App() {
           mode === "premieres" ? recommendationFilmIdsRef.current : new Set<number>();
         const previousVisibleCount = countVisibleFilms(previousFilms, mode, excludeRecommendationIds);
         const nextVisibleCount = countVisibleFilms(merged, mode, excludeRecommendationIds);
-        const shouldLoadAnotherPage =
+        shouldChaseNextPage =
           !replace &&
           catalogPage.page < catalogPage.totalPages &&
           nextVisibleCount === previousVisibleCount &&
-          catalogPage.films.length > 0;
+          autoChaseDepth < 30;
 
         setFilms(merged);
         filmsRef.current = merged;
@@ -653,7 +661,7 @@ export function App() {
         hasMoreRef.current = nextHasMore;
         setStatus("success");
 
-        if (shouldLoadAnotherPage && autoChaseDepth < 10) {
+        if (shouldChaseNextPage) {
           await loadCatalogPage({
             mode,
             nextPage: catalogPage.page + 1,
@@ -661,7 +669,6 @@ export function App() {
             filter: activeFilter,
             autoChaseDepth: autoChaseDepth + 1
           });
-          return;
         }
       } catch (loadError) {
         setError(getErrorMessage(loadError));
@@ -671,8 +678,10 @@ export function App() {
           hasMoreRef.current = false;
         }
       } finally {
-        setIsLoadingMore(false);
-        isFetchingMoreRef.current = false;
+        if (autoChaseDepth === 0) {
+          setIsLoadingMore(false);
+          isFetchingMoreRef.current = false;
+        }
       }
     },
     [client]
@@ -740,8 +749,8 @@ export function App() {
     setSelectedFilm(null);
     setDetailsStatus("loading");
     setView("watch");
-    setSelectedListStatus(
-      userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.status ?? null
+    setSelectedLists(
+      userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.lists ?? []
     );
     requestHistoryCommit(pushHistory);
 
@@ -769,7 +778,7 @@ export function App() {
 
     setCollectionId(id);
     setView("collection");
-    setActiveMenu("Подборки");
+    setActiveMenu("Каталог");
     setCollectionStatus("loading");
     setCollectionFilms([]);
 
@@ -799,11 +808,6 @@ export function App() {
     setIsSearchOpen(false);
 
     try {
-      if (item === "Подборки") {
-        setView("collections");
-        return;
-      }
-
       if (item === "Профиль") {
         setView("profile");
         if (authUser) {
@@ -910,7 +914,7 @@ export function App() {
     setAuthUser(null);
     setUserLists([]);
     setListFilms({});
-    setSelectedListStatus(null);
+    setSelectedLists([]);
     setRecommendations(null);
     setRecommendationsStatus("idle");
   }
@@ -1020,10 +1024,7 @@ export function App() {
             <aside className="recommendations-rail" aria-label="Рекомендации">
               <FilmShelf
                 title={recommendationTitle}
-                subtitle={
-                  recommendations?.reason ??
-                  "Отдельная подборка — основная лента ниже подгружается независимо"
-                }
+                subtitle={recommendations?.reason}
                 films={recommendationFilms}
                 onSelect={(film) => void openFilm(film)}
               />
@@ -1046,20 +1047,16 @@ export function App() {
             </div>
           ) : null}
 
-          {!recommendationsPending ? (
-            <div className="catalog-feed">
-              {catalogGridFilms.length > 0 ? (
-                <FilmGrid
-                  films={catalogGridFilms}
-                  animate={status === "success"}
-                  onSelect={(film) => void openFilm(film)}
-                />
-              ) : null}
-
-              {isLoadingMore && catalogMode !== "search" ? (
-                <CatalogSkeletonGrid count={10} variant="inline" />
-              ) : null}
-            </div>
+          {!recommendationsPending &&
+          (catalogGridFilms.length > 0 || (isLoadingMore && catalogMode !== "search")) ? (
+            <FilmGrid
+              films={catalogGridFilms}
+              animate={status === "success"}
+              loadingSkeletonCount={
+                isLoadingMore && catalogMode !== "search" ? 10 : 0
+              }
+              onSelect={(film) => void openFilm(film)}
+            />
           ) : null}
 
           {catalogMode !== "search" && !recommendationsPending ? (
@@ -1068,8 +1065,8 @@ export function App() {
               className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
               aria-live="polite"
             >
-              {!isLoadingMore && hasMore ? (
-                <span className="load-more-sentinel__hint">Листайте дальше</span>
+              {isLoadingMore ? (
+                <span className="load-more-sentinel__hint">Подгружаем...</span>
               ) : null}
               {!isLoadingMore && !hasMore && catalogGridFilms.length > 0 ? (
                 <span>Это всё на сейчас</span>
@@ -1080,20 +1077,15 @@ export function App() {
       ) : null}
 
       {view === "browse" ? (
-        <>
-          <div className="browse-view__toolbar">
-            <BackButton label={backLabel} onClick={() => void goBack()} />
-          </div>
-          <BrowseMenu
-            media={browseMedia}
-            sections={browseSections}
-            isLoading={filtersStatus === "loading"}
-            error={filtersStatus === "error" ? error : null}
-            onMediaChange={setBrowseMedia}
-            onRetry={() => void loadKinopoiskFilters()}
-            onSelect={(filter) => void openFilteredCatalog(filter)}
-          />
-        </>
+        <BrowseMenu
+          media={browseMedia}
+          sections={browseSections}
+          isLoading={filtersStatus === "loading"}
+          error={filtersStatus === "error" ? error : null}
+          onMediaChange={setBrowseMedia}
+          onRetry={() => void loadKinopoiskFilters()}
+          onSelect={(filter) => void openFilteredCatalog(filter)}
+        />
       ) : null}
 
       {view === "collections" ? (
@@ -1175,23 +1167,25 @@ export function App() {
             </div>
           ) : (
             <div className="profile-shelves">
-              {(["watching", "plan", "waiting", "watched"] as WatchStatus[]).map((statusKey) => {
-                const items = userLists.filter((item) => item.status === statusKey);
-                const films = items
-                  .map((item) => listFilms[item.kinopoiskId])
-                  .filter((film): film is KinopoiskFilm => Boolean(film));
-                const showProgress = statusKey === "watching" || statusKey === "watched";
+              {(["favorite", "watching", "plan", "waiting", "watched"] as WatchStatus[]).map(
+                (statusKey) => {
+                  const items = userLists.filter((item) => item.lists.includes(statusKey));
+                  const films = items
+                    .map((item) => listFilms[item.kinopoiskId])
+                    .filter((film): film is KinopoiskFilm => Boolean(film));
+                  const showProgress = statusKey === "watching" || statusKey === "watched";
 
-                return (
-                  <FilmShelf
-                    key={statusKey}
-                    title={watchStatusLabels[statusKey]}
-                    films={films}
-                    progressByFilm={showProgress ? progressByFilm : undefined}
-                    onSelect={(film) => void openFilm(film)}
-                  />
-                );
-              })}
+                  return (
+                    <FilmShelf
+                      key={statusKey}
+                      title={watchStatusLabels[statusKey]}
+                      films={films}
+                      progressByFilm={showProgress ? progressByFilm : undefined}
+                      onSelect={(film) => void openFilm(film)}
+                    />
+                  );
+                }
+              )}
             </div>
           )}
         </section>
@@ -1204,11 +1198,11 @@ export function App() {
             {selectedFilm ? (
               <WatchListControls
                 kinopoiskId={selectedFilm.kinopoiskId}
-                currentStatus={selectedListStatus ?? undefined}
+                activeLists={selectedLists}
                 progressPercent={selectedListEntry?.progressPercent}
                 isAuthenticated={Boolean(authUser)}
-                onStatusChange={(nextStatus) => {
-                  setSelectedListStatus(nextStatus);
+                onListsChange={(lists) => {
+                  setSelectedLists(lists);
                   if (authUser) {
                     void refreshUserLists();
                   }
@@ -1237,7 +1231,26 @@ export function App() {
                 ) : null}
                 <div className="watch-hero__copy">
                   <p className="watch-hero__eyebrow">Сейчас смотрите</p>
-                  <h1>{selectedFilm.title}</h1>
+                  <h1 className="watch-hero__title">
+                    <span>{selectedFilm.title}</span>
+                    <FavoriteToggle
+                      kinopoiskId={selectedFilm.kinopoiskId}
+                      isFavorite={selectedLists.includes("favorite")}
+                      isAuthenticated={Boolean(authUser)}
+                      onChange={(isFavorite) => {
+                        setSelectedLists((current) => {
+                          if (isFavorite) {
+                            return current.includes("favorite") ? current : [...current, "favorite"];
+                          }
+
+                          return current.filter((status) => status !== "favorite");
+                        });
+                        if (authUser) {
+                          void refreshUserLists();
+                        }
+                      }}
+                    />
+                  </h1>
                   <p className="watch-hero__facts">
                     {[
                       selectedFilm.year,
@@ -1366,6 +1379,18 @@ function countVisibleFilms(
   }
 
   return candidates.filter((film) => !excludeIds.has(film.kinopoiskId)).length;
+}
+
+function resolvePlaybackStatus(lists: WatchStatus[]): WatchStatus | null {
+  if (lists.includes("watched")) {
+    return "watched";
+  }
+
+  if (lists.includes("watching")) {
+    return "watching";
+  }
+
+  return null;
 }
 
 function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {

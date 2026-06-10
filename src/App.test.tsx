@@ -110,7 +110,6 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Фильмы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Каталог" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Подборки" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Войти" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Поиск фильма" })).not.toBeInTheDocument();
@@ -150,7 +149,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
-    expect(screen.getByText("Листайте дальше")).toBeInTheDocument();
+    expect(document.querySelector(".load-more-sentinel")).toBeInTheDocument();
   });
 
   it("hides premieres without posters on the home page", async () => {
@@ -321,15 +320,6 @@ describe("App", () => {
     });
   });
 
-  it("opens the collections page from the menu", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    await user.click(screen.getByRole("button", { name: "Подборки" }));
-
-    expect(await screen.findByText("Подборки фильмов")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /250 лучших фильмов/i })).toBeInTheDocument();
-  });
 
   it("clears stale film details when a later detail request fails", async () => {
     const user = userEvent.setup();
@@ -494,7 +484,7 @@ describe("App", () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            items: [{ kinopoiskId: 301, status: "plan" }],
+            items: [{ kinopoiskId: 301, lists: ["plan"] }],
             films: {
               301: {
                 kinopoiskId: 301,

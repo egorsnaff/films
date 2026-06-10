@@ -12,6 +12,11 @@ type UseCatalogInfiniteScrollOptions = {
   resetKey: number;
 };
 
+function isSentinelNearViewport(sentinel: HTMLElement): boolean {
+  const rect = sentinel.getBoundingClientRect();
+  return rect.top <= window.innerHeight + 200;
+}
+
 export function useCatalogInfiniteScroll({
   enabled,
   catalogMode,
@@ -22,7 +27,9 @@ export function useCatalogInfiniteScroll({
   resetKey
 }: UseCatalogInfiniteScrollOptions) {
   const onLoadMoreRef = useRef(onLoadMore);
+  const isLoadingMoreRef = useRef(isLoadingMore);
   onLoadMoreRef.current = onLoadMore;
+  isLoadingMoreRef.current = isLoadingMore;
 
   useEffect(() => {
     if (!enabled || catalogMode === "search" || !hasMore) {
@@ -34,19 +41,44 @@ export function useCatalogInfiniteScroll({
       return;
     }
 
+    const maybeLoadMore = () => {
+      if (isLoadingMoreRef.current) {
+        return;
+      }
+
+      onLoadMoreRef.current();
+    };
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries[0]?.isIntersecting || isLoadingMore) {
+        if (!entries[0]?.isIntersecting) {
           return;
         }
 
-        onLoadMoreRef.current();
+        maybeLoadMore();
       },
-      { root: null, rootMargin: "160px 0px 80px 0px", threshold: 0 }
+      { root: null, rootMargin: "200px 0px 120px 0px", threshold: 0 }
     );
 
     observer.observe(sentinel);
 
+    if (isSentinelNearViewport(sentinel)) {
+      maybeLoadMore();
+    }
+
     return () => observer.disconnect();
+  }, [catalogMode, enabled, hasMore, resetKey, sentinelRef]);
+
+  useEffect(() => {
+    if (!enabled || catalogMode === "search" || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !isSentinelNearViewport(sentinel)) {
+      return;
+    }
+
+    onLoadMoreRef.current();
   }, [catalogMode, enabled, hasMore, isLoadingMore, resetKey, sentinelRef]);
 }

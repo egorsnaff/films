@@ -2,7 +2,7 @@ import type { BrowseMedia, CatalogFilter } from "./catalogFilter";
 
 export type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile" | "browse";
 export type CatalogMode = "premieres" | "search" | "films" | "serials" | "filtered";
-export type MenuItem = "Главная" | "Фильмы" | "Сериалы" | "Каталог" | "Подборки" | "Профиль";
+export type MenuItem = "Главная" | "Фильмы" | "Сериалы" | "Каталог" | "Профиль";
 
 export type NavigationSnapshot = {
   view: ViewState;

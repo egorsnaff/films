@@ -11,10 +11,11 @@ const STATUS_WEIGHTS: Record<WatchStatus, number> = {
   watched: 3,
   watching: 2,
   plan: 1,
-  waiting: 0
+  waiting: 0,
+  favorite: 1
 };
 
-const PROFILE_STATUSES: WatchStatus[] = ["watched", "watching", "plan"];
+const PROFILE_STATUSES: WatchStatus[] = ["watched", "watching", "plan", "favorite"];
 const WARM_START_MIN_FILMS = 3;
 const RESULT_LIMIT = 20;
 

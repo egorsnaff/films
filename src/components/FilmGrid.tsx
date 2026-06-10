@@ -8,10 +8,16 @@ import { PosterImage } from "./PosterImage";
 type FilmGridProps = {
   films: KinopoiskFilm[];
   animate?: boolean;
+  loadingSkeletonCount?: number;
   onSelect: (film: KinopoiskFilm) => void;
 };
 
-export function FilmGrid({ films, animate = true, onSelect }: FilmGridProps) {
+export function FilmGrid({
+  films,
+  animate = true,
+  loadingSkeletonCount = 0,
+  onSelect
+}: FilmGridProps) {
   return (
     <div className={`film-grid${animate ? " film-grid--revealed" : ""}`}>
       {films.map((film, index) => (
@@ -40,6 +46,21 @@ export function FilmGrid({ films, animate = true, onSelect }: FilmGridProps) {
           </span>
         </button>
       ))}
+      {loadingSkeletonCount > 0
+        ? Array.from({ length: loadingSkeletonCount }).map((_, index) => (
+            <span
+              key={`catalog-skeleton-${index}`}
+              className="film-card film-card--skeleton"
+              aria-hidden="true"
+            >
+              <span className="film-card__poster film-skeleton" />
+              <span className="film-card__body">
+                <span className="catalog-skeleton-card__line catalog-skeleton-card__line--title" />
+                <span className="catalog-skeleton-card__line catalog-skeleton-card__line--meta" />
+              </span>
+            </span>
+          ))
+        : null}
     </div>
   );
 }

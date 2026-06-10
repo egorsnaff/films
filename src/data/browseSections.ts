@@ -18,8 +18,7 @@ const FILM_THEME_EXTRAS: Array<{ type: ThemeCollectionType; title: string }> = [
 
 const FILM_TOP_ITEMS: Array<{ type: TopCollectionType; title: string }> = [
   { type: "TOP_250_BEST_FILMS", title: "250 лучших фильмов" },
-  { type: "TOP_100_POPULAR_FILMS", title: "Топ по популярности" },
-  { type: "TOP_AWAIT_FILMS", title: "Скоро в кино" }
+  { type: "TOP_100_POPULAR_FILMS", title: "Топ по популярности" }
 ];
 
 const SERIAL_THEME_ITEMS: Array<{ type: ThemeCollectionType; title: string }> = [
@@ -55,11 +54,16 @@ function buildTopItems(media: BrowseMedia): CatalogFilter[] {
   );
 }
 
+function hasLabel(value: string | undefined): boolean {
+  return Boolean(value?.trim());
+}
+
 function buildGenreItems(
   media: BrowseMedia,
   genres: KinopoiskFilters["genres"]
 ): CatalogFilter[] {
   return [...genres]
+    .filter((genre) => hasLabel(genre.genre))
     .sort((left, right) => left.genre.localeCompare(right.genre, "ru"))
     .map((genre) =>
       createCatalogFilter({
@@ -76,6 +80,7 @@ function buildCountryItems(
   countries: KinopoiskFilters["countries"]
 ): CatalogFilter[] {
   return [...countries]
+    .filter((country) => hasLabel(country.country))
     .sort((left, right) => left.country.localeCompare(right.country, "ru"))
     .map((country) =>
       createCatalogFilter({
@@ -180,10 +185,19 @@ function buildSerialSections(filters: KinopoiskFilters): BrowseSection[] {
   ];
 }
 
+function pruneEmptySections(sections: BrowseSection[]): BrowseSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => hasLabel(item.title))
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function buildBrowseSections(media: BrowseMedia, filters: KinopoiskFilters): BrowseSection[] {
   if (media === "serials") {
-    return buildSerialSections(filters);
+    return pruneEmptySections(buildSerialSections(filters));
   }
 
-  return buildFilmSections(filters);
+  return pruneEmptySections(buildFilmSections(filters));
 }

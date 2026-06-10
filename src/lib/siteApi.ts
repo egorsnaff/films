@@ -1,4 +1,4 @@
-export type WatchStatus = "watching" | "plan" | "waiting" | "watched";
+export type WatchStatus = "watching" | "plan" | "waiting" | "watched" | "favorite";
 
 export type AuthUser = {
   id: number;
@@ -7,7 +7,7 @@ export type AuthUser = {
 
 export type UserFilmEntry = {
   kinopoiskId: number;
-  status: WatchStatus;
+  lists: WatchStatus[];
   watchSeconds?: number;
   progressPercent?: number;
   updatedAt: string;
@@ -84,11 +84,31 @@ export const siteApi = {
     return { items: data.items, films: data.films ?? {} };
   },
 
-  async setFilmStatus(kinopoiskId: number, status: WatchStatus): Promise<UserFilmEntry> {
-    const data = await request<{ item: UserFilmEntry }>("/lists", {
+  async toggleFilmList(
+    kinopoiskId: number,
+    status: WatchStatus,
+    enabled: boolean
+  ): Promise<UserFilmEntry | null> {
+    const response = await fetch(`${API_BASE}/lists`, {
       method: "PUT",
-      body: JSON.stringify({ kinopoiskId, status })
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ kinopoiskId, status, enabled })
     });
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(payload?.error ?? `Request failed with status ${response.status}`);
+    }
+
+    const data = (await response.json()) as { item: UserFilmEntry };
     return data.item;
   },
 
@@ -121,16 +141,13 @@ export const siteApi = {
     return data.item;
   },
 
-  async removeFilm(kinopoiskId: number): Promise<void> {
-    await request<void>(`/lists/${kinopoiskId}`, { method: "DELETE" });
-  },
-
   async getRecommendations(): Promise<RecommendationResponse> {
     return request<RecommendationResponse>("/recommendations");
   }
 };
 
 export const watchStatusLabels: Record<WatchStatus, string> = {
+  favorite: "Любимое",
   watching: "Смотрю сейчас",
   plan: "Буду смотреть",
   waiting: "Жду продолжения",
