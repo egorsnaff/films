@@ -2488,6 +2488,63 @@ h1 em {
   padding: 8px;
 }
 
+.watch-hero__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.favorite-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 4%);
+  color: rgb(255 255 255 / 42%);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.favorite-toggle:hover,
+.favorite-toggle:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: rgb(255 120 148 / 48%);
+  color: rgb(255 140 168 / 88%);
+}
+
+.favorite-toggle--active {
+  border-color: rgb(255 120 148 / 62%);
+  background: rgb(255 120 148 / 14%);
+  color: #ff7f9d;
+}
+
+.watch-list-menu__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.watch-list-menu__favorite {
+  color: #ff7f9d;
+}
+
+.watch-list-menu__progress-note {
+  margin: 4px 0 0;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .watch-list-menu__status {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveProgressStatus } from "./db.js";
+import { resolveAutoListMemberships, resolveProgressStatus } from "./db.js";
 
 describe("resolveProgressStatus", () => {
   const existingPlan = {
@@ -12,8 +12,8 @@ describe("resolveProgressStatus", () => {
     updated_at: "2026-01-01T00:00:00.000Z"
   };
 
-  it("keeps existing status when watch time is under five minutes", () => {
-    expect(resolveProgressStatus(existingPlan, 120, 1, "watching")).toBe("plan");
+  it("does not auto-add watching before five minutes", () => {
+    expect(resolveProgressStatus(existingPlan, 120, 1, "watching")).toBeNull();
     expect(resolveProgressStatus(undefined, 120, 1, "watching")).toBeNull();
   });
 
@@ -25,5 +25,13 @@ describe("resolveProgressStatus", () => {
   it("marks watched at ninety percent regardless of elapsed time", () => {
     expect(resolveProgressStatus(undefined, 10, 90)).toBe("watched");
     expect(resolveProgressStatus(existingPlan, 10, 90, "watched")).toBe("watched");
+  });
+});
+
+describe("resolveAutoListMemberships", () => {
+  it("adds memberships without removing existing lists", () => {
+    expect(resolveAutoListMemberships(["plan", "favorite"], 300, 2)).toEqual(["watching"]);
+    expect(resolveAutoListMemberships(["plan", "watching"], 300, 2)).toEqual([]);
+    expect(resolveAutoListMemberships(["plan"], 10, 95)).toEqual(["watched"]);
   });
 });

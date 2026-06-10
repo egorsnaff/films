@@ -5,12 +5,13 @@ import express from "express";
 import jwt from "jsonwebtoken";
 
 import {
+  addUserFilmToList,
   deleteUserFilm,
   findUserById,
   findUserByUsername,
-  listUserFilms,
+  listUserFilmsAggregated,
+  removeUserFilmFromList,
   updateUserFilmProgress,
-  upsertUserFilm,
   type WatchStatus
 } from "./db.js";
 import { getKinopoiskApiStats } from "./kpApiStats.js";
@@ -319,9 +320,9 @@ app.get("/recommendations", requireUser, async (req, res) => {
 
 app.get("/lists", requireUser, async (req, res) => {
   const user = res.locals.user as { id: number };
-  const items = listUserFilms(user.id).map((item) => ({
+  const items = listUserFilmsAggregated(user.id).map((item) => ({
     kinopoiskId: item.kinopoisk_id,
-    status: item.status,
+    lists: item.lists,
     watchSeconds: item.watch_seconds,
     progressPercent: item.progress_percent,
     updatedAt: item.updated_at
@@ -340,22 +341,30 @@ app.put("/lists", requireUser, (req, res) => {
   const user = res.locals.user as { id: number };
   const kinopoiskId = Number(req.body?.kinopoiskId);
   const status = String(req.body?.status ?? "") as WatchStatus;
-  const allowed: WatchStatus[] = ["watching", "plan", "waiting", "watched"];
+  const enabled = req.body?.enabled !== false;
+  const allowed: WatchStatus[] = ["watching", "plan", "waiting", "watched", "favorite"];
 
   if (!Number.isFinite(kinopoiskId) || !allowed.includes(status)) {
     res.status(400).json({ error: "Некорректные данные списка" });
     return;
   }
 
-  const item = upsertUserFilm(user.id, kinopoiskId, status);
+  const aggregate = enabled
+    ? addUserFilmToList(user.id, kinopoiskId, status)
+    : removeUserFilmFromList(user.id, kinopoiskId, status);
+
+  if (!aggregate) {
+    res.status(204).send();
+    return;
+  }
 
   res.json({
     item: {
-      kinopoiskId: item.kinopoisk_id,
-      status: item.status,
-      watchSeconds: item.watch_seconds,
-      progressPercent: item.progress_percent,
-      updatedAt: item.updated_at
+      kinopoiskId: aggregate.kinopoisk_id,
+      lists: aggregate.lists,
+      watchSeconds: aggregate.watch_seconds,
+      progressPercent: aggregate.progress_percent,
+      updatedAt: aggregate.updated_at
     }
   });
 });
@@ -366,7 +375,7 @@ app.patch("/lists/progress", requireUser, (req, res) => {
   const watchSeconds = Number(req.body?.watchSeconds ?? 0);
   const progressPercent = Number(req.body?.progressPercent ?? 0);
   const forceStatus = req.body?.forceStatus as WatchStatus | undefined;
-  const allowed: WatchStatus[] = ["watching", "plan", "waiting", "watched"];
+  const allowed: WatchStatus[] = ["watching", "plan", "waiting", "watched", "favorite"];
 
   if (
     !Number.isFinite(kinopoiskId) ||
@@ -391,10 +400,14 @@ app.patch("/lists/progress", requireUser, (req, res) => {
     return;
   }
 
+  const aggregate = listUserFilmsAggregated(user.id).find(
+    (entry) => entry.kinopoisk_id === kinopoiskId
+  );
+
   res.json({
     item: {
       kinopoiskId: item.kinopoisk_id,
-      status: item.status,
+      lists: aggregate?.lists ?? [item.status],
       watchSeconds: item.watch_seconds,
       progressPercent: item.progress_percent,
       updatedAt: item.updated_at

@@ -11,6 +11,7 @@ import { MoviePlayers } from "./components/MoviePlayers";
 import { PosterImage } from "./components/PosterImage";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
+import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
 import { useCatalogInfiniteScroll } from "./hooks/useCatalogInfiniteScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
@@ -64,7 +65,7 @@ const playerTemplates =
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Подборки", "Профиль"];
+const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Профиль"];
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
@@ -116,7 +117,7 @@ export function App() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
-  const [selectedListStatus, setSelectedListStatus] = useState<WatchStatus | null>(null);
+  const [selectedLists, setSelectedLists] = useState<WatchStatus[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
@@ -294,17 +295,19 @@ export function App() {
 
   const handleWatchTrackerStatusChange = useCallback(
     (status: WatchStatus) => {
-      setSelectedListStatus(status);
+      setSelectedLists((current) => (current.includes(status) ? current : [...current, status]));
       void refreshUserLists();
     },
     [refreshUserLists]
   );
 
+  const playbackStatus = resolvePlaybackStatus(selectedLists);
+
   const { markPlaybackStarted, reportPosition } = useWatchTracker({
     enabled: Boolean(authUser && view === "watch" && selectedFilm),
     kinopoiskId: selectedFilm?.kinopoiskId,
     filmLengthMinutes: selectedFilm?.filmLengthMinutes,
-    currentStatus: selectedListStatus,
+    currentStatus: playbackStatus,
     onStatusChange: handleWatchTrackerStatusChange
   });
 
@@ -364,8 +367,8 @@ export function App() {
         setView("watch");
         setSelectedFilm(null);
         setDetailsStatus("loading");
-        setSelectedListStatus(
-          userLists.find((item) => item.kinopoiskId === snapshot.filmId)?.status ?? null
+        setSelectedLists(
+          userLists.find((item) => item.kinopoiskId === snapshot.filmId)?.lists ?? []
         );
 
         try {
@@ -746,8 +749,8 @@ export function App() {
     setSelectedFilm(null);
     setDetailsStatus("loading");
     setView("watch");
-    setSelectedListStatus(
-      userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.status ?? null
+    setSelectedLists(
+      userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.lists ?? []
     );
     requestHistoryCommit(pushHistory);
 
@@ -775,7 +778,7 @@ export function App() {
 
     setCollectionId(id);
     setView("collection");
-    setActiveMenu("Подборки");
+    setActiveMenu("Каталог");
     setCollectionStatus("loading");
     setCollectionFilms([]);
 
@@ -805,11 +808,6 @@ export function App() {
     setIsSearchOpen(false);
 
     try {
-      if (item === "Подборки") {
-        setView("collections");
-        return;
-      }
-
       if (item === "Профиль") {
         setView("profile");
         if (authUser) {
@@ -916,7 +914,7 @@ export function App() {
     setAuthUser(null);
     setUserLists([]);
     setListFilms({});
-    setSelectedListStatus(null);
+    setSelectedLists([]);
     setRecommendations(null);
     setRecommendationsStatus("idle");
   }
@@ -1169,23 +1167,25 @@ export function App() {
             </div>
           ) : (
             <div className="profile-shelves">
-              {(["watching", "plan", "waiting", "watched"] as WatchStatus[]).map((statusKey) => {
-                const items = userLists.filter((item) => item.status === statusKey);
-                const films = items
-                  .map((item) => listFilms[item.kinopoiskId])
-                  .filter((film): film is KinopoiskFilm => Boolean(film));
-                const showProgress = statusKey === "watching" || statusKey === "watched";
+              {(["favorite", "watching", "plan", "waiting", "watched"] as WatchStatus[]).map(
+                (statusKey) => {
+                  const items = userLists.filter((item) => item.lists.includes(statusKey));
+                  const films = items
+                    .map((item) => listFilms[item.kinopoiskId])
+                    .filter((film): film is KinopoiskFilm => Boolean(film));
+                  const showProgress = statusKey === "watching" || statusKey === "watched";
 
-                return (
-                  <FilmShelf
-                    key={statusKey}
-                    title={watchStatusLabels[statusKey]}
-                    films={films}
-                    progressByFilm={showProgress ? progressByFilm : undefined}
-                    onSelect={(film) => void openFilm(film)}
-                  />
-                );
-              })}
+                  return (
+                    <FilmShelf
+                      key={statusKey}
+                      title={watchStatusLabels[statusKey]}
+                      films={films}
+                      progressByFilm={showProgress ? progressByFilm : undefined}
+                      onSelect={(film) => void openFilm(film)}
+                    />
+                  );
+                }
+              )}
             </div>
           )}
         </section>
@@ -1198,11 +1198,11 @@ export function App() {
             {selectedFilm ? (
               <WatchListControls
                 kinopoiskId={selectedFilm.kinopoiskId}
-                currentStatus={selectedListStatus ?? undefined}
+                activeLists={selectedLists}
                 progressPercent={selectedListEntry?.progressPercent}
                 isAuthenticated={Boolean(authUser)}
-                onStatusChange={(nextStatus) => {
-                  setSelectedListStatus(nextStatus);
+                onListsChange={(lists) => {
+                  setSelectedLists(lists);
                   if (authUser) {
                     void refreshUserLists();
                   }
@@ -1231,7 +1231,26 @@ export function App() {
                 ) : null}
                 <div className="watch-hero__copy">
                   <p className="watch-hero__eyebrow">Сейчас смотрите</p>
-                  <h1>{selectedFilm.title}</h1>
+                  <h1 className="watch-hero__title">
+                    <span>{selectedFilm.title}</span>
+                    <FavoriteToggle
+                      kinopoiskId={selectedFilm.kinopoiskId}
+                      isFavorite={selectedLists.includes("favorite")}
+                      isAuthenticated={Boolean(authUser)}
+                      onChange={(isFavorite) => {
+                        setSelectedLists((current) => {
+                          if (isFavorite) {
+                            return current.includes("favorite") ? current : [...current, "favorite"];
+                          }
+
+                          return current.filter((status) => status !== "favorite");
+                        });
+                        if (authUser) {
+                          void refreshUserLists();
+                        }
+                      }}
+                    />
+                  </h1>
                   <p className="watch-hero__facts">
                     {[
                       selectedFilm.year,
@@ -1360,6 +1379,18 @@ function countVisibleFilms(
   }
 
   return candidates.filter((film) => !excludeIds.has(film.kinopoiskId)).length;
+}
+
+function resolvePlaybackStatus(lists: WatchStatus[]): WatchStatus | null {
+  if (lists.includes("watched")) {
+    return "watched";
+  }
+
+  if (lists.includes("watching")) {
+    return "watching";
+  }
+
+  return null;
 }
 
 function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {
