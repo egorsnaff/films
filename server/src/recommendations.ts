@@ -13,6 +13,7 @@ import {
   getTopList
 } from "./kinopoiskProxy.js";
 import { getImdbTop250KinopoiskIds, IMDB_TOP_250_PAGE_SIZE } from "./imdbTop250.js";
+import { getImdbTop250TvKinopoiskIds } from "./imdbTop250Tv.js";
 
 const STATUS_WEIGHTS: Record<WatchStatus, number> = {
   watched: 3,
@@ -377,6 +378,14 @@ async function gatherSerialCandidates(profile: Record<string, number>): Promise<
   };
 
   try {
+    const topTvIds = getImdbTop250TvKinopoiskIds().slice(0, IMDB_TOP_250_PAGE_SIZE);
+    const topTvFilms = await ensureAllFilmsCached(topTvIds);
+    addFilms(topTvIds.map((id) => topTvFilms[id]).filter(Boolean));
+  } catch {
+    // skip failed pool
+  }
+
+  try {
     const recent = await getRecentCatalog(1, "TV_SERIES");
     addFilms(recent.page.films);
   } catch {
@@ -403,11 +412,13 @@ async function gatherSerialCandidates(profile: Record<string, number>): Promise<
 }
 
 async function buildSerialColdStart(userFilmIds: Set<number>): Promise<RecommendationResult> {
-  const { page } = await getFilterCatalog({ type: "TV_SERIES", page: 1, order: "RATING" });
-  const films = page.films
-    .filter((film) => !userFilmIds.has(film.kinopoiskId))
-    .sort((left, right) => parseRating(right.rating) - parseRating(left.rating))
+  const selectedIds = getImdbTop250TvKinopoiskIds()
+    .filter((kinopoiskId) => !userFilmIds.has(kinopoiskId))
     .slice(0, RESULT_LIMIT);
+  const filmsById = await ensureAllFilmsCached(selectedIds);
+  const films = selectedIds
+    .map((kinopoiskId) => filmsById[kinopoiskId])
+    .filter((film): film is CachedFilm => Boolean(film));
 
   return {
     films,

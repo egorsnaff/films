@@ -1,0 +1,2506 @@
+{
+  "source": "https://www.imdb.com/chart/toptv/",
+  "syncedAt": "2026-06-11T10:26:01.303Z",
+  "entries": [
+    {
+      "rank": 1,
+      "title": "Breaking Bad",
+      "year": "2008",
+      "imdbId": "tt0903747",
+      "kinopoiskId": 404900,
+      "matchedTitle": "Во все тяжкие",
+      "matchedYear": "2008",
+      "matchScore": 30
+    },
+    {
+      "rank": 2,
+      "title": "Planet Earth II",
+      "year": "2016",
+      "imdbId": "tt5491994",
+      "kinopoiskId": 1007472,
+      "matchedTitle": "Планета Земля 2",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 3,
+      "title": "Planet Earth",
+      "year": "2006",
+      "imdbId": "tt0795176",
+      "kinopoiskId": 279548,
+      "matchedTitle": "BBC: Планета Земля",
+      "matchedYear": "2006",
+      "matchScore": 30
+    },
+    {
+      "rank": 4,
+      "title": "Band of Brothers",
+      "year": "2001",
+      "imdbId": "tt0185906",
+      "kinopoiskId": 94249,
+      "matchedTitle": "Братья по оружию",
+      "matchedYear": "2001",
+      "matchScore": 30
+    },
+    {
+      "rank": 5,
+      "title": "Chernobyl",
+      "year": "2019",
+      "imdbId": "tt7366338",
+      "kinopoiskId": 1227803,
+      "matchedTitle": "Чернобыль",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 6,
+      "title": "The Wire",
+      "year": "2002",
+      "imdbId": "tt0306414",
+      "kinopoiskId": 402955,
+      "matchedTitle": "Прослушка",
+      "matchedYear": "2002",
+      "matchScore": 30
+    },
+    {
+      "rank": 7,
+      "title": "Avatar: The Last Airbender",
+      "year": "2004",
+      "imdbId": "tt0417299",
+      "kinopoiskId": 401152,
+      "matchedTitle": "Аватар: Легенда об Аанге",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 8,
+      "title": "The Sopranos",
+      "year": "1999",
+      "imdbId": "tt0141842",
+      "kinopoiskId": 79848,
+      "matchedTitle": "Сопрано",
+      "matchedYear": "1999",
+      "matchScore": 30
+    },
+    {
+      "rank": 9,
+      "title": "Blue Planet II",
+      "year": "2017",
+      "imdbId": "tt6769208",
+      "kinopoiskId": 1073233,
+      "matchedTitle": "Голубая планета 2",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 10,
+      "title": "Cosmos: A Spacetime Odyssey",
+      "year": "2014",
+      "imdbId": "tt2395695",
+      "kinopoiskId": 762381,
+      "matchedTitle": "Космос: Пространство и время",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 11,
+      "title": "Cosmos",
+      "year": "2019",
+      "imdbId": "tt0081846",
+      "kinopoiskId": 1210349,
+      "matchedTitle": "Космос",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 12,
+      "title": "Our Planet",
+      "year": "2019",
+      "imdbId": "tt9253866",
+      "kinopoiskId": 1235081,
+      "matchedTitle": "Наша планета",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 13,
+      "title": "Game of Thrones",
+      "year": "2011",
+      "imdbId": "tt0944947",
+      "kinopoiskId": 464963,
+      "matchedTitle": "Игра престолов",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 14,
+      "title": "Bluey",
+      "year": "2018",
+      "imdbId": "tt7678620",
+      "kinopoiskId": 1338495,
+      "matchedTitle": "Блуи",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 15,
+      "title": "The World at War",
+      "year": "1973",
+      "imdbId": "tt0071075",
+      "kinopoiskId": 254886,
+      "matchedTitle": "Мир в войне",
+      "matchedYear": "1973",
+      "matchScore": 30
+    },
+    {
+      "rank": 16,
+      "title": "Hagane no renkinjutsushi",
+      "year": "2017",
+      "imdbId": "tt1355642",
+      "kinopoiskId": 978425,
+      "matchedTitle": "Стальной алхимик",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 17,
+      "title": "Shingeki no kyojin",
+      "year": "2013",
+      "imdbId": "tt2560140",
+      "kinopoiskId": 749374,
+      "matchedTitle": "Атака титанов",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 18,
+      "title": "Life",
+      "year": "2017",
+      "imdbId": "tt1533395",
+      "kinopoiskId": 966995,
+      "matchedTitle": "Живое",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 19,
+      "title": "The Last Dance",
+      "year": "2020",
+      "imdbId": "tt8420184",
+      "kinopoiskId": 1162628,
+      "matchedTitle": "Последний танец",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 20,
+      "title": "The Twilight Zone",
+      "year": "2019",
+      "imdbId": "tt0052520",
+      "kinopoiskId": 762172,
+      "matchedTitle": "Сумеречная зона",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 21,
+      "title": "The Vietnam War",
+      "year": "2017",
+      "imdbId": "tt1877514",
+      "kinopoiskId": 775289,
+      "matchedTitle": "Вьетнам",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 22,
+      "title": "Rick and Morty",
+      "year": "2013",
+      "imdbId": "tt2861424",
+      "kinopoiskId": 685246,
+      "matchedTitle": "Рик и Морти",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 23,
+      "title": "Sherlock",
+      "year": "2010",
+      "imdbId": "tt1475582",
+      "kinopoiskId": 502838,
+      "matchedTitle": "Шерлок",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 24,
+      "title": "Batman: The Animated Series",
+      "year": "1992",
+      "imdbId": "tt0103359",
+      "kinopoiskId": 94681,
+      "matchedTitle": "Бэтмен",
+      "matchedYear": "1992",
+      "matchScore": 30
+    },
+    {
+      "rank": 25,
+      "title": "Better Call Saul",
+      "year": "2015",
+      "imdbId": "tt3032476",
+      "kinopoiskId": 796660,
+      "matchedTitle": "Лучше звоните Солу",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 26,
+      "title": "Arcane: League of Legends",
+      "year": "2021",
+      "imdbId": "tt11126994",
+      "kinopoiskId": 4445150,
+      "matchedTitle": "Аркейн",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 27,
+      "title": "The Office",
+      "year": "2005",
+      "imdbId": "tt0386676",
+      "kinopoiskId": 253245,
+      "matchedTitle": "Офис",
+      "matchedYear": "2005",
+      "matchScore": 30
+    },
+    {
+      "rank": 28,
+      "title": "The Blue Planet",
+      "year": "2001",
+      "imdbId": "tt0296310",
+      "kinopoiskId": 252059,
+      "matchedTitle": "Голубая планета",
+      "matchedYear": "2001",
+      "matchScore": 30
+    },
+    {
+      "rank": 29,
+      "title": "Clarkson's Farm",
+      "year": "2021",
+      "imdbId": "tt10541088",
+      "kinopoiskId": 4475473,
+      "matchedTitle": "Ферма Кларксона",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 30,
+      "title": "Scam 1992: The Harshad Mehta Story",
+      "year": "2020",
+      "imdbId": "tt12392504",
+      "kinopoiskId": 1393461,
+      "matchedTitle": "Жульничество 1992: История Харшада Мехты",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 31,
+      "title": "Hunter x Hunter",
+      "year": "2011",
+      "imdbId": "tt2098220",
+      "kinopoiskId": 647602,
+      "matchedTitle": "Охотник х Охотник",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 32,
+      "title": "Frozen Planet",
+      "year": "2011",
+      "imdbId": "tt2092588",
+      "kinopoiskId": 652564,
+      "matchedTitle": "BBC: Замерзшая планета",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 33,
+      "title": "Only Fools and Horses",
+      "year": "1981",
+      "imdbId": "tt0081912",
+      "kinopoiskId": 471405,
+      "matchedTitle": "Дуракам везет",
+      "matchedYear": "1981",
+      "matchScore": 30
+    },
+    {
+      "rank": 34,
+      "title": "Human Planet",
+      "year": "2011",
+      "imdbId": "tt1806234",
+      "kinopoiskId": 591822,
+      "matchedTitle": "BBC: Планета людей",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 35,
+      "title": "The Beatles Anthology",
+      "year": "1995",
+      "imdbId": "tt0111893",
+      "kinopoiskId": 383870,
+      "matchedTitle": "Антология The Beatles",
+      "matchedYear": "1995",
+      "matchScore": 30
+    },
+    {
+      "rank": 36,
+      "title": "Dexter: Resurrection",
+      "year": "2025",
+      "imdbId": "tt33043892",
+      "kinopoiskId": 6058297,
+      "matchedTitle": "Декстер: Воскрешение",
+      "matchedYear": "2025",
+      "matchScore": 30
+    },
+    {
+      "rank": 37,
+      "title": "The Civil War",
+      "year": "1990",
+      "imdbId": "tt0098769",
+      "kinopoiskId": 521770,
+      "matchedTitle": "Гражданская война",
+      "matchedYear": "1990",
+      "matchScore": 30
+    },
+    {
+      "rank": 38,
+      "title": "The Pitt",
+      "year": "2025",
+      "imdbId": "tt31938062",
+      "kinopoiskId": 6589776,
+      "matchedTitle": "Питт",
+      "matchedYear": "2025",
+      "matchScore": 30
+    },
+    {
+      "rank": 39,
+      "title": "Gibi",
+      "year": "2021",
+      "imdbId": "tt13675832",
+      "kinopoiskId": 4424713,
+      "matchedTitle": "Гиби",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 40,
+      "title": "Firefly",
+      "year": "2002",
+      "imdbId": "tt0303461",
+      "kinopoiskId": 178720,
+      "matchedTitle": "Светлячок",
+      "matchedYear": "2002",
+      "matchScore": 30
+    },
+    {
+      "rank": 41,
+      "title": "Gravity Falls",
+      "year": "2012",
+      "imdbId": "tt1865718",
+      "kinopoiskId": 591929,
+      "matchedTitle": "Гравити Фолз",
+      "matchedYear": "2012",
+      "matchScore": 30
+    },
+    {
+      "rank": 42,
+      "title": "Death Note: Desu nôto",
+      "year": "2015",
+      "imdbId": "tt0877057",
+      "kinopoiskId": 922144,
+      "matchedTitle": "Тетрадь смерти",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 43,
+      "title": "Sôsô no Furîren",
+      "year": "2023",
+      "imdbId": "tt22248376",
+      "kinopoiskId": 5401195,
+      "matchedTitle": "Фрирен, провожающая в последний путь",
+      "matchedYear": "2023",
+      "matchScore": 4
+    },
+    {
+      "rank": 44,
+      "title": "Taskmaster",
+      "year": "2015",
+      "imdbId": "tt4934214",
+      "kinopoiskId": 934169,
+      "matchedTitle": "Taskmaster",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 45,
+      "title": "Seinfeld",
+      "year": "1989",
+      "imdbId": "tt0098904",
+      "kinopoiskId": 277627,
+      "matchedTitle": "Сайнфелд",
+      "matchedYear": "1989",
+      "matchScore": 30
+    },
+    {
+      "rank": 46,
+      "title": "Dekalog",
+      "year": "1988",
+      "imdbId": "tt0092337",
+      "kinopoiskId": 94660,
+      "matchedTitle": "Декалог",
+      "matchedYear": "1988",
+      "matchScore": 30
+    },
+    {
+      "rank": 47,
+      "title": "The Beatles: Get Back",
+      "year": "2021",
+      "imdbId": "tt9735318",
+      "kinopoiskId": 1355015,
+      "matchedTitle": "The Beatles: Get Back",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 48,
+      "title": "Nathan for You",
+      "year": "2013",
+      "imdbId": "tt2297757",
+      "kinopoiskId": 734884,
+      "matchedTitle": "Нэйтан спешит на выручку",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 49,
+      "title": "Kaubôi bibappu",
+      "year": "1998",
+      "imdbId": "tt0213338",
+      "kinopoiskId": 229653,
+      "matchedTitle": "Ковбой Бибоп",
+      "matchedYear": "1998",
+      "matchScore": 4
+    },
+    {
+      "rank": 50,
+      "title": "True Detective",
+      "year": "2014",
+      "imdbId": "tt2356777",
+      "kinopoiskId": 681831,
+      "matchedTitle": "Настоящий детектив",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 51,
+      "title": "Apocalypse: La 2ème guerre mondiale",
+      "year": "2009",
+      "imdbId": "tt1508238",
+      "kinopoiskId": 478013,
+      "matchedTitle": "Апокалипсис: Вторая мировая война",
+      "matchedYear": "2009",
+      "matchScore": 30
+    },
+    {
+      "rank": 52,
+      "title": "Fargo",
+      "year": "2014",
+      "imdbId": "tt2802850",
+      "kinopoiskId": 767379,
+      "matchedTitle": "Фарго",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 53,
+      "title": "Sahsiyet",
+      "year": "2018",
+      "imdbId": "tt7920978",
+      "kinopoiskId": 1112358,
+      "matchedTitle": "Личность",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 54,
+      "title": "One Piece: Wan pîsu",
+      "year": "1999",
+      "imdbId": "tt0388629",
+      "kinopoiskId": 382731,
+      "matchedTitle": "Ван-Пис",
+      "matchedYear": "1999",
+      "matchScore": 12
+    },
+    {
+      "rank": 55,
+      "title": "Africa",
+      "year": "2013",
+      "imdbId": "tt2571774",
+      "kinopoiskId": 743965,
+      "matchedTitle": "Африка",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 56,
+      "title": "The Chosen",
+      "year": "2017",
+      "imdbId": "tt5622316",
+      "kinopoiskId": 1228882,
+      "matchedTitle": "Избранные",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 57,
+      "title": "Bleach: Sennen Kessen-hen",
+      "year": "2022",
+      "imdbId": "tt14986406",
+      "kinopoiskId": 4789626,
+      "matchedTitle": "Блич: Тысячелетняя кровавая война",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 58,
+      "title": "The West Wing",
+      "year": "1999",
+      "imdbId": "tt0200276",
+      "kinopoiskId": 94224,
+      "matchedTitle": "Западное крыло",
+      "matchedYear": "1999",
+      "matchScore": 30
+    },
+    {
+      "rank": 59,
+      "title": "Friends",
+      "year": "1994",
+      "imdbId": "tt0108778",
+      "kinopoiskId": 77044,
+      "matchedTitle": "Друзья",
+      "matchedYear": "1994",
+      "matchScore": 30
+    },
+    {
+      "rank": 60,
+      "title": "When They See Us",
+      "year": "2019",
+      "imdbId": "tt7137906",
+      "kinopoiskId": 1174230,
+      "matchedTitle": "Когда они нас увидят",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 61,
+      "title": "It's Always Sunny in Philadelphia",
+      "year": "2005",
+      "imdbId": "tt0472954",
+      "kinopoiskId": 401515,
+      "matchedTitle": "В Филадельфии всегда солнечно",
+      "matchedYear": "2005",
+      "matchScore": 30
+    },
+    {
+      "rank": 62,
+      "title": "Pokssak sogatsuda",
+      "year": "2025",
+      "imdbId": "tt26471411",
+      "kinopoiskId": 5249436,
+      "matchedTitle": "Когда жизнь даёт тебе мандарины",
+      "matchedYear": "2025",
+      "matchScore": 4
+    },
+    {
+      "rank": 63,
+      "title": "Last Week Tonight with John Oliver",
+      "year": "2014",
+      "imdbId": "tt3530232",
+      "kinopoiskId": 839427,
+      "matchedTitle": "События прошедшей недели с Джоном Оливером",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 64,
+      "title": "TVF Pitchers",
+      "year": "2015",
+      "imdbId": "tt4742876",
+      "kinopoiskId": 952178,
+      "matchedTitle": "TVF Pitchers",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 65,
+      "title": "Succession",
+      "year": "2018",
+      "imdbId": "tt7660850",
+      "kinopoiskId": 986788,
+      "matchedTitle": "Наследники",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 66,
+      "title": "Curb Your Enthusiasm",
+      "year": "2000",
+      "imdbId": "tt0264235",
+      "kinopoiskId": 277559,
+      "matchedTitle": "Умерь свой энтузиазм",
+      "matchedYear": "2000",
+      "matchScore": 30
+    },
+    {
+      "rank": 67,
+      "title": "BoJack Horseman",
+      "year": "2014",
+      "imdbId": "tt3398228",
+      "kinopoiskId": 818185,
+      "matchedTitle": "Конь БоДжек",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 68,
+      "title": "Das Boot",
+      "year": "1981",
+      "imdbId": "tt0081834",
+      "kinopoiskId": 362,
+      "matchedTitle": "Подводная лодка",
+      "matchedYear": "1981",
+      "matchScore": 30
+    },
+    {
+      "rank": 69,
+      "title": "Monty Python's Flying Circus",
+      "year": "1969",
+      "imdbId": "tt0063929",
+      "kinopoiskId": 94730,
+      "matchedTitle": "Монти Пайтон: Летающий цирк",
+      "matchedYear": "1969",
+      "matchScore": 30
+    },
+    {
+      "rank": 70,
+      "title": "Vinland Saga",
+      "year": "2019",
+      "imdbId": "tt10233448",
+      "kinopoiskId": 1274280,
+      "matchedTitle": "Сага о Винланде",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 71,
+      "title": "Panchayat",
+      "year": "2020",
+      "imdbId": "tt12004706",
+      "kinopoiskId": 1359425,
+      "matchedTitle": "Панчаят",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 72,
+      "title": "Fawlty Towers",
+      "year": "1975",
+      "imdbId": "tt0072500",
+      "kinopoiskId": 438208,
+      "matchedTitle": "Отель «Фолти Тауэрс»",
+      "matchedYear": "1975",
+      "matchScore": 30
+    },
+    {
+      "rank": 73,
+      "title": "Dragon Ball Z",
+      "year": "1996",
+      "imdbId": "tt0214341",
+      "kinopoiskId": 230594,
+      "matchedTitle": "Драконий жемчуг Зет",
+      "matchedYear": "1996",
+      "matchScore": 30
+    },
+    {
+      "rank": 74,
+      "title": "Gullak",
+      "year": "2019",
+      "imdbId": "tt10530900",
+      "kinopoiskId": 1277337,
+      "matchedTitle": "Копилка",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 75,
+      "title": "Blackadder Goes Forth",
+      "year": "1989",
+      "imdbId": "tt0096548",
+      "kinopoiskId": 89626,
+      "matchedTitle": "Чёрная гадюка 4",
+      "matchedYear": "1989",
+      "matchScore": 30
+    },
+    {
+      "rank": 76,
+      "title": "Leyla ile Mecnun",
+      "year": "2011",
+      "imdbId": "tt1831164",
+      "kinopoiskId": 591995,
+      "matchedTitle": "Лейла и Меджнун",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 77,
+      "title": "Dragon Ball Z: Doragon bôru zetto",
+      "year": "1989",
+      "imdbId": "tt0121220",
+      "kinopoiskId": 230603,
+      "matchedTitle": "Драконий жемчуг Зет",
+      "matchedYear": "1989",
+      "matchScore": 30
+    },
+    {
+      "rank": 78,
+      "title": "Freaks and Geeks",
+      "year": "1999",
+      "imdbId": "tt0193676",
+      "kinopoiskId": 401639,
+      "matchedTitle": "Хулиганы и ботаны",
+      "matchedYear": "1999",
+      "matchScore": 30
+    },
+    {
+      "rank": 79,
+      "title": "Chappelle's Show",
+      "year": "2003",
+      "imdbId": "tt0353049",
+      "kinopoiskId": 403956,
+      "matchedTitle": "Шоу Шаппелла",
+      "matchedYear": "2003",
+      "matchScore": 30
+    },
+    {
+      "rank": 80,
+      "title": "Pride and Prejudice",
+      "year": "1995",
+      "imdbId": "tt0112130",
+      "kinopoiskId": 89518,
+      "matchedTitle": "Гордость и предубеждение",
+      "matchedYear": "1995",
+      "matchScore": 30
+    },
+    {
+      "rank": 81,
+      "title": "Twin Peaks",
+      "year": "1990",
+      "imdbId": "tt0098936",
+      "kinopoiskId": 84358,
+      "matchedTitle": "Твин Пикс",
+      "matchedYear": "1990",
+      "matchScore": 30
+    },
+    {
+      "rank": 82,
+      "title": "Eungdaphara 1988",
+      "year": "2015",
+      "imdbId": "tt5182866",
+      "kinopoiskId": 944829,
+      "matchedTitle": "Вернуться в 1988",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 83,
+      "title": "Narcos",
+      "year": "2015",
+      "imdbId": "tt2707408",
+      "kinopoiskId": 821565,
+      "matchedTitle": "Нарко",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 84,
+      "title": "I, Claudius",
+      "year": "1976",
+      "imdbId": "tt0074006",
+      "kinopoiskId": 566991,
+      "matchedTitle": "Я, Клавдий",
+      "matchedYear": "1976",
+      "matchScore": 30
+    },
+    {
+      "rank": 85,
+      "title": "South Park",
+      "year": "1997",
+      "imdbId": "tt0121955",
+      "kinopoiskId": 161252,
+      "matchedTitle": "Южный Парк",
+      "matchedYear": "1997",
+      "matchScore": 30
+    },
+    {
+      "rank": 86,
+      "title": "Kota Factory",
+      "year": "2019",
+      "imdbId": "tt9432978",
+      "kinopoiskId": 1255656,
+      "matchedTitle": "Фабрика гениев",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 87,
+      "title": "Kenpuu Denki Berserk",
+      "year": "1997",
+      "imdbId": "tt0318871",
+      "kinopoiskId": 257376,
+      "matchedTitle": "Берсерк",
+      "matchedYear": "1997",
+      "matchScore": 4
+    },
+    {
+      "rank": 88,
+      "title": "Steins; Gate",
+      "year": "2011",
+      "imdbId": "tt1910272",
+      "kinopoiskId": 586251,
+      "matchedTitle": "Врата Штейна",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 89,
+      "title": "Ted Lasso",
+      "year": "2020",
+      "imdbId": "tt10986410",
+      "kinopoiskId": 1309707,
+      "matchedTitle": "Тед Лассо",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 90,
+      "title": "Over the Garden Wall",
+      "year": "2014",
+      "imdbId": "tt3718778",
+      "kinopoiskId": 841914,
+      "matchedTitle": "По ту сторону изгороди",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 91,
+      "title": "Naui ajusshi",
+      "year": "2018",
+      "imdbId": "tt7923710",
+      "kinopoiskId": 1048567,
+      "matchedTitle": "Мой мистер",
+      "matchedYear": "2018",
+      "matchScore": 4
+    },
+    {
+      "rank": 92,
+      "title": "Black Mirror",
+      "year": "2011",
+      "imdbId": "tt2085059",
+      "kinopoiskId": 655800,
+      "matchedTitle": "Чёрное зеркало",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 93,
+      "title": "Peaky Blinders",
+      "year": "2013",
+      "imdbId": "tt2442560",
+      "kinopoiskId": 716587,
+      "matchedTitle": "Острые козырьки",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 94,
+      "title": "Six Feet Under",
+      "year": "2001",
+      "imdbId": "tt0248654",
+      "kinopoiskId": 181807,
+      "matchedTitle": "Клиент всегда мертв",
+      "matchedYear": "2001",
+      "matchScore": 30
+    },
+    {
+      "rank": 95,
+      "title": "Rome",
+      "year": "2005",
+      "imdbId": "tt0384766",
+      "kinopoiskId": 257386,
+      "matchedTitle": "Рим",
+      "matchedYear": "2005",
+      "matchScore": 30
+    },
+    {
+      "rank": 96,
+      "title": "Dark",
+      "year": "2017",
+      "imdbId": "tt5753856",
+      "kinopoiskId": 1032606,
+      "matchedTitle": "Тьма",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 97,
+      "title": "Oz",
+      "year": "1997",
+      "imdbId": "tt0118421",
+      "kinopoiskId": 258070,
+      "matchedTitle": "Тюрьма «ОZ»",
+      "matchedYear": "1997",
+      "matchScore": 30
+    },
+    {
+      "rank": 98,
+      "title": "Monster",
+      "year": "2022",
+      "imdbId": "tt0434706",
+      "kinopoiskId": 1435087,
+      "matchedTitle": "Монстры",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 99,
+      "title": "X-Men '97",
+      "year": "2024",
+      "imdbId": "tt16026746",
+      "kinopoiskId": 4711940,
+      "matchedTitle": "Люди Икс ’97",
+      "matchedYear": "2024",
+      "matchScore": 30
+    },
+    {
+      "rank": 100,
+      "title": "Naruto: Shippûden",
+      "year": "2007",
+      "imdbId": "tt0988824",
+      "kinopoiskId": 281884,
+      "matchedTitle": "Наруто: Ураганные хроники",
+      "matchedYear": "2007",
+      "matchScore": 30
+    },
+    {
+      "rank": 101,
+      "title": "The Grand Tour",
+      "year": "2016",
+      "imdbId": "tt5712554",
+      "kinopoiskId": 982730,
+      "matchedTitle": "Гранд тур",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 102,
+      "title": "Invincible",
+      "year": "2021",
+      "imdbId": "tt6741278",
+      "kinopoiskId": 1171895,
+      "matchedTitle": "Непобедимый",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 103,
+      "title": "The Shield",
+      "year": "2002",
+      "imdbId": "tt0286486",
+      "kinopoiskId": 229080,
+      "matchedTitle": "Щит",
+      "matchedYear": "2002",
+      "matchScore": 30
+    },
+    {
+      "rank": 104,
+      "title": "Downton Abbey",
+      "year": "2010",
+      "imdbId": "tt1606375",
+      "kinopoiskId": 518192,
+      "matchedTitle": "Аббатство Даунтон",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 105,
+      "title": "Fleabag",
+      "year": "2016",
+      "imdbId": "tt5687612",
+      "kinopoiskId": 991739,
+      "matchedTitle": "Дрянь",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 106,
+      "title": "Battlestar Galactica",
+      "year": "2004",
+      "imdbId": "tt0407362",
+      "kinopoiskId": 229162,
+      "matchedTitle": "Звёздный крейсер «Галактика»",
+      "matchedYear": "2004",
+      "matchScore": 100
+    },
+    {
+      "rank": 107,
+      "title": "Peep Show",
+      "year": "2003",
+      "imdbId": "tt0387764",
+      "kinopoiskId": 412006,
+      "matchedTitle": "Пип шоу",
+      "matchedYear": "2003",
+      "matchScore": 30
+    },
+    {
+      "rank": 108,
+      "title": "Star Trek: The Next Generation",
+      "year": "1987",
+      "imdbId": "tt0092455",
+      "kinopoiskId": 229996,
+      "matchedTitle": "Звездный путь: Следующее поколение",
+      "matchedYear": "1987",
+      "matchScore": 30
+    },
+    {
+      "rank": 109,
+      "title": "Mad Men",
+      "year": "2007",
+      "imdbId": "tt0804503",
+      "kinopoiskId": 391889,
+      "matchedTitle": "Безумцы",
+      "matchedYear": "2007",
+      "matchScore": 30
+    },
+    {
+      "rank": 110,
+      "title": "Still Game",
+      "year": "2002",
+      "imdbId": "tt0281491",
+      "kinopoiskId": 372637,
+      "matchedTitle": "Всё ещё игра",
+      "matchedYear": "2002",
+      "matchScore": 30
+    },
+    {
+      "rank": 111,
+      "title": "Blue Eye Samurai",
+      "year": "2023",
+      "imdbId": "tt13309742",
+      "kinopoiskId": 4992678,
+      "matchedTitle": "Голубоглазый самурай",
+      "matchedYear": "2023",
+      "matchScore": 30
+    },
+    {
+      "rank": 112,
+      "title": "Mahabharat",
+      "year": "2013",
+      "imdbId": "tt0158417",
+      "kinopoiskId": 453176,
+      "matchedTitle": "Махабхарата",
+      "matchedYear": "2013",
+      "matchScore": 100
+    },
+    {
+      "rank": 113,
+      "title": "The Simpsons",
+      "year": "1989",
+      "imdbId": "tt0096697",
+      "kinopoiskId": 77164,
+      "matchedTitle": "Симпсоны",
+      "matchedYear": "1989",
+      "matchScore": 30
+    },
+    {
+      "rank": 114,
+      "title": "House M.D.",
+      "year": "2004",
+      "imdbId": "tt0412142",
+      "kinopoiskId": 178710,
+      "matchedTitle": "Доктор Хаус",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 115,
+      "title": "Justice League Unlimited",
+      "year": "2004",
+      "imdbId": "tt6025022",
+      "kinopoiskId": 1009665,
+      "matchedTitle": "Лига справедливости: Без границ",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 116,
+      "title": "The Adventures of Sherlock Holmes",
+      "year": "1984",
+      "imdbId": "tt0086661",
+      "kinopoiskId": 402506,
+      "matchedTitle": "Приключения Шерлока Холмса",
+      "matchedYear": "1984",
+      "matchScore": 30
+    },
+    {
+      "rank": 117,
+      "title": "Line of Duty",
+      "year": "2012",
+      "imdbId": "tt2303687",
+      "kinopoiskId": 688829,
+      "matchedTitle": "По долгу службы",
+      "matchedYear": "2012",
+      "matchScore": 30
+    },
+    {
+      "rank": 118,
+      "title": "Top Gear",
+      "year": "2002",
+      "imdbId": "tt1628033",
+      "kinopoiskId": 566602,
+      "matchedTitle": "Топ Гир",
+      "matchedYear": "2002",
+      "matchScore": 30
+    },
+    {
+      "rank": 119,
+      "title": "Severance",
+      "year": "2022",
+      "imdbId": "tt11280740",
+      "kinopoiskId": 1343318,
+      "matchedTitle": "Разделение",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 120,
+      "title": "Arrested Development",
+      "year": "2003",
+      "imdbId": "tt0367279",
+      "kinopoiskId": 277569,
+      "matchedTitle": "Задержка в развитии",
+      "matchedYear": "2003",
+      "matchScore": 30
+    },
+    {
+      "rank": 121,
+      "title": "Friday Night Lights",
+      "year": "2006",
+      "imdbId": "tt0758745",
+      "kinopoiskId": 400030,
+      "matchedTitle": "Огни ночной пятницы",
+      "matchedYear": "2006",
+      "matchScore": 30
+    },
+    {
+      "rank": 122,
+      "title": "Kôdo Giasu: Hangyaku no Rurûshu",
+      "year": "2008",
+      "imdbId": "tt0994314",
+      "kinopoiskId": 408758,
+      "matchedTitle": "Код Гиас: Восставший Лелуш R2",
+      "matchedYear": "2008",
+      "matchScore": 12
+    },
+    {
+      "rank": 123,
+      "title": "Ramayan",
+      "year": "1987",
+      "imdbId": "tt0268093",
+      "kinopoiskId": 574668,
+      "matchedTitle": "Рамаяна",
+      "matchedYear": "1987",
+      "matchScore": 30
+    },
+    {
+      "rank": 124,
+      "title": "The Marvelous Mrs. Maisel",
+      "year": "2017",
+      "imdbId": "tt5788792",
+      "kinopoiskId": 994468,
+      "matchedTitle": "Удивительная миссис Мейзел",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 125,
+      "title": "How to with John Wilson",
+      "year": "2020",
+      "imdbId": "tt10801534",
+      "kinopoiskId": 1406458,
+      "matchedTitle": "Полезные советы от Джона Уилсона",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 126,
+      "title": "Hajime no Ippo",
+      "year": "2000",
+      "imdbId": "tt0481256",
+      "kinopoiskId": 408577,
+      "matchedTitle": "Первый шаг",
+      "matchedYear": "2000",
+      "matchScore": 30
+    },
+    {
+      "rank": 127,
+      "title": "This Is Us",
+      "year": "2016",
+      "imdbId": "tt5555260",
+      "kinopoiskId": 969141,
+      "matchedTitle": "Это мы",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 128,
+      "title": "Behzat Ç.",
+      "year": "2010",
+      "imdbId": "tt1795096",
+      "kinopoiskId": 579611,
+      "matchedTitle": "Бехзат: Серийные преступления в Анкаре",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 129,
+      "title": "The Thick of It",
+      "year": "2005",
+      "imdbId": "tt0459159",
+      "kinopoiskId": 570010,
+      "matchedTitle": "Гуща событий",
+      "matchedYear": "2005",
+      "matchScore": 30
+    },
+    {
+      "rank": 130,
+      "title": "Mr Inbetween",
+      "year": "2018",
+      "imdbId": "tt7472896",
+      "kinopoiskId": 1179409,
+      "matchedTitle": "Решала",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 131,
+      "title": "Adventure Time",
+      "year": "null",
+      "imdbId": "tt1305826",
+      "kinopoiskId": 1044150,
+      "matchedTitle": "Время приключений",
+      "matchedYear": "null",
+      "matchScore": 30
+    },
+    {
+      "rank": 132,
+      "title": "Aspirants",
+      "year": "2021",
+      "imdbId": "tt14392248",
+      "kinopoiskId": 4438142,
+      "matchedTitle": "Кандидаты",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 133,
+      "title": "Father Ted",
+      "year": "1995",
+      "imdbId": "tt0111958",
+      "kinopoiskId": 439912,
+      "matchedTitle": "Отец Тед",
+      "matchedYear": "1995",
+      "matchScore": 30
+    },
+    {
+      "rank": 134,
+      "title": "Dexter",
+      "year": "2006",
+      "imdbId": "tt0773262",
+      "kinopoiskId": 277537,
+      "matchedTitle": "Декстер",
+      "matchedYear": "2006",
+      "matchScore": 30
+    },
+    {
+      "rank": 135,
+      "title": "The X Files",
+      "year": "1993",
+      "imdbId": "tt0106179",
+      "kinopoiskId": 77046,
+      "matchedTitle": "Секретные материалы",
+      "matchedYear": "1993",
+      "matchScore": 30
+    },
+    {
+      "rank": 136,
+      "title": "A Knight of the Seven Kingdoms",
+      "year": "2026",
+      "imdbId": "tt27497448",
+      "kinopoiskId": 5281617,
+      "matchedTitle": "Рыцарь Семи Королевств",
+      "matchedYear": "2026",
+      "matchScore": 30
+    },
+    {
+      "rank": 137,
+      "title": "Parks and Recreation",
+      "year": "2009",
+      "imdbId": "tt1266020",
+      "kinopoiskId": 455368,
+      "matchedTitle": "Парки и зоны отдыха",
+      "matchedYear": "2009",
+      "matchScore": 30
+    },
+    {
+      "rank": 138,
+      "title": "1883",
+      "year": "2021",
+      "imdbId": "tt13991232",
+      "kinopoiskId": 4397594,
+      "matchedTitle": "1883",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 139,
+      "title": "Sarabhai V/S Sarabhai",
+      "year": "2004",
+      "imdbId": "tt1518542",
+      "kinopoiskId": 838879,
+      "matchedTitle": "Сарабхай против Сарабхай",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 140,
+      "title": "Poirot",
+      "year": "1989",
+      "imdbId": "tt0094525",
+      "kinopoiskId": 85208,
+      "matchedTitle": "Пуаро",
+      "matchedYear": "1989",
+      "matchScore": 30
+    },
+    {
+      "rank": 141,
+      "title": "Deadwood",
+      "year": "2004",
+      "imdbId": "tt0348914",
+      "kinopoiskId": 255671,
+      "matchedTitle": "Дэдвуд",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 142,
+      "title": "Atlanta",
+      "year": "2016",
+      "imdbId": "tt4288182",
+      "kinopoiskId": 882408,
+      "matchedTitle": "Атланта",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 143,
+      "title": "The Crown",
+      "year": "2016",
+      "imdbId": "tt4786824",
+      "kinopoiskId": 924910,
+      "matchedTitle": "Корона",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 144,
+      "title": "Daredevil",
+      "year": "2015",
+      "imdbId": "tt3322312",
+      "kinopoiskId": 817509,
+      "matchedTitle": "Сорвиголова",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 145,
+      "title": "House of Cards",
+      "year": "2013",
+      "imdbId": "tt1856010",
+      "kinopoiskId": 581937,
+      "matchedTitle": "Карточный домик",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 146,
+      "title": "Bron/Broen",
+      "year": "2011",
+      "imdbId": "tt1733785",
+      "kinopoiskId": 574497,
+      "matchedTitle": "Мост",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 147,
+      "title": "It's a Sin",
+      "year": "2021",
+      "imdbId": "tt9140342",
+      "kinopoiskId": 1311396,
+      "matchedTitle": "Это грех",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 148,
+      "title": "Omar",
+      "year": "2013",
+      "imdbId": "tt2063241",
+      "kinopoiskId": 760000,
+      "matchedTitle": "Омар",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 149,
+      "title": "Mindhunter",
+      "year": "2017",
+      "imdbId": "tt5290382",
+      "kinopoiskId": 958500,
+      "matchedTitle": "Охотник за разумом",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 150,
+      "title": "Mr. Bean",
+      "year": "1990",
+      "imdbId": "tt0096657",
+      "kinopoiskId": 161087,
+      "matchedTitle": "Мистер Бин",
+      "matchedYear": "1990",
+      "matchScore": 30
+    },
+    {
+      "rank": 151,
+      "title": "Lonesome Dove",
+      "year": "1988",
+      "imdbId": "tt0096639",
+      "kinopoiskId": 276113,
+      "matchedTitle": "Одинокий голубь",
+      "matchedYear": "1988",
+      "matchScore": 30
+    },
+    {
+      "rank": 152,
+      "title": "The Mandalorian",
+      "year": "2019",
+      "imdbId": "tt8111088",
+      "kinopoiskId": 1118138,
+      "matchedTitle": "Мандалорец",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 153,
+      "title": "Primal",
+      "year": "2019",
+      "imdbId": "tt10332508",
+      "kinopoiskId": 1263399,
+      "matchedTitle": "Первобытный",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 154,
+      "title": "Blackadder II",
+      "year": "1986",
+      "imdbId": "tt0088484",
+      "kinopoiskId": 89623,
+      "matchedTitle": "Чёрная гадюка 2",
+      "matchedYear": "1986",
+      "matchScore": 30
+    },
+    {
+      "rank": 155,
+      "title": "Haikyû!!",
+      "year": "2014",
+      "imdbId": "tt3398540",
+      "kinopoiskId": 840073,
+      "matchedTitle": "Волейбол!!",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 156,
+      "title": "One Punch Man: Wanpanman",
+      "year": "2015",
+      "imdbId": "tt4508902",
+      "kinopoiskId": 942544,
+      "matchedTitle": "One Punch Man",
+      "matchedYear": "2015",
+      "matchScore": 12
+    },
+    {
+      "rank": 157,
+      "title": "Sarangeui bulsachak",
+      "year": "2019",
+      "imdbId": "tt10850932",
+      "kinopoiskId": 1267353,
+      "matchedTitle": "Любовное приземление",
+      "matchedYear": "2019",
+      "matchScore": 4
+    },
+    {
+      "rank": 158,
+      "title": "Le bureau des légendes",
+      "year": "2015",
+      "imdbId": "tt4063800",
+      "kinopoiskId": 891683,
+      "matchedTitle": "Бюро",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 159,
+      "title": "Sapne vs Everyone",
+      "year": "2023",
+      "imdbId": "tt30263074",
+      "kinopoiskId": 12153684,
+      "matchedTitle": "Мечтатели против всех",
+      "matchedYear": "2023",
+      "matchScore": 30
+    },
+    {
+      "rank": 160,
+      "title": "The Offer",
+      "year": "2022",
+      "imdbId": "tt13111040",
+      "kinopoiskId": 1407744,
+      "matchedTitle": "Предложение",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 161,
+      "title": "Shogun",
+      "year": "1980",
+      "imdbId": "tt2788316",
+      "kinopoiskId": 93572,
+      "matchedTitle": "Сёгун",
+      "matchedYear": "1980",
+      "matchScore": 30
+    },
+    {
+      "rank": 162,
+      "title": "Yes Minister",
+      "year": "1980",
+      "imdbId": "tt0080306",
+      "kinopoiskId": 89609,
+      "matchedTitle": "Да, господин министр",
+      "matchedYear": "1980",
+      "matchScore": 30
+    },
+    {
+      "rank": 163,
+      "title": "Andor",
+      "year": "2022",
+      "imdbId": "tt9253284",
+      "kinopoiskId": 1209850,
+      "matchedTitle": "Андор",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 164,
+      "title": "The Return of Sherlock Holmes",
+      "year": "1986",
+      "imdbId": "tt0090509",
+      "kinopoiskId": 402507,
+      "matchedTitle": "Возвращение Шерлока Холмса",
+      "matchedYear": "1986",
+      "matchScore": 30
+    },
+    {
+      "rank": 165,
+      "title": "Pose",
+      "year": "2018",
+      "imdbId": "tt7562112",
+      "kinopoiskId": 1118137,
+      "matchedTitle": "Поза",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 166,
+      "title": "El Chavo del Ocho",
+      "year": "1972",
+      "imdbId": "tt0229889",
+      "kinopoiskId": 565046,
+      "matchedTitle": "Чаво с восьмого",
+      "matchedYear": "1972",
+      "matchScore": 30
+    },
+    {
+      "rank": 167,
+      "title": "Gomorra",
+      "year": "2008",
+      "imdbId": "tt2049116",
+      "kinopoiskId": 398405,
+      "matchedTitle": "Гоморра",
+      "matchedYear": "2008",
+      "matchScore": 30
+    },
+    {
+      "rank": 168,
+      "title": "Greatest Events of WWII in Colour",
+      "year": "2019",
+      "imdbId": "tt9103932",
+      "kinopoiskId": 1371988,
+      "matchedTitle": "Величайшие события Второй мировой войны",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 169,
+      "title": "Heated Rivalry",
+      "year": "2025",
+      "imdbId": "tt35495073",
+      "kinopoiskId": 9997408,
+      "matchedTitle": "Жаркое соперничество",
+      "matchedYear": "2025",
+      "matchScore": 30
+    },
+    {
+      "rank": 170,
+      "title": "The Jinx: The Life and Deaths of Robert Durst",
+      "year": "2015",
+      "imdbId": "tt4299972",
+      "kinopoiskId": 870265,
+      "matchedTitle": "Тайны миллиардера",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 171,
+      "title": "Blackadder the Third",
+      "year": "1987",
+      "imdbId": "tt0092324",
+      "kinopoiskId": 89625,
+      "matchedTitle": "Чёрная гадюка 3",
+      "matchedYear": "1987",
+      "matchScore": 30
+    },
+    {
+      "rank": 172,
+      "title": "The Penguin",
+      "year": "2024",
+      "imdbId": "tt15435876",
+      "kinopoiskId": 4635062,
+      "matchedTitle": "Пингвин",
+      "matchedYear": "2024",
+      "matchScore": 30
+    },
+    {
+      "rank": 173,
+      "title": "The Newsroom",
+      "year": "2012",
+      "imdbId": "tt1870479",
+      "kinopoiskId": 584777,
+      "matchedTitle": "Служба новостей",
+      "matchedYear": "2012",
+      "matchScore": 30
+    },
+    {
+      "rank": 174,
+      "title": "Anne with an E",
+      "year": "2017",
+      "imdbId": "tt5421602",
+      "kinopoiskId": 1009510,
+      "matchedTitle": "Энн",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 175,
+      "title": "Homicide: Life on the Street",
+      "year": "1993",
+      "imdbId": "tt0106028",
+      "kinopoiskId": 252102,
+      "matchedTitle": "Убойный отдел",
+      "matchedYear": "1993",
+      "matchScore": 30
+    },
+    {
+      "rank": 176,
+      "title": "Stranger Things",
+      "year": "2016",
+      "imdbId": "tt4574334",
+      "kinopoiskId": 915196,
+      "matchedTitle": "Очень странные дела",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 177,
+      "title": "Boardwalk Empire",
+      "year": "2010",
+      "imdbId": "tt0979432",
+      "kinopoiskId": 474779,
+      "matchedTitle": "Подпольная империя",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 178,
+      "title": "Critical Role",
+      "year": "2015",
+      "imdbId": "tt4834232",
+      "kinopoiskId": 1346691,
+      "matchedTitle": "Critical Role",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 179,
+      "title": "Archer",
+      "year": "2009",
+      "imdbId": "tt1486217",
+      "kinopoiskId": 491547,
+      "matchedTitle": "Арчер",
+      "matchedYear": "2009",
+      "matchScore": 30
+    },
+    {
+      "rank": 180,
+      "title": "Dopesick",
+      "year": "2021",
+      "imdbId": "tt9174558",
+      "kinopoiskId": 1390826,
+      "matchedTitle": "Ломка",
+      "matchedYear": "2021",
+      "matchScore": 30
+    },
+    {
+      "rank": 181,
+      "title": "Scavengers Reign",
+      "year": "2023",
+      "imdbId": "tt21056886",
+      "kinopoiskId": 5002282,
+      "matchedTitle": "Царство падальщиков",
+      "matchedYear": "2023",
+      "matchScore": 30
+    },
+    {
+      "rank": 182,
+      "title": "Mystery Science Theater 3000",
+      "year": "1988",
+      "imdbId": "tt0094517",
+      "kinopoiskId": 353893,
+      "matchedTitle": "Таинственный театр 3000 года",
+      "matchedYear": "1988",
+      "matchScore": 30
+    },
+    {
+      "rank": 183,
+      "title": "Yeh Meri Family",
+      "year": "2018",
+      "imdbId": "tt8595766",
+      "kinopoiskId": 1165887,
+      "matchedTitle": "Yeh Meri Family",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 184,
+      "title": "Justified",
+      "year": "2010",
+      "imdbId": "tt1489428",
+      "kinopoiskId": 500600,
+      "matchedTitle": "Правосудие",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 185,
+      "title": "The Bugs Bunny Show",
+      "year": "1960",
+      "imdbId": "tt0053488",
+      "kinopoiskId": 447320,
+      "matchedTitle": "Шоу Багса Банни",
+      "matchedYear": "1960",
+      "matchScore": 30
+    },
+    {
+      "rank": 186,
+      "title": "QI",
+      "year": "2003",
+      "imdbId": "tt0380136",
+      "kinopoiskId": 493902,
+      "matchedTitle": "КьюАй. Весьма интересно",
+      "matchedYear": "2003",
+      "matchScore": 30
+    },
+    {
+      "rank": 187,
+      "title": "Battlestar Galactica",
+      "year": "2004",
+      "imdbId": "tt0314979",
+      "kinopoiskId": 229181,
+      "matchedTitle": "Звёздный крейсер «Галактика»",
+      "matchedYear": "2004",
+      "matchScore": 100
+    },
+    {
+      "rank": 188,
+      "title": "Endeavour",
+      "year": "2012",
+      "imdbId": "tt2701582",
+      "kinopoiskId": 614196,
+      "matchedTitle": "Индевор",
+      "matchedYear": "2012",
+      "matchScore": 30
+    },
+    {
+      "rank": 189,
+      "title": "Dragon Ball: Doragon bôru",
+      "year": "1986",
+      "imdbId": "tt0088509",
+      "kinopoiskId": 230604,
+      "matchedTitle": "Драконий жемчуг",
+      "matchedYear": "1986",
+      "matchScore": 30
+    },
+    {
+      "rank": 190,
+      "title": "The Venture Bros.",
+      "year": "2003",
+      "imdbId": "tt0417373",
+      "kinopoiskId": 281897,
+      "matchedTitle": "Братья Вентура",
+      "matchedYear": "2003",
+      "matchScore": 30
+    },
+    {
+      "rank": 191,
+      "title": "Justice League",
+      "year": "2017",
+      "imdbId": "tt0275137",
+      "kinopoiskId": 424994,
+      "matchedTitle": "Лига справедливости",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 192,
+      "title": "Yes, Prime Minister",
+      "year": "1986",
+      "imdbId": "tt0086831",
+      "kinopoiskId": 89608,
+      "matchedTitle": "Да, господин Премьер-министр",
+      "matchedYear": "1986",
+      "matchScore": 30
+    },
+    {
+      "rank": 193,
+      "title": "Young Justice",
+      "year": "2010",
+      "imdbId": "tt1641384",
+      "kinopoiskId": 570073,
+      "matchedTitle": "Юная Лига Справедливости",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 194,
+      "title": "Senke nad Balkanom",
+      "year": "2017",
+      "imdbId": "tt6108262",
+      "kinopoiskId": 1195676,
+      "matchedTitle": "Тени над Балканами",
+      "matchedYear": "2017",
+      "matchScore": 30
+    },
+    {
+      "rank": 195,
+      "title": "What We Do in the Shadows",
+      "year": "2014",
+      "imdbId": "tt7908628",
+      "kinopoiskId": 818981,
+      "matchedTitle": "Реальные упыри",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 196,
+      "title": "Kimetsu no Yaiba",
+      "year": "2019",
+      "imdbId": "tt9335498",
+      "kinopoiskId": 1220920,
+      "matchedTitle": "Истребитель демонов",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 197,
+      "title": "Regular Show",
+      "year": "2009",
+      "imdbId": "tt1710308",
+      "kinopoiskId": 669362,
+      "matchedTitle": "Обычный мультик",
+      "matchedYear": "2009",
+      "matchScore": 30
+    },
+    {
+      "rank": 198,
+      "title": "Samurai Chanpurû",
+      "year": "2004",
+      "imdbId": "tt0423731",
+      "kinopoiskId": 256147,
+      "matchedTitle": "Самурай Чамплу",
+      "matchedYear": "2004",
+      "matchScore": 4
+    },
+    {
+      "rank": 199,
+      "title": "Dragon Ball",
+      "year": "1995",
+      "imdbId": "tt0280249",
+      "kinopoiskId": 230611,
+      "matchedTitle": "Драконий жемчуг",
+      "matchedYear": "1995",
+      "matchScore": 30
+    },
+    {
+      "rank": 200,
+      "title": "The Haunting of Hill House",
+      "year": "2018",
+      "imdbId": "tt6763664",
+      "kinopoiskId": 1044279,
+      "matchedTitle": "Призрак дома на холме",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 201,
+      "title": "Detectorists",
+      "year": "2014",
+      "imdbId": "tt4082744",
+      "kinopoiskId": 846937,
+      "matchedTitle": "Искатели сокровищ",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 202,
+      "title": "The IT Crowd",
+      "year": "2006",
+      "imdbId": "tt0487831",
+      "kinopoiskId": 386715,
+      "matchedTitle": "Компьютерщики",
+      "matchedYear": "2006",
+      "matchScore": 30
+    },
+    {
+      "rank": 203,
+      "title": "Flight of the Conchords",
+      "year": "2007",
+      "imdbId": "tt0863046",
+      "kinopoiskId": 399984,
+      "matchedTitle": "Полет Конкордов",
+      "matchedYear": "2007",
+      "matchScore": 30
+    },
+    {
+      "rank": 204,
+      "title": "Mr. Robot",
+      "year": "2015",
+      "imdbId": "tt4158110",
+      "kinopoiskId": 859908,
+      "matchedTitle": "Мистер Робот",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 205,
+      "title": "The Boys",
+      "year": "2019",
+      "imdbId": "tt1190634",
+      "kinopoiskId": 460586,
+      "matchedTitle": "Пацаны",
+      "matchedYear": "2019",
+      "matchScore": 30
+    },
+    {
+      "rank": 206,
+      "title": "The Family Man",
+      "year": "2000",
+      "imdbId": "tt9544034",
+      "kinopoiskId": 664,
+      "matchedTitle": "Семьянин",
+      "matchedYear": "2000",
+      "matchScore": 30
+    },
+    {
+      "rank": 207,
+      "title": "Rocket Boys",
+      "year": "2022",
+      "imdbId": "tt13868972",
+      "kinopoiskId": 4672473,
+      "matchedTitle": "Rocket Boys",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 208,
+      "title": "Samurai Jack",
+      "year": "2001",
+      "imdbId": "tt0278238",
+      "kinopoiskId": 295050,
+      "matchedTitle": "Самурай Джек",
+      "matchedYear": "2001",
+      "matchScore": 30
+    },
+    {
+      "rank": 209,
+      "title": "I'm Alan Partridge",
+      "year": "1997",
+      "imdbId": "tt0129690",
+      "kinopoiskId": 230897,
+      "matchedTitle": "Я – Алан Партридж",
+      "matchedYear": "1997",
+      "matchScore": 30
+    },
+    {
+      "rank": 210,
+      "title": "Coupling",
+      "year": "2000",
+      "imdbId": "tt0237123",
+      "kinopoiskId": 248134,
+      "matchedTitle": "Любовь на шестерых",
+      "matchedYear": "2000",
+      "matchScore": 30
+    },
+    {
+      "rank": 211,
+      "title": "Ezel",
+      "year": "2009",
+      "imdbId": "tt1534360",
+      "kinopoiskId": 497667,
+      "matchedTitle": "Эзель",
+      "matchedYear": "2009",
+      "matchScore": 30
+    },
+    {
+      "rank": 212,
+      "title": "The Queen's Gambit",
+      "year": "2020",
+      "imdbId": "tt10048342",
+      "kinopoiskId": 1253633,
+      "matchedTitle": "Ход королевы",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 213,
+      "title": "Happy Valley",
+      "year": "2014",
+      "imdbId": "tt3428912",
+      "kinopoiskId": 818955,
+      "matchedTitle": "Счастливая долина",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 214,
+      "title": "Derry Girls",
+      "year": "2018",
+      "imdbId": "tt7120662",
+      "kinopoiskId": 1111962,
+      "matchedTitle": "Девчонки из Дерри",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 215,
+      "title": "The Rehearsal",
+      "year": "2022",
+      "imdbId": "tt10802170",
+      "kinopoiskId": 5030035,
+      "matchedTitle": "Репетиция",
+      "matchedYear": "2022",
+      "matchScore": 30
+    },
+    {
+      "rank": 216,
+      "title": "Long Way Round",
+      "year": "2004",
+      "imdbId": "tt0403778",
+      "kinopoiskId": 257333,
+      "matchedTitle": "Долгий путь вокруг Земли",
+      "matchedYear": "2004",
+      "matchScore": 30
+    },
+    {
+      "rank": 217,
+      "title": "Mob Psycho 100",
+      "year": "2016",
+      "imdbId": "tt5897304",
+      "kinopoiskId": 1002686,
+      "matchedTitle": "Моб Психо 100",
+      "matchedYear": "2016",
+      "matchScore": 30
+    },
+    {
+      "rank": 218,
+      "title": "Jujutsu Kaisen",
+      "year": "2020",
+      "imdbId": "tt12343534",
+      "kinopoiskId": 1381125,
+      "matchedTitle": "Магическая битва",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 219,
+      "title": "Making a Murderer",
+      "year": "2015",
+      "imdbId": "tt5189670",
+      "kinopoiskId": 957236,
+      "matchedTitle": "Создавая убийцу",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 220,
+      "title": "Twin Peaks",
+      "year": "1990",
+      "imdbId": "tt4093826",
+      "kinopoiskId": 84358,
+      "matchedTitle": "Твин Пикс",
+      "matchedYear": "1990",
+      "matchScore": 30
+    },
+    {
+      "rank": 221,
+      "title": "Hwan Hon",
+      "year": "2022",
+      "imdbId": "tt20859920",
+      "kinopoiskId": 4872515,
+      "matchedTitle": "Алхимия душ",
+      "matchedYear": "2022",
+      "matchScore": 4
+    },
+    {
+      "rank": 222,
+      "title": "All Creatures Great & Small",
+      "year": "2020",
+      "imdbId": "tt10590066",
+      "kinopoiskId": 1309507,
+      "matchedTitle": "О всех созданиях — больших и малых",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 223,
+      "title": "Spaced",
+      "year": "1999",
+      "imdbId": "tt0187664",
+      "kinopoiskId": 281874,
+      "matchedTitle": "Долбанутые",
+      "matchedYear": "1999",
+      "matchScore": 30
+    },
+    {
+      "rank": 224,
+      "title": "Sons of Anarchy",
+      "year": "2008",
+      "imdbId": "tt1124373",
+      "kinopoiskId": 417846,
+      "matchedTitle": "Сыны анархии",
+      "matchedYear": "2008",
+      "matchScore": 30
+    },
+    {
+      "rank": 225,
+      "title": "Star Wars: Maul - Shadow Lord",
+      "year": "2026",
+      "imdbId": "tt36594331",
+      "kinopoiskId": 7684174,
+      "matchedTitle": "Звёздные войны. Дарт Мол: Повелитель теней",
+      "matchedYear": "2026",
+      "matchScore": 30
+    },
+    {
+      "rank": 226,
+      "title": "Impractical Jokers",
+      "year": "2011",
+      "imdbId": "tt2100976",
+      "kinopoiskId": 652825,
+      "matchedTitle": "Невозможные шутники",
+      "matchedYear": "2011",
+      "matchScore": 30
+    },
+    {
+      "rank": 227,
+      "title": "Whose Line Is It Anyway?",
+      "year": "1998",
+      "imdbId": "tt0163507",
+      "kinopoiskId": 678761,
+      "matchedTitle": "Так чья сейчас реплика?",
+      "matchedYear": "1998",
+      "matchScore": 30
+    },
+    {
+      "rank": 228,
+      "title": "Shinseiki Evangelion",
+      "year": "1997",
+      "imdbId": "tt0112159",
+      "kinopoiskId": 41956,
+      "matchedTitle": "Конец Евангелиона",
+      "matchedYear": "1997",
+      "matchScore": 12
+    },
+    {
+      "rank": 229,
+      "title": "Through the Wormhole",
+      "year": "2010",
+      "imdbId": "tt1513168",
+      "kinopoiskId": 542041,
+      "matchedTitle": "Discovery: Сквозь пространство и время с Морганом Фрименом",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 230,
+      "title": "Louie",
+      "year": "2010",
+      "imdbId": "tt1492966",
+      "kinopoiskId": 505736,
+      "matchedTitle": "Луи",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 231,
+      "title": "Mind Your Language",
+      "year": "1977",
+      "imdbId": "tt0075537",
+      "kinopoiskId": 395130,
+      "matchedTitle": "Выбирайте выражения",
+      "matchedYear": "1977",
+      "matchScore": 30
+    },
+    {
+      "rank": 232,
+      "title": "Takopii no genzai",
+      "year": "2025",
+      "imdbId": "tt36988358",
+      "kinopoiskId": 8624606,
+      "matchedTitle": "Первородный грех Такопи",
+      "matchedYear": "2025",
+      "matchScore": 30
+    },
+    {
+      "rank": 233,
+      "title": "L'amica geniale",
+      "year": "2018",
+      "imdbId": "tt7278862",
+      "kinopoiskId": 1176172,
+      "matchedTitle": "Моя гениальная подруга",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 234,
+      "title": "Trailer Park Boys",
+      "year": "2001",
+      "imdbId": "tt0290988",
+      "kinopoiskId": 412485,
+      "matchedTitle": "Парни из Трейлерпарка",
+      "matchedYear": "2001",
+      "matchScore": 30
+    },
+    {
+      "rank": 235,
+      "title": "The Eric Andre Show",
+      "year": "2012",
+      "imdbId": "tt2244495",
+      "kinopoiskId": 703286,
+      "matchedTitle": "Шоу Эрика Андре",
+      "matchedYear": "2012",
+      "matchScore": 30
+    },
+    {
+      "rank": 236,
+      "title": "The Office",
+      "year": "2005",
+      "imdbId": "tt0290978",
+      "kinopoiskId": 258550,
+      "matchedTitle": "Офис",
+      "matchedYear": "2005",
+      "matchScore": 100
+    },
+    {
+      "rank": 237,
+      "title": "Yellowstone",
+      "year": "2018",
+      "imdbId": "tt4236770",
+      "kinopoiskId": 1045172,
+      "matchedTitle": "Йеллоустоун",
+      "matchedYear": "2018",
+      "matchScore": 30
+    },
+    {
+      "rank": 238,
+      "title": "Ore dake reberu appu na ken",
+      "year": "2024",
+      "imdbId": "tt21209876",
+      "kinopoiskId": 5230828,
+      "matchedTitle": "Поднятие уровня в одиночку",
+      "matchedYear": "2024",
+      "matchScore": 4
+    },
+    {
+      "rank": 239,
+      "title": "Shigatsu wa kimi no uso",
+      "year": "2014",
+      "imdbId": "tt3895150",
+      "kinopoiskId": 846825,
+      "matchedTitle": "Твоя апрельская ложь",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 240,
+      "title": "Gintama",
+      "year": "2005",
+      "imdbId": "tt0988818",
+      "kinopoiskId": 490128,
+      "matchedTitle": "Гинтама",
+      "matchedYear": "2005",
+      "matchScore": 30
+    },
+    {
+      "rank": 241,
+      "title": "Schitt$ Creek",
+      "year": "2015",
+      "imdbId": "tt3526078",
+      "kinopoiskId": 869554,
+      "matchedTitle": "Шиттс Крик",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 242,
+      "title": "Tash Ma Tash",
+      "year": "1993",
+      "imdbId": "tt5851616",
+      "kinopoiskId": 1144913,
+      "matchedTitle": "Tash Ma Tash",
+      "matchedYear": "1993",
+      "matchScore": 30
+    },
+    {
+      "rank": 243,
+      "title": "Smiling Friends",
+      "year": "2020",
+      "imdbId": "tt12074628",
+      "kinopoiskId": 1363973,
+      "matchedTitle": "Задорные друзья",
+      "matchedYear": "2020",
+      "matchScore": 30
+    },
+    {
+      "rank": 244,
+      "title": "Brass Eye",
+      "year": "1997",
+      "imdbId": "tt0118273",
+      "kinopoiskId": 633644,
+      "matchedTitle": "Заднепроходнее отверстие",
+      "matchedYear": "1997",
+      "matchScore": 30
+    },
+    {
+      "rank": 245,
+      "title": "Mahabharat",
+      "year": "2013",
+      "imdbId": "tt3212600",
+      "kinopoiskId": 807847,
+      "matchedTitle": "Махабхарата",
+      "matchedYear": "2013",
+      "matchScore": 30
+    },
+    {
+      "rank": 246,
+      "title": "The Expanse",
+      "year": "2015",
+      "imdbId": "tt3230854",
+      "kinopoiskId": 805092,
+      "matchedTitle": "Пространство",
+      "matchedYear": "2015",
+      "matchScore": 30
+    },
+    {
+      "rank": 247,
+      "title": "The Great British Bake Off",
+      "year": "2010",
+      "imdbId": "tt1877368",
+      "kinopoiskId": 1048025,
+      "matchedTitle": "Лучший пекарь Британии",
+      "matchedYear": "2010",
+      "matchScore": 30
+    },
+    {
+      "rank": 248,
+      "title": "Banjjagineun Woteomellon",
+      "year": "2023",
+      "imdbId": "tt27446493",
+      "kinopoiskId": 5276678,
+      "matchedTitle": "Мерцающий арбуз",
+      "matchedYear": "2023",
+      "matchScore": 4
+    },
+    {
+      "rank": 249,
+      "title": "Silicon Valley",
+      "year": "2014",
+      "imdbId": "tt2575988",
+      "kinopoiskId": 723959,
+      "matchedTitle": "Силиконовая долина",
+      "matchedYear": "2014",
+      "matchScore": 30
+    },
+    {
+      "rank": 250,
+      "title": "The Boondocks",
+      "year": "2005",
+      "imdbId": "tt0373732",
+      "kinopoiskId": 401157,
+      "matchedTitle": "Гетто",
+      "matchedYear": "2005",
+      "matchScore": 30
+    }
+  ]
+}
