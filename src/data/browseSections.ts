@@ -21,6 +21,10 @@ const FILM_TOP_ITEMS: Array<{ type: TopCollectionType; title: string }> = [
   { type: "TOP_100_POPULAR_FILMS", title: "Топ по популярности" }
 ];
 
+const SERIAL_TOP_ITEMS: Array<{ type: TopCollectionType; title: string }> = [
+  { type: "IMDB_TOP_250_TV", title: "250 лучших сериалов (IMDb)" }
+];
+
 const SERIAL_THEME_ITEMS: Array<{ type: ThemeCollectionType; title: string }> = [
   { type: "TOP_POPULAR_SERIES", title: "Популярные сериалы" },
   { type: "FAMILY", title: "Семейные сериалы" },
@@ -44,7 +48,9 @@ function buildThemeItems(
 }
 
 function buildTopItems(media: BrowseMedia): CatalogFilter[] {
-  return FILM_TOP_ITEMS.map((entry) =>
+  const entries = media === "serials" ? SERIAL_TOP_ITEMS : FILM_TOP_ITEMS;
+
+  return entries.map((entry) =>
     createCatalogFilter({
       title: entry.title,
       kind: "top",
@@ -171,6 +177,11 @@ function buildSerialSections(filters: KinopoiskFilters): BrowseSection[] {
       id: "categories",
       title: "Категории",
       items: categoryItems
+    },
+    {
+      id: "tops",
+      title: "Топы",
+      items: buildTopItems("serials")
     },
     {
       id: "genres",

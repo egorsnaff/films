@@ -11,15 +11,31 @@ type FilmShelfProps = {
   films: KinopoiskFilm[];
   progressByFilm?: Record<number, number>;
   onSelect: (film: KinopoiskFilm) => void;
+  onTitleClick?: () => void;
 };
 
-export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: FilmShelfProps) {
+export function FilmShelf({
+  title,
+  subtitle,
+  films,
+  progressByFilm,
+  onSelect,
+  onTitleClick
+}: FilmShelfProps) {
+  const titleNode = onTitleClick ? (
+    <button type="button" className="film-shelf__title-link" onClick={onTitleClick}>
+      {title}
+    </button>
+  ) : (
+    <h2>{title}</h2>
+  );
+
   if (films.length === 0) {
     return (
       <section className="film-shelf film-shelf--empty">
         <div className="film-shelf__head">
           <div>
-            <h2>{title}</h2>
+            {titleNode}
             {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
           </div>
         </div>
@@ -32,7 +48,7 @@ export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: 
     <section className="film-shelf">
       <div className="film-shelf__head">
         <div>
-          <h2>{title}</h2>
+          {titleNode}
           {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
         </div>
         <span className="film-shelf__count">{films.length}</span>
@@ -45,7 +61,7 @@ export function FilmShelf({ title, subtitle, films, progressByFilm, onSelect }: 
               key={film.kinopoiskId}
               type="button"
               className="film-shelf__card film-shelf__card--interactive"
-              role="listitem"
+              aria-label={film.title}
               onClick={() => onSelect(film)}
             >
               <span className="film-shelf__poster">

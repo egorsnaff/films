@@ -2,6 +2,10 @@ import {
   getImdbTop250Page,
   IMDB_TOP_250_TYPE
 } from "./imdbTop250.js";
+import {
+  getImdbTop250TvPage,
+  IMDB_TOP_250_TV_TYPE
+} from "./imdbTop250Tv.js";
 import { recordKinopoiskApiCall } from "./kpApiStats.js";
 import {
   readCache,
@@ -33,7 +37,8 @@ const TOP_TYPES = new Set([
   "TOP_250_BEST_FILMS",
   "TOP_100_POPULAR_FILMS",
   "TOP_AWAIT_FILMS",
-  IMDB_TOP_250_TYPE
+  IMDB_TOP_250_TYPE,
+  IMDB_TOP_250_TV_TYPE
 ]);
 
 const THEME_TYPES = new Set([
@@ -347,6 +352,10 @@ export async function getTopList(
 ): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
   if (type === IMDB_TOP_250_TYPE) {
     return getImdbTop250Page(page);
+  }
+
+  if (type === IMDB_TOP_250_TV_TYPE) {
+    return getImdbTop250TvPage(page);
   }
 
   if (!TOP_TYPES.has(type)) {

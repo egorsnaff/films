@@ -1988,6 +1988,27 @@ h1 em {
   line-height: 1;
 }
 
+.film-shelf__title-link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.film-shelf__title-link:hover,
+.film-shelf__title-link:focus-visible {
+  color: #f0b75b;
+  outline: none;
+}
+
 .film-shelf__subtitle {
   margin: 8px 0 0;
   color: #b8ad9a;

@@ -49,12 +49,13 @@ describe("buildBrowseSections", () => {
   it("builds serial sections with categories and genres", () => {
     const sections = buildBrowseSections("serials", sampleFilters);
 
-    expect(sections.map((section) => section.id)).toEqual(["categories", "genres", "countries"]);
+    expect(sections.map((section) => section.id)).toEqual(["categories", "tops", "genres", "countries"]);
     expect(sections[0]?.items[0]).toMatchObject({
       title: "Все сериалы",
       kind: "serialCategory",
       media: "serials"
     });
-    expect(sections[1]?.items.map((item) => item.title)).toEqual(["драмы", "комедии"]);
+    expect(sections[1]?.items.some((item) => item.topType === "IMDB_TOP_250_TV")).toBe(true);
+    expect(sections[2]?.items.map((item) => item.title)).toEqual(["драмы", "комедии"]);
   });
 });

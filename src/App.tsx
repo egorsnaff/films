@@ -17,6 +17,12 @@ import { useWindowCatalogScroll } from "./hooks/useWindowCatalogScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
 import { buildBrowseSections } from "./data/browseSections";
 import { filmCollections, getCollectionById } from "./data/collections";
+import {
+  createImdbFilmsTopFilter,
+  createImdbSerialsTopFilter,
+  IMDB_FILMS_SHELF_TITLE,
+  IMDB_SERIALS_SHELF_TITLE
+} from "./data/imdbShelves";
 import type { BrowseMedia, CatalogFilter, KinopoiskFilters } from "./lib/catalogFilter";
 import { getCatalogFilterMediaType } from "./lib/catalogFilter";
 import {
@@ -57,7 +63,6 @@ import {
   siteApi,
   watchStatusLabels,
   type AuthUser,
-  type RecommendationResponse,
   type UserFilmEntry,
   type WatchStatus
 } from "./lib/siteApi";
@@ -129,12 +134,8 @@ export function App() {
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
   const [selectedLists, setSelectedLists] = useState<WatchStatus[]>([]);
-  const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
-  const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
-  const [serialRecommendations, setSerialRecommendations] = useState<RecommendationResponse | null>(
-    null
-  );
-  const [serialRecommendationsStatus, setSerialRecommendationsStatus] = useState<LoadState>("idle");
+  const [imdbShelfFilms, setImdbShelfFilms] = useState<KinopoiskFilm[]>([]);
+  const [imdbShelfStatus, setImdbShelfStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
   const [browseMedia, setBrowseMedia] = useState<BrowseMedia>("films");
@@ -191,102 +192,29 @@ export function App() {
     return map;
   }, [userLists]);
   const backLabel = getBackLabel(navHistoryRef.current.at(-1));
-  const recommendationFilms = useMemo(
-    () =>
-      (recommendations?.films ?? []).filter((film) => hasValidPosterUrl(film.posterUrl)),
-    [recommendations]
+  const imdbShelfTitle =
+    catalogMode === "serials" ? IMDB_SERIALS_SHELF_TITLE : IMDB_FILMS_SHELF_TITLE;
+  const visibleImdbShelfFilms = useMemo(
+    () => imdbShelfFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
+    [imdbShelfFilms]
   );
-  const recommendationTitle =
-    recommendations?.mode === "cold"
-      ? "250 лучших, которые вы ещё не смотрели"
-      : "На основе ваших интересов";
-  const recommendationsPending =
-    Boolean(authUser) &&
-    catalogMode === "premieres" &&
-    recommendationsStatus === "loading" &&
-    recommendations === null;
-  const showRecommendations =
-    Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
-  const serialRecommendationFilms = useMemo(
-    () =>
-      (serialRecommendations?.films ?? []).filter((film) => hasValidPosterUrl(film.posterUrl)),
-    [serialRecommendations]
+  const showImdbShelf =
+    (catalogMode === "premieres" || catalogMode === "serials") && visibleImdbShelfFilms.length > 0;
+  const imdbShelfPending =
+    (catalogMode === "premieres" || catalogMode === "serials") &&
+    imdbShelfStatus === "loading" &&
+    visibleImdbShelfFilms.length === 0;
+  const imdbShelfFilmIds = useMemo(
+    () => new Set(visibleImdbShelfFilms.map((film) => film.kinopoiskId)),
+    [visibleImdbShelfFilms]
   );
-  const serialRecommendationTitle =
-    serialRecommendations?.mode === "cold"
-      ? "250 лучших сериалов, которые вы ещё не смотрели"
-      : "На основе ваших интересов";
-  const serialRecommendationsPending =
-    Boolean(authUser) &&
-    catalogMode === "serials" &&
-    serialRecommendationsStatus === "loading" &&
-    serialRecommendations === null;
-  const showSerialRecommendations =
-    Boolean(authUser) && catalogMode === "serials" && serialRecommendationFilms.length > 0;
-  const catalogRecommendationsPending =
-    catalogMode === "premieres"
-      ? recommendationsPending
-      : catalogMode === "serials"
-        ? serialRecommendationsPending
-        : false;
-  const showCatalogRecommendations =
-    catalogMode === "premieres"
-      ? showRecommendations
-      : catalogMode === "serials"
-        ? showSerialRecommendations
-        : false;
-  const catalogRecommendationFilms =
-    catalogMode === "premieres"
-      ? recommendationFilms
-      : catalogMode === "serials"
-        ? serialRecommendationFilms
-        : [];
-  const catalogRecommendationTitle =
-    catalogMode === "premieres"
-      ? recommendationTitle
-      : catalogMode === "serials"
-        ? serialRecommendationTitle
-        : "";
-  const catalogRecommendationReason =
-    catalogMode === "premieres"
-      ? recommendations?.reason
-      : catalogMode === "serials"
-        ? serialRecommendations?.reason
-        : undefined;
-  const recommendationFilmIds = useMemo(
-    () => new Set(recommendationFilms.map((film) => film.kinopoiskId)),
-    [recommendationFilms]
-  );
-  const recommendationFilmIdsRef = useRef(recommendationFilmIds);
-  recommendationFilmIdsRef.current = showRecommendations ? recommendationFilmIds : new Set<number>();
-  const serialRecommendationFilmIds = useMemo(
-    () => new Set(serialRecommendationFilms.map((film) => film.kinopoiskId)),
-    [serialRecommendationFilms]
-  );
-  const catalogRecommendationFilmIds = useMemo(() => {
-    if (catalogMode === "premieres" && showRecommendations) {
-      return recommendationFilmIds;
-    }
-
-    if (catalogMode === "serials" && showSerialRecommendations) {
-      return serialRecommendationFilmIds;
-    }
-
-    return new Set<number>();
-  }, [
-    catalogMode,
-    recommendationFilmIds,
-    serialRecommendationFilmIds,
-    showRecommendations,
-    showSerialRecommendations
-  ]);
   const catalogGridFilms = useMemo(() => {
-    if (!showCatalogRecommendations || catalogRecommendationFilmIds.size === 0) {
+    if (!showImdbShelf || imdbShelfFilmIds.size === 0) {
       return visibleFilms;
     }
 
-    return visibleFilms.filter((film) => !catalogRecommendationFilmIds.has(film.kinopoiskId));
-  }, [catalogRecommendationFilmIds, showCatalogRecommendations, visibleFilms]);
+    return visibleFilms.filter((film) => !imdbShelfFilmIds.has(film.kinopoiskId));
+  }, [imdbShelfFilmIds, showImdbShelf, visibleFilms]);
   const visibleSimilarFilms = useMemo(
     () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [similarFilms]
@@ -303,31 +231,21 @@ export function App() {
     setListFilms((current) => ({ ...current, ...films }));
   }, []);
 
-  const loadRecommendations = useCallback(async () => {
-    setRecommendationsStatus("loading");
+  const loadImdbShelf = useCallback(async (mode: "premieres" | "serials") => {
+    setImdbShelfStatus("loading");
 
     try {
-      const result = await siteApi.getRecommendations();
-      setRecommendations(result);
-      setRecommendationsStatus("success");
+      const page = await client.getTopFilms(
+        mode === "serials" ? "IMDB_TOP_250_TV" : "IMDB_TOP_250",
+        1
+      );
+      setImdbShelfFilms(page.films);
+      setImdbShelfStatus("success");
     } catch {
-      setRecommendations(null);
-      setRecommendationsStatus("error");
+      setImdbShelfFilms([]);
+      setImdbShelfStatus("error");
     }
-  }, []);
-
-  const loadSerialRecommendations = useCallback(async () => {
-    setSerialRecommendationsStatus("loading");
-
-    try {
-      const result = await siteApi.getSerialRecommendations();
-      setSerialRecommendations(result);
-      setSerialRecommendationsStatus("success");
-    } catch {
-      setSerialRecommendations(null);
-      setSerialRecommendationsStatus("error");
-    }
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     document.title = "Сеанс — фильмы и сериалы";
@@ -353,20 +271,19 @@ export function App() {
   }, [refreshUserLists]);
 
   useEffect(() => {
-    if (!authUser || view !== "catalog" || catalogMode !== "premieres") {
+    if (view !== "catalog") {
       return;
     }
 
-    void loadRecommendations();
-  }, [authUser, catalogMode, loadRecommendations, userLists, view]);
-
-  useEffect(() => {
-    if (!authUser || view !== "catalog" || catalogMode !== "serials") {
+    if (catalogMode === "premieres") {
+      void loadImdbShelf("premieres");
       return;
     }
 
-    void loadSerialRecommendations();
-  }, [authUser, catalogMode, loadSerialRecommendations, userLists, view]);
+    if (catalogMode === "serials") {
+      void loadImdbShelf("serials");
+    }
+  }, [catalogMode, loadImdbShelf, view]);
 
   useEffect(() => {
     if (view !== "watch" || !selectedFilm) {
@@ -842,7 +759,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (view !== "catalog" || catalogMode !== "premieres" || catalogRecommendationsPending) {
+    if (view !== "catalog" || catalogMode !== "premieres" || imdbShelfPending) {
       return;
     }
 
@@ -854,11 +771,7 @@ export function App() {
       return;
     }
 
-    const visible = countVisibleFilms(
-      filmsRef.current,
-      "premieres",
-      catalogRecommendationFilmIds
-    );
+    const visible = countVisibleFilms(filmsRef.current, "premieres", imdbShelfFilmIds);
     if (visible >= MIN_VISIBLE_BUFFER) {
       autoBufferLoadsRef.current = 0;
       return;
@@ -871,7 +784,7 @@ export function App() {
       replace: false,
       filter: null
     });
-  }, [catalogMode, catalogRecommendationFilmIds, catalogRecommendationsPending, loadCatalogPage, view]);
+  }, [catalogMode, imdbShelfFilmIds, imdbShelfPending, loadCatalogPage, view]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1010,14 +923,17 @@ export function App() {
     requestHistoryCommit(pushHistory);
   }
 
-  async function openFilteredCatalog(filter: CatalogFilter, options?: { pushHistory?: boolean }) {
+  async function openFilteredCatalog(
+    filter: CatalogFilter,
+    options?: { pushHistory?: boolean; activeMenu?: MenuItem }
+  ) {
     const pushHistory = options?.pushHistory !== false;
     beginHistoryEntry(pushHistory);
     pendingWatchFilmIdRef.current = null;
     setCatalogFilter(filter);
     catalogFilterRef.current = filter;
     setView("catalog");
-    setActiveMenu("Каталог");
+    setActiveMenu(options?.activeMenu ?? "Каталог");
     setCatalogMode("filtered");
     catalogModeRef.current = "filtered";
     setSelectedFilm(null);
@@ -1026,6 +942,13 @@ export function App() {
     setIsSearchOpen(false);
     await loadCatalogPage({ mode: "filtered", nextPage: 1, replace: true, filter });
     requestHistoryCommit(pushHistory);
+  }
+
+  function openImdbTopShelfPage() {
+    const filter =
+      catalogMode === "serials" ? createImdbSerialsTopFilter() : createImdbFilmsTopFilter();
+    const activeMenu: MenuItem = catalogMode === "serials" ? "Сериалы" : "Фильмы";
+    void openFilteredCatalog(filter, { activeMenu });
   }
 
   async function goHome() {
@@ -1064,10 +987,6 @@ export function App() {
     setUserLists([]);
     setListFilms({});
     setSelectedLists([]);
-    setRecommendations(null);
-    setRecommendationsStatus("idle");
-    setSerialRecommendations(null);
-    setSerialRecommendationsStatus("idle");
   }
 
   const heading =
@@ -1170,8 +1089,8 @@ export function App() {
             </div>
           ) : null}
 
-          {catalogRecommendationsPending ? (
-            <div className="recommendations-shelf-skeleton" aria-label="Загрузка рекомендаций">
+          {imdbShelfPending ? (
+            <div className="recommendations-shelf-skeleton" aria-label="Загрузка подборки IMDb">
               <span className="recommendations-shelf-skeleton__head" />
               <div className="recommendations-shelf-skeleton__track">
                 {Array.from({ length: 6 }).map((_, index) => (
@@ -1181,18 +1100,18 @@ export function App() {
             </div>
           ) : null}
 
-          {showCatalogRecommendations ? (
-            <aside className="recommendations-rail" aria-label="Рекомендации">
+          {showImdbShelf ? (
+            <aside className="recommendations-rail" aria-label="Подборка IMDb">
               <FilmShelf
-                title={catalogRecommendationTitle}
-                subtitle={catalogRecommendationReason}
-                films={catalogRecommendationFilms}
+                title={imdbShelfTitle}
+                films={visibleImdbShelfFilms}
                 onSelect={(film) => void openFilm(film)}
+                onTitleClick={openImdbTopShelfPage}
               />
             </aside>
           ) : null}
 
-          {homeCatalogTitle && !catalogRecommendationsPending ? (
+          {homeCatalogTitle && !imdbShelfPending ? (
             <div className="film-shelf__head catalog-feed__head">
               <div>
                 <h2>{homeCatalogTitle}</h2>
@@ -1200,7 +1119,7 @@ export function App() {
             </div>
           ) : null}
 
-          {serialCatalogTitle && !catalogRecommendationsPending ? (
+          {serialCatalogTitle && !imdbShelfPending ? (
             <div className="film-shelf__head catalog-feed__head">
               <div>
                 <h2>{serialCatalogTitle}</h2>
@@ -1208,7 +1127,7 @@ export function App() {
             </div>
           ) : null}
 
-          {!catalogRecommendationsPending && status === "loading" ? (
+          {!imdbShelfPending && status === "loading" ? (
             <div className="skeleton-grid" aria-label="Загрузка результатов">
               {Array.from({ length: 10 }).map((_, index) => (
                 <span key={index} className="film-skeleton" />
@@ -1216,7 +1135,7 @@ export function App() {
             </div>
           ) : null}
 
-          {!catalogRecommendationsPending && visibleFilms.length === 0 && status !== "loading" ? (
+          {!imdbShelfPending && visibleFilms.length === 0 && status !== "loading" ? (
             <div className="empty-state empty-state--composed">
               <span className="empty-state__marker">01</span>
               <strong>Пока ничего не найдено.</strong>
@@ -1224,7 +1143,7 @@ export function App() {
             </div>
           ) : null}
 
-          {!catalogRecommendationsPending &&
+          {!imdbShelfPending &&
           (catalogGridFilms.length > 0 || showCatalogSkeletons) ? (
             <div
               className={`catalog-feed${showCatalogSkeletons ? " catalog-feed--loading" : ""}`}
@@ -1238,7 +1157,7 @@ export function App() {
             </div>
           ) : null}
 
-          {catalogMode !== "search" && !catalogRecommendationsPending ? (
+          {catalogMode !== "search" && !imdbShelfPending ? (
             <div className="catalog-feed-footer" aria-live="polite">
               {showCatalogSkeletons ? (
                 <div className="catalog-feed-footer__loading" role="status">
