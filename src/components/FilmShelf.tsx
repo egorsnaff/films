@@ -12,6 +12,9 @@ type FilmShelfProps = {
   progressByFilm?: Record<number, number>;
   onSelect: (film: KinopoiskFilm) => void;
   onTitleClick?: () => void;
+  onShowMore?: () => void;
+  showMoreLabel?: string;
+  showCount?: boolean;
 };
 
 export function FilmShelf({
@@ -20,7 +23,10 @@ export function FilmShelf({
   films,
   progressByFilm,
   onSelect,
-  onTitleClick
+  onTitleClick,
+  onShowMore,
+  showMoreLabel = "Показать ещё",
+  showCount = true
 }: FilmShelfProps) {
   const titleNode = onTitleClick ? (
     <button type="button" className="film-shelf__title-link" onClick={onTitleClick}>
@@ -51,7 +57,7 @@ export function FilmShelf({
           {titleNode}
           {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
         </div>
-        <span className="film-shelf__count">{films.length}</span>
+        {showCount ? <span className="film-shelf__count">{films.length}</span> : null}
       </div>
       <div className="film-shelf__track" role="list">
         {films.map((film) => {
@@ -87,6 +93,23 @@ export function FilmShelf({
             </button>
           );
         })}
+        {onShowMore ? (
+          <button
+            type="button"
+            className="film-shelf__card film-shelf__card--interactive film-shelf__card--show-more"
+            aria-label={showMoreLabel}
+            onClick={onShowMore}
+          >
+            <span className="film-shelf__poster film-shelf__poster--show-more">
+              <span className="film-shelf__show-more-mark" aria-hidden="true">
+                +
+              </span>
+            </span>
+            <span className="film-shelf__meta">
+              <strong>{showMoreLabel}</strong>
+            </span>
+          </button>
+        ) : null}
       </div>
     </section>
   );

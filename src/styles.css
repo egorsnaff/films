@@ -1568,6 +1568,20 @@ h1 em {
   line-height: 1.65;
 }
 
+.section-heading--shelf {
+  display: grid;
+  justify-items: start;
+  max-width: 920px;
+  border: 0;
+  padding: 28px 0 8px;
+}
+
+.section-heading--shelf h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  line-height: 1;
+}
+
 .home-view .film-grid,
 .home-view .skeleton-grid {
   grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
@@ -2419,6 +2433,41 @@ h1 em {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.film-shelf__poster--show-more {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  background:
+    linear-gradient(160deg, rgb(240 183 91 / 10%), rgb(255 255 255 / 4%)),
+    rgb(255 255 255 / 4%);
+}
+
+.film-shelf__show-more-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgb(240 183 91 / 42%);
+  border-radius: 999px;
+  background: rgb(240 183 91 / 12%);
+  color: #f0b75b;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.film-shelf__card--show-more:hover .film-shelf__poster--show-more,
+.film-shelf__card--show-more:focus-visible .film-shelf__poster--show-more {
+  border-color: rgb(240 183 91 / 70%);
+  background:
+    linear-gradient(160deg, rgb(240 183 91 / 18%), rgb(255 255 255 / 6%)),
+    rgb(255 255 255 / 5%);
+}
+
+.film-shelf__card--show-more .film-shelf__meta strong {
+  color: #f0b75b;
 }
 
 .film-shelf__progress {
