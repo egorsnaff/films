@@ -981,7 +981,10 @@ export function App() {
           title: "",
           text: ""
         });
-  const showCatalogHeading = Boolean(heading.eyebrow || heading.title || heading.text);
+  const showTopCatalogHeading =
+    catalogMode !== "premieres" && Boolean(heading.eyebrow || heading.title || heading.text);
+  const homeCatalogTitle =
+    catalogMode === "premieres" ? catalogHeadings.premieres.title : "";
 
   return (
     <>
@@ -1055,7 +1058,7 @@ export function App() {
         <div key={view} className="page-stage page-stage--enter">
       {view === "catalog" ? (
         <section className="home-view" id="main">
-          {showCatalogHeading ? (
+          {showTopCatalogHeading ? (
             <div className="section-heading section-heading--home">
               {heading.eyebrow ? <p className="eyebrow">{heading.eyebrow}</p> : null}
               {heading.title ? <h1>{heading.title}</h1> : null}
@@ -1083,6 +1086,14 @@ export function App() {
                 onSelect={(film) => void openFilm(film)}
               />
             </aside>
+          ) : null}
+
+          {homeCatalogTitle && !recommendationsPending ? (
+            <div className="film-shelf__head catalog-feed__head">
+              <div>
+                <h2>{homeCatalogTitle}</h2>
+              </div>
+            </div>
           ) : null}
 
           {!recommendationsPending && status === "loading" ? (

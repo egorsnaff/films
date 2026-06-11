@@ -2305,6 +2305,10 @@ h1 em {
   margin-top: 4px;
 }
 
+.catalog-feed__head {
+  margin: 0;
+}
+
 .recommendations-shelf-skeleton {
   display: grid;
   gap: 14px;
