@@ -18,6 +18,34 @@ export type KinopoiskFilmDetails = KinopoiskFilm & {
   filmLengthMinutes?: number;
 };
 
+export type FilmAwardItem = {
+  nominationName: string;
+  win: boolean;
+  persons: string[];
+};
+
+export type FilmAwardGroup = {
+  name: string;
+  year: number;
+  imageUrl?: string;
+  wins: number;
+  nominations: number;
+  items: FilmAwardItem[];
+};
+
+export type FilmAwardSummaryChip = {
+  name: string;
+  wins: number;
+  nominations: number;
+  imageUrl?: string;
+};
+
+export type FilmAwardsPayload = {
+  total: number;
+  summary: FilmAwardSummaryChip[];
+  groups: FilmAwardGroup[];
+};
+
 export type KinopoiskCatalogPage = {
   films: KinopoiskFilm[];
   page: number;
@@ -283,6 +311,20 @@ export function createKinopoiskClient({
       const films = result.films ?? [];
       writeLocalCache(cacheKey, films);
       return films;
+    },
+
+    async getFilmAwards(kinopoiskId: number): Promise<FilmAwardsPayload> {
+      const cacheKey = `awards:${kinopoiskId}`;
+      const local = readLocalCache<FilmAwardsPayload>(cacheKey, "awards");
+      if (local) {
+        return local;
+      }
+
+      const result = await proxyRequest<{ awards: FilmAwardsPayload }>(
+        `/films/${kinopoiskId}/awards`
+      );
+      writeLocalCache(cacheKey, result.awards);
+      return result.awards;
     }
   };
 }

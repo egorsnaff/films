@@ -2,6 +2,7 @@ const STORAGE_PREFIX = "films-kp:";
 
 const TTL_MS = {
   film: 7 * 24 * 60 * 60 * 1000,
+  awards: 180 * 24 * 60 * 60 * 1000,
   catalog: 6 * 60 * 60 * 1000,
   search: 2 * 60 * 60 * 1000,
   list: 24 * 60 * 60 * 1000
