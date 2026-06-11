@@ -76,7 +76,7 @@ const playerTemplates =
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const menuItems: MenuItem[] = ["Главная", "Фильмы", "Сериалы", "Каталог", "Профиль"];
+const menuItems: MenuItem[] = ["Главная", "Сериалы", "Каталог", "Профиль"];
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
@@ -131,6 +131,10 @@ export function App() {
   const [selectedLists, setSelectedLists] = useState<WatchStatus[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [recommendationsStatus, setRecommendationsStatus] = useState<LoadState>("idle");
+  const [serialRecommendations, setSerialRecommendations] = useState<RecommendationResponse | null>(
+    null
+  );
+  const [serialRecommendationsStatus, setSerialRecommendationsStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
   const [browseMedia, setBrowseMedia] = useState<BrowseMedia>("films");
@@ -203,19 +207,86 @@ export function App() {
     recommendations === null;
   const showRecommendations =
     Boolean(authUser) && catalogMode === "premieres" && recommendationFilms.length > 0;
+  const serialRecommendationFilms = useMemo(
+    () =>
+      (serialRecommendations?.films ?? []).filter((film) => hasValidPosterUrl(film.posterUrl)),
+    [serialRecommendations]
+  );
+  const serialRecommendationTitle =
+    serialRecommendations?.mode === "cold"
+      ? "250 лучших сериалов, которые вы ещё не смотрели"
+      : "На основе ваших интересов";
+  const serialRecommendationsPending =
+    Boolean(authUser) &&
+    catalogMode === "serials" &&
+    serialRecommendationsStatus === "loading" &&
+    serialRecommendations === null;
+  const showSerialRecommendations =
+    Boolean(authUser) && catalogMode === "serials" && serialRecommendationFilms.length > 0;
+  const catalogRecommendationsPending =
+    catalogMode === "premieres"
+      ? recommendationsPending
+      : catalogMode === "serials"
+        ? serialRecommendationsPending
+        : false;
+  const showCatalogRecommendations =
+    catalogMode === "premieres"
+      ? showRecommendations
+      : catalogMode === "serials"
+        ? showSerialRecommendations
+        : false;
+  const catalogRecommendationFilms =
+    catalogMode === "premieres"
+      ? recommendationFilms
+      : catalogMode === "serials"
+        ? serialRecommendationFilms
+        : [];
+  const catalogRecommendationTitle =
+    catalogMode === "premieres"
+      ? recommendationTitle
+      : catalogMode === "serials"
+        ? serialRecommendationTitle
+        : "";
+  const catalogRecommendationReason =
+    catalogMode === "premieres"
+      ? recommendations?.reason
+      : catalogMode === "serials"
+        ? serialRecommendations?.reason
+        : undefined;
   const recommendationFilmIds = useMemo(
     () => new Set(recommendationFilms.map((film) => film.kinopoiskId)),
     [recommendationFilms]
   );
   const recommendationFilmIdsRef = useRef(recommendationFilmIds);
   recommendationFilmIdsRef.current = showRecommendations ? recommendationFilmIds : new Set<number>();
+  const serialRecommendationFilmIds = useMemo(
+    () => new Set(serialRecommendationFilms.map((film) => film.kinopoiskId)),
+    [serialRecommendationFilms]
+  );
+  const catalogRecommendationFilmIds = useMemo(() => {
+    if (catalogMode === "premieres" && showRecommendations) {
+      return recommendationFilmIds;
+    }
+
+    if (catalogMode === "serials" && showSerialRecommendations) {
+      return serialRecommendationFilmIds;
+    }
+
+    return new Set<number>();
+  }, [
+    catalogMode,
+    recommendationFilmIds,
+    serialRecommendationFilmIds,
+    showRecommendations,
+    showSerialRecommendations
+  ]);
   const catalogGridFilms = useMemo(() => {
-    if (!showRecommendations || recommendationFilmIds.size === 0) {
+    if (!showCatalogRecommendations || catalogRecommendationFilmIds.size === 0) {
       return visibleFilms;
     }
 
-    return visibleFilms.filter((film) => !recommendationFilmIds.has(film.kinopoiskId));
-  }, [recommendationFilmIds, showRecommendations, visibleFilms]);
+    return visibleFilms.filter((film) => !catalogRecommendationFilmIds.has(film.kinopoiskId));
+  }, [catalogRecommendationFilmIds, showCatalogRecommendations, visibleFilms]);
   const visibleSimilarFilms = useMemo(
     () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [similarFilms]
@@ -242,6 +313,19 @@ export function App() {
     } catch {
       setRecommendations(null);
       setRecommendationsStatus("error");
+    }
+  }, []);
+
+  const loadSerialRecommendations = useCallback(async () => {
+    setSerialRecommendationsStatus("loading");
+
+    try {
+      const result = await siteApi.getSerialRecommendations();
+      setSerialRecommendations(result);
+      setSerialRecommendationsStatus("success");
+    } catch {
+      setSerialRecommendations(null);
+      setSerialRecommendationsStatus("error");
     }
   }, []);
 
@@ -275,6 +359,14 @@ export function App() {
 
     void loadRecommendations();
   }, [authUser, catalogMode, loadRecommendations, userLists, view]);
+
+  useEffect(() => {
+    if (!authUser || view !== "catalog" || catalogMode !== "serials") {
+      return;
+    }
+
+    void loadSerialRecommendations();
+  }, [authUser, catalogMode, loadSerialRecommendations, userLists, view]);
 
   useEffect(() => {
     if (view !== "watch" || !selectedFilm) {
@@ -370,8 +462,16 @@ export function App() {
 
   const restoreSnapshot = useCallback(
     async (snapshot: NavigationSnapshot) => {
-      setActiveMenu(snapshot.activeMenu);
-      setCatalogMode(snapshot.catalogMode);
+      const restoredCatalogMode =
+        snapshot.catalogMode === "films" ? "premieres" : snapshot.catalogMode;
+      const restoredActiveMenu =
+        snapshot.activeMenu === "Фильмы" || snapshot.catalogMode === "films"
+          ? "Главная"
+          : snapshot.activeMenu;
+
+      setActiveMenu(restoredActiveMenu);
+      setCatalogMode(restoredCatalogMode);
+      catalogModeRef.current = restoredCatalogMode;
       setCollectionId(snapshot.collectionId);
       setIsSearchOpen(false);
       setError(null);
@@ -489,7 +589,7 @@ export function App() {
           setError(null);
 
           try {
-            const page = await fetchCatalogPage(client, snapshot.catalogMode, 1, "", null);
+            const page = await fetchCatalogPage(client, restoredCatalogMode, 1, "", null);
             setFilms(page.films);
             filmsRef.current = page.films;
             setPage(page.page);
@@ -740,7 +840,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (view !== "catalog" || catalogMode !== "premieres" || recommendationsPending) {
+    if (view !== "catalog" || catalogMode !== "premieres" || catalogRecommendationsPending) {
       return;
     }
 
@@ -752,7 +852,11 @@ export function App() {
       return;
     }
 
-    const visible = countVisibleFilms(filmsRef.current, "premieres", recommendationFilmIds);
+    const visible = countVisibleFilms(
+      filmsRef.current,
+      "premieres",
+      catalogRecommendationFilmIds
+    );
     if (visible >= MIN_VISIBLE_BUFFER) {
       autoBufferLoadsRef.current = 0;
       return;
@@ -765,7 +869,7 @@ export function App() {
       replace: false,
       filter: null
     });
-  }, [catalogMode, loadCatalogPage, recommendationFilmIds, recommendationsPending, view]);
+  }, [catalogMode, catalogRecommendationFilmIds, catalogRecommendationsPending, loadCatalogPage, view]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -876,13 +980,6 @@ export function App() {
         return;
       }
 
-      if (item === "Фильмы") {
-        setCatalogMode("films");
-        catalogModeRef.current = "films";
-        await loadCatalogPage({ mode: "films", nextPage: 1, replace: true, filter: null });
-        return;
-      }
-
       if (item === "Сериалы") {
         setCatalogMode("serials");
         catalogModeRef.current = "serials";
@@ -902,7 +999,7 @@ export function App() {
     pendingWatchFilmIdRef.current = null;
     setBrowseMedia(media);
     setView("browse");
-    setActiveMenu(options?.activeMenu ?? (media === "serials" ? "Сериалы" : "Фильмы"));
+    setActiveMenu(options?.activeMenu ?? "Каталог");
     setSelectedFilm(null);
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
@@ -918,7 +1015,7 @@ export function App() {
     setCatalogFilter(filter);
     catalogFilterRef.current = filter;
     setView("catalog");
-    setActiveMenu(filter.media === "serials" ? "Сериалы" : "Фильмы");
+    setActiveMenu("Каталог");
     setCatalogMode("filtered");
     catalogModeRef.current = "filtered";
     setSelectedFilm(null);
@@ -967,6 +1064,8 @@ export function App() {
     setSelectedLists([]);
     setRecommendations(null);
     setRecommendationsStatus("idle");
+    setSerialRecommendations(null);
+    setSerialRecommendationsStatus("idle");
   }
 
   const heading =
@@ -982,9 +1081,12 @@ export function App() {
           text: ""
         });
   const showTopCatalogHeading =
-    catalogMode !== "premieres" && Boolean(heading.eyebrow || heading.title || heading.text);
+    catalogMode !== "premieres" &&
+    catalogMode !== "serials" &&
+    Boolean(heading.eyebrow || heading.title || heading.text);
   const homeCatalogTitle =
     catalogMode === "premieres" ? catalogHeadings.premieres.title : "";
+  const serialCatalogTitle = catalogMode === "serials" ? catalogHeadings.serials.title : "";
 
   return (
     <>
@@ -1066,7 +1168,7 @@ export function App() {
             </div>
           ) : null}
 
-          {recommendationsPending ? (
+          {catalogRecommendationsPending ? (
             <div className="recommendations-shelf-skeleton" aria-label="Загрузка рекомендаций">
               <span className="recommendations-shelf-skeleton__head" />
               <div className="recommendations-shelf-skeleton__track">
@@ -1077,18 +1179,18 @@ export function App() {
             </div>
           ) : null}
 
-          {showRecommendations ? (
+          {showCatalogRecommendations ? (
             <aside className="recommendations-rail" aria-label="Рекомендации">
               <FilmShelf
-                title={recommendationTitle}
-                subtitle={recommendations?.reason}
-                films={recommendationFilms}
+                title={catalogRecommendationTitle}
+                subtitle={catalogRecommendationReason}
+                films={catalogRecommendationFilms}
                 onSelect={(film) => void openFilm(film)}
               />
             </aside>
           ) : null}
 
-          {homeCatalogTitle && !recommendationsPending ? (
+          {homeCatalogTitle && !catalogRecommendationsPending ? (
             <div className="film-shelf__head catalog-feed__head">
               <div>
                 <h2>{homeCatalogTitle}</h2>
@@ -1096,7 +1198,15 @@ export function App() {
             </div>
           ) : null}
 
-          {!recommendationsPending && status === "loading" ? (
+          {serialCatalogTitle && !catalogRecommendationsPending ? (
+            <div className="film-shelf__head catalog-feed__head">
+              <div>
+                <h2>{serialCatalogTitle}</h2>
+              </div>
+            </div>
+          ) : null}
+
+          {!catalogRecommendationsPending && status === "loading" ? (
             <div className="skeleton-grid" aria-label="Загрузка результатов">
               {Array.from({ length: 10 }).map((_, index) => (
                 <span key={index} className="film-skeleton" />
@@ -1104,7 +1214,7 @@ export function App() {
             </div>
           ) : null}
 
-          {!recommendationsPending && visibleFilms.length === 0 && status !== "loading" ? (
+          {!catalogRecommendationsPending && visibleFilms.length === 0 && status !== "loading" ? (
             <div className="empty-state empty-state--composed">
               <span className="empty-state__marker">01</span>
               <strong>Пока ничего не найдено.</strong>
@@ -1112,7 +1222,7 @@ export function App() {
             </div>
           ) : null}
 
-          {!recommendationsPending &&
+          {!catalogRecommendationsPending &&
           (catalogGridFilms.length > 0 || showCatalogSkeletons) ? (
             <div
               className={`catalog-feed${showCatalogSkeletons ? " catalog-feed--loading" : ""}`}
@@ -1126,7 +1236,7 @@ export function App() {
             </div>
           ) : null}
 
-          {catalogMode !== "search" && !recommendationsPending ? (
+          {catalogMode !== "search" && !catalogRecommendationsPending ? (
             <div className="catalog-feed-footer" aria-live="polite">
               {showCatalogSkeletons ? (
                 <div className="catalog-feed-footer__loading" role="status">

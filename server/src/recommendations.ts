@@ -5,7 +5,13 @@ import {
   writeCache,
   type CachedFilm
 } from "./kpCache.js";
-import { ensureFilmsCached, getRecentCatalog, getThemeList, getTopList } from "./kinopoiskProxy.js";
+import {
+  ensureFilmsCached,
+  getFilterCatalog,
+  getRecentCatalog,
+  getThemeList,
+  getTopList
+} from "./kinopoiskProxy.js";
 
 const STATUS_WEIGHTS: Record<WatchStatus, number> = {
   watched: 3,
@@ -63,8 +69,8 @@ function listFingerprint(items: DbUserFilm[]): string {
     .join("|");
 }
 
-function cacheKey(userId: number, fingerprint: string): string {
-  return `recs:${userId}:${fingerprint}`;
+function cacheKey(userId: number, fingerprint: string, scope: "films" | "serials" = "films"): string {
+  return scope === "serials" ? `recs:serials:${userId}:${fingerprint}` : `recs:${userId}:${fingerprint}`;
 }
 
 export function buildGenreProfile(
@@ -342,6 +348,83 @@ async function buildWarmStart(
   };
 }
 
+async function gatherSerialCandidates(profile: Record<string, number>): Promise<CachedFilm[]> {
+  const seen = new Set<number>();
+  const candidates: CachedFilm[] = [];
+
+  const addFilms = (films: CachedFilm[]) => {
+    for (const film of films) {
+      if (seen.has(film.kinopoiskId)) {
+        continue;
+      }
+      seen.add(film.kinopoiskId);
+      candidates.push(film);
+    }
+  };
+
+  try {
+    const recent = await getRecentCatalog(1, "TV_SERIES");
+    addFilms(recent.page.films);
+  } catch {
+    // skip failed pool
+  }
+
+  try {
+    const topRated = await getFilterCatalog({ type: "TV_SERIES", page: 1, order: "RATING" });
+    addFilms(topRated.page.films);
+  } catch {
+    // skip failed pool
+  }
+
+  for (const theme of themesForProfile(profile)) {
+    try {
+      const themed = await getThemeList(theme, 1);
+      addFilms(themed.page.films);
+    } catch {
+      // skip failed theme
+    }
+  }
+
+  return candidates;
+}
+
+async function buildSerialColdStart(userFilmIds: Set<number>): Promise<RecommendationResult> {
+  const { page } = await getFilterCatalog({ type: "TV_SERIES", page: 1, order: "RATING" });
+  const films = page.films
+    .filter((film) => !userFilmIds.has(film.kinopoiskId))
+    .sort((left, right) => parseRating(right.rating) - parseRating(left.rating))
+    .slice(0, RESULT_LIMIT);
+
+  return {
+    films,
+    mode: "cold"
+  };
+}
+
+async function buildSerialWarmStart(
+  profile: Record<string, number>,
+  userFilmIds: Set<number>
+): Promise<RecommendationResult> {
+  const candidates = await gatherSerialCandidates(profile);
+
+  const scored: ScoredFilm[] = candidates
+    .map((film) => ({
+      film,
+      score: scoreFilm(film, profile, userFilmIds),
+      primaryGenre: getPrimaryGenre(film, profile)
+    }))
+    .filter((entry) => entry.score > -100)
+    .sort((left, right) => right.score - left.score);
+
+  const films = interleaveByGenre(scored.slice(0, RESULT_LIMIT * 2), RESULT_LIMIT);
+
+  return {
+    films,
+    mode: "warm",
+    reason: buildReason(profile)
+  };
+}
+
 export async function getRecommendations(userId: number): Promise<RecommendationResult> {
   const items = listUserFilms(userId);
   const fingerprint = listFingerprint(items);
@@ -365,6 +448,34 @@ export async function getRecommendations(userId: number): Promise<Recommendation
     profileFilmCount >= WARM_START_MIN_FILMS
       ? await buildWarmStart(profile, userFilmIds)
       : await buildColdStart(userFilmIds);
+
+  writeCache(key, result);
+  return result;
+}
+
+export async function getSerialRecommendations(userId: number): Promise<RecommendationResult> {
+  const items = listUserFilms(userId);
+  const fingerprint = listFingerprint(items);
+  const key = cacheKey(userId, fingerprint, "serials");
+  const cached = readCache<RecommendationCachePayload>(key, "recommendations");
+
+  if (cached) {
+    return cached;
+  }
+
+  const userFilmIds = new Set(items.map((item) => item.kinopoisk_id));
+  const profileIds = items
+    .filter((item) => PROFILE_STATUSES.includes(item.status))
+    .map((item) => item.kinopoisk_id);
+
+  const profileFilms = await ensureAllFilmsCached(profileIds);
+  const profile = buildGenreProfile(items, profileFilms);
+  const profileFilmCount = countProfileFilms(items, profileFilms);
+
+  const result =
+    profileFilmCount >= WARM_START_MIN_FILMS
+      ? await buildSerialWarmStart(profile, userFilmIds)
+      : await buildSerialColdStart(userFilmIds);
 
   writeCache(key, result);
   return result;

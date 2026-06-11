@@ -143,6 +143,10 @@ export const siteApi = {
 
   async getRecommendations(): Promise<RecommendationResponse> {
     return request<RecommendationResponse>("/recommendations");
+  },
+
+  async getSerialRecommendations(): Promise<RecommendationResponse> {
+    return request<RecommendationResponse>("/recommendations/serials");
   }
 };
 

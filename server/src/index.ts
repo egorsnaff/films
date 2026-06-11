@@ -27,7 +27,7 @@ import {
   probeKinopoisk,
   searchCatalog
 } from "./kinopoiskProxy.js";
-import { getRecommendations } from "./recommendations.js";
+import { getRecommendations, getSerialRecommendations } from "./recommendations.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -314,6 +314,19 @@ app.get("/recommendations", requireUser, async (req, res) => {
     res.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Не удалось собрать рекомендации";
+    res.status(502).json({ error: message });
+  }
+});
+
+app.get("/recommendations/serials", requireUser, async (req, res) => {
+  const user = res.locals.user as { id: number };
+
+  try {
+    const result = await getSerialRecommendations(user.id);
+    res.json(result);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Не удалось собрать рекомендации сериалов";
     res.status(502).json({ error: message });
   }
 });

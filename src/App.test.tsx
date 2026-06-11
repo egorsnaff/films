@@ -107,7 +107,7 @@ describe("App", () => {
     const header = screen.getByRole("banner", { name: "Навигация" });
 
     expect(screen.getByRole("button", { name: "Главная" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Фильмы" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Фильмы" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Каталог" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
-  it("loads films section after leaving a filtered catalog view", async () => {
+  it("loads home section after leaving a filtered catalog view", async () => {
     const user = userEvent.setup();
     const fetchMock = createFetchMock((url) => {
       if (url.includes("/api/kp/filters")) {
@@ -211,21 +211,6 @@ describe("App", () => {
               title: "Фильтрованная драма",
               year: "2024",
               posterUrl: "https://example.test/filtered.jpg"
-            }
-          ],
-          1,
-          3
-        );
-      }
-
-      if (url.includes("/api/kp/collections") && url.includes("TOP_POPULAR_MOVIES")) {
-        return catalogResponse(
-          [
-            {
-              kinopoiskId: 601,
-              title: "Популярный фильм ленты",
-              year: "2025",
-              posterUrl: "https://example.test/films-feed.jpg"
             }
           ],
           1,
@@ -259,9 +244,9 @@ describe("App", () => {
 
     expect(await screen.findByText("Фильтрованная драма")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Фильмы" }));
+    await user.click(screen.getByRole("button", { name: "Главная" }));
 
-    expect(await screen.findByText("Популярный фильм ленты")).toBeInTheDocument();
+    expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.queryByText("Фильтрованная драма")).not.toBeInTheDocument();
   });
 
