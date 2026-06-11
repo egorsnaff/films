@@ -183,19 +183,19 @@ export function hasDisplayablePoster(film: CachedFilm): boolean {
 export async function bufferCatalogPage(
   fetchPage: (page: number) => Promise<KinopoiskCatalogPage>,
   startPage: number,
-  options: { minFilms?: number; maxFetches?: number } = {}
+  options: { minFilms?: number; maxFetches?: number; batchSize?: number } = {}
 ): Promise<KinopoiskCatalogPage> {
   const minFilms = options.minFilms ?? BUFFERED_CATALOG_MIN_FILMS;
   const maxFetches = options.maxFetches ?? BUFFERED_CATALOG_MAX_FETCHES;
+  const batchSize = options.batchSize ?? 4;
   const collected: CachedFilm[] = [];
   const seen = new Set<number>();
-  let currentPage = startPage;
+  let nextStartPage = startPage;
   let totalPages = 1;
-  let fetches = 0;
+  let consumedPages = 0;
 
-  while (fetches < maxFetches) {
-    const result = await fetchPage(currentPage);
-    totalPages = result.totalPages;
+  const collectFromPage = (result: KinopoiskCatalogPage, pageNumber: number) => {
+    totalPages = Math.max(totalPages, result.totalPages);
 
     for (const film of result.films) {
       if (!hasDisplayablePoster(film) || seen.has(film.kinopoiskId)) {
@@ -206,18 +206,47 @@ export async function bufferCatalogPage(
       collected.push(film);
     }
 
-    fetches += 1;
+    return pageNumber;
+  };
 
-    if (collected.length >= minFilms || currentPage >= totalPages) {
+  while (consumedPages < maxFetches && collected.length < minFilms) {
+    const remainingFetches = maxFetches - consumedPages;
+    const currentBatchSize = Math.min(batchSize, remainingFetches);
+    const pageNumbers = Array.from(
+      { length: currentBatchSize },
+      (_, index) => nextStartPage + index
+    ).filter((pageNumber) => pageNumber <= totalPages);
+
+    if (pageNumbers.length === 0) {
       break;
     }
 
-    currentPage += 1;
+    const results = await Promise.all(pageNumbers.map((pageNumber) => fetchPage(pageNumber)));
+    let lastConsumedPage = nextStartPage;
+
+    for (let index = 0; index < results.length; index += 1) {
+      lastConsumedPage = collectFromPage(results[index], pageNumbers[index]);
+      consumedPages += 1;
+
+      if (collected.length >= minFilms || pageNumbers[index] >= totalPages) {
+        return {
+          films: collected,
+          page: lastConsumedPage,
+          totalPages
+        };
+      }
+    }
+
+    nextStartPage += pageNumbers.length;
+
+    if (nextStartPage > totalPages) {
+      break;
+    }
   }
 
   return {
     films: collected,
-    page: currentPage,
+    page: Math.min(Math.max(startPage, nextStartPage - 1), totalPages),
     totalPages
   };
 }

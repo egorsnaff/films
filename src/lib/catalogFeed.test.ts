@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { countVisibleFilms, mergeFilms } from "./catalogFeed";
+import {
+  countVisibleFilms,
+  getAdaptiveSkeletonCount,
+  getScrollPrefetchThreshold,
+  mergeFilms,
+  shouldShowCatalogSkeletons
+} from "./catalogFeed";
 
 describe("catalogFeed", () => {
   it("merges films without duplicates", () => {
@@ -21,6 +27,48 @@ describe("catalogFeed", () => {
 
     expect(countVisibleFilms(films, "films")).toBe(1);
     expect(countVisibleFilms(films, "search")).toBe(2);
+  });
+
+  it("prefetches earlier on tall viewports", () => {
+    expect(getScrollPrefetchThreshold(900)).toBe(2475);
+    expect(getScrollPrefetchThreshold(500)).toBe(1800);
+  });
+
+  it("fills at least three skeleton rows for the current viewport", () => {
+    expect(getAdaptiveSkeletonCount(1200)).toBeGreaterThanOrEqual(12);
+    expect(getAdaptiveSkeletonCount(768)).toBe(12);
+  });
+
+  it("shows skeletons while loading or near the end of the feed", () => {
+    expect(
+      shouldShowCatalogSkeletons({
+        catalogMode: "premieres",
+        hasMore: true,
+        isLoadingMore: false,
+        nearEnd: true,
+        hasUserScrolled: true
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowCatalogSkeletons({
+        catalogMode: "premieres",
+        hasMore: true,
+        isLoadingMore: false,
+        nearEnd: true,
+        hasUserScrolled: false
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowCatalogSkeletons({
+        catalogMode: "search",
+        hasMore: true,
+        isLoadingMore: true,
+        nearEnd: true,
+        hasUserScrolled: true
+      })
+    ).toBe(false);
   });
 
   it("excludes recommendation ids from visible count", () => {

@@ -37,9 +37,10 @@ import {
 } from "./lib/appHistory";
 import {
   countVisibleFilms,
-  LOAD_MORE_SKELETON_COUNT,
+  getAdaptiveSkeletonCount,
   mergeFilms,
-  MIN_VISIBLE_BUFFER
+  MIN_VISIBLE_BUFFER,
+  shouldShowCatalogSkeletons
 } from "./lib/catalogFeed";
 import {
   getBackLabel,
@@ -213,6 +214,7 @@ export function App() {
     () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [similarFilms]
   );
+  const [catalogSkeletonCount, setCatalogSkeletonCount] = useState(() => getAdaptiveSkeletonCount());
 
   useEffect(() => {
     pageRef.current = page;
@@ -694,13 +696,32 @@ export function App() {
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
   }, [loadCatalogPage]);
 
-  useWindowCatalogScroll({
-    enabled: view === "catalog",
+  const { nearEnd: catalogNearEnd, hasUserScrolled: catalogHasUserScrolled } =
+    useWindowCatalogScroll({
+      enabled: view === "catalog",
+      catalogMode,
+      hasMore,
+      isLoadingMore,
+      onLoadMore: () => void loadNextPageRef.current()
+    });
+
+  const showCatalogSkeletons = shouldShowCatalogSkeletons({
     catalogMode,
     hasMore,
     isLoadingMore,
-    onLoadMore: () => void loadNextPageRef.current()
+    nearEnd: catalogNearEnd,
+    hasUserScrolled: catalogHasUserScrolled
   });
+
+  useEffect(() => {
+    const syncSkeletonCount = () => {
+      setCatalogSkeletonCount(getAdaptiveSkeletonCount());
+    };
+
+    syncSkeletonCount();
+    window.addEventListener("resize", syncSkeletonCount, { passive: true });
+    return () => window.removeEventListener("resize", syncSkeletonCount);
+  }, []);
 
   useEffect(() => {
     if (view !== "catalog" || catalogMode !== "premieres" || recommendationsPending) {
@@ -1049,23 +1070,30 @@ export function App() {
           ) : null}
 
           {!recommendationsPending &&
-          (catalogGridFilms.length > 0 || (isLoadingMore && catalogMode !== "search")) ? (
-            <FilmGrid
-              films={catalogGridFilms}
-              animate={status === "success"}
-              loadingSkeletonCount={
-                isLoadingMore && catalogMode !== "search" ? LOAD_MORE_SKELETON_COUNT : 0
-              }
-              onSelect={(film) => void openFilm(film)}
-            />
+          (catalogGridFilms.length > 0 || showCatalogSkeletons) ? (
+            <div
+              className={`catalog-feed${showCatalogSkeletons ? " catalog-feed--loading" : ""}`}
+            >
+              <FilmGrid
+                films={catalogGridFilms}
+                animate={status === "success" && !showCatalogSkeletons}
+                loadingSkeletonCount={showCatalogSkeletons ? catalogSkeletonCount : 0}
+                onSelect={(film) => void openFilm(film)}
+              />
+            </div>
           ) : null}
 
           {catalogMode !== "search" && !recommendationsPending ? (
             <div className="catalog-feed-footer" aria-live="polite">
-              {isLoadingMore ? (
-                <p className="catalog-feed-footer__status">Подгружаем фильмы...</p>
+              {showCatalogSkeletons ? (
+                <div className="catalog-feed-footer__loading" role="status">
+                  <span className="catalog-feed-footer__progress" aria-hidden="true">
+                    <span className="catalog-feed-footer__progress-bar" />
+                  </span>
+                  <p className="catalog-feed-footer__status">Подгружаем фильмы...</p>
+                </div>
               ) : null}
-              {!isLoadingMore && hasMore && catalogGridFilms.length > 0 ? (
+              {!showCatalogSkeletons && hasMore && catalogGridFilms.length > 0 ? (
                 <button
                   type="button"
                   className="load-more-button"
@@ -1074,7 +1102,7 @@ export function App() {
                   Загрузить ещё
                 </button>
               ) : null}
-              {!isLoadingMore && !hasMore && catalogGridFilms.length > 0 ? (
+              {!showCatalogSkeletons && !hasMore && catalogGridFilms.length > 0 ? (
                 <p className="catalog-feed-footer__status">Это всё на сейчас</p>
               ) : null}
             </div>

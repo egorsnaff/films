@@ -1,6 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { SCROLL_PREFETCH_PX, shouldPrefetchByScroll } from "../lib/catalogFeed";
+import {
+  getScrollPrefetchThreshold,
+  shouldPrefetchByScroll
+} from "../lib/catalogFeed";
 import type { CatalogMode } from "../lib/navigation";
 
 type UseWindowCatalogScrollOptions = {
@@ -18,9 +21,12 @@ export function useWindowCatalogScroll({
   isLoadingMore,
   onLoadMore
 }: UseWindowCatalogScrollOptions) {
+  const [nearEnd, setNearEnd] = useState(false);
+  const [hasUserScrolled, setHasUserScrolled] = useState(false);
   const onLoadMoreRef = useRef(onLoadMore);
   const hasMoreRef = useRef(hasMore);
   const isLoadingMoreRef = useRef(isLoadingMore);
+  const rafRef = useRef<number | null>(null);
 
   onLoadMoreRef.current = onLoadMore;
   hasMoreRef.current = hasMore;
@@ -28,26 +34,48 @@ export function useWindowCatalogScroll({
 
   useEffect(() => {
     if (!enabled || catalogMode === "search") {
+      setNearEnd(false);
+      setHasUserScrolled(false);
       return;
     }
 
-    const maybeLoadMore = () => {
-      if (!hasMoreRef.current || isLoadingMoreRef.current) {
-        return;
+    const syncScrollState = () => {
+      if (window.scrollY > 72) {
+        setHasUserScrolled(true);
       }
 
-      if (shouldPrefetchByScroll(SCROLL_PREFETCH_PX)) {
+      const threshold = getScrollPrefetchThreshold();
+      const isNearEnd = shouldPrefetchByScroll(threshold);
+      setNearEnd(isNearEnd);
+
+      if (isNearEnd && hasMoreRef.current && !isLoadingMoreRef.current) {
         onLoadMoreRef.current();
       }
     };
 
-    window.addEventListener("scroll", maybeLoadMore, { passive: true });
-    window.addEventListener("resize", maybeLoadMore, { passive: true });
-    maybeLoadMore();
+    const scheduleSync = () => {
+      if (rafRef.current !== null) {
+        return;
+      }
+
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        syncScrollState();
+      });
+    };
+
+    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("resize", scheduleSync, { passive: true });
+    scheduleSync();
 
     return () => {
-      window.removeEventListener("scroll", maybeLoadMore);
-      window.removeEventListener("resize", maybeLoadMore);
+      window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("resize", scheduleSync);
+
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
   }, [catalogMode, enabled, hasMore]);
 
@@ -61,11 +89,13 @@ export function useWindowCatalogScroll({
         return;
       }
 
-      if (shouldPrefetchByScroll(SCROLL_PREFETCH_PX)) {
+      if (shouldPrefetchByScroll(getScrollPrefetchThreshold())) {
         onLoadMoreRef.current();
       }
     });
 
     return () => window.cancelAnimationFrame(frameId);
   }, [catalogMode, enabled, hasMore, isLoadingMore]);
+
+  return { nearEnd, hasUserScrolled };
 }
