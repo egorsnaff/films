@@ -760,7 +760,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (view !== "catalog" || catalogMode !== "premieres" || imdbShelfPending) {
+    const autoBufferMode =
+      catalogMode === "premieres" || catalogMode === "serials" ? catalogMode : null;
+
+    if (view !== "catalog" || !autoBufferMode || imdbShelfPending) {
       return;
     }
 
@@ -772,7 +775,7 @@ export function App() {
       return;
     }
 
-    const visible = countVisibleFilms(filmsRef.current, "premieres", imdbShelfFilmIds);
+    const visible = countVisibleFilms(filmsRef.current, autoBufferMode, imdbShelfFilmIds);
     if (visible >= MIN_VISIBLE_BUFFER) {
       autoBufferLoadsRef.current = 0;
       return;
@@ -780,7 +783,7 @@ export function App() {
 
     autoBufferLoadsRef.current += 1;
     void loadCatalogPage({
-      mode: "premieres",
+      mode: autoBufferMode,
       nextPage: pageRef.current + 1,
       replace: false,
       filter: null
