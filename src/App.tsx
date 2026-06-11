@@ -42,6 +42,8 @@ import {
   MIN_VISIBLE_BUFFER,
   MIN_CATALOG_LOAD_INTERVAL_MS,
   MAX_AUTO_BUFFER_LOADS,
+  isCatalogPageResponseValid,
+  resolveCatalogHasMore,
   shouldShowCatalogSkeletons
 } from "./lib/catalogFeed";
 import {
@@ -91,8 +93,8 @@ const catalogHeadings: Record<
     text: "Показываем первую страницу результатов. Уточните запрос, если нужен другой фильм."
   },
   films: {
-    eyebrow: "films",
-    title: "Фильмы",
+    eyebrow: "",
+    title: "Список последних новинок",
     text: ""
   },
   serials: {
@@ -643,6 +645,11 @@ export function App() {
           queryRef.current,
           activeFilter
         );
+
+        if (!replace && !isCatalogPageResponseValid(catalogPage, pageNumber)) {
+          return catalogPage;
+        }
+
         const merged = reset ? catalogPage.films : mergeFilms(filmsRef.current, catalogPage.films);
 
         setFilms(merged);
@@ -652,7 +659,7 @@ export function App() {
         setTotalPages(catalogPage.totalPages);
         setCatalogMode(mode);
         catalogModeRef.current = mode;
-        const nextHasMore = mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
+        const nextHasMore = resolveCatalogHasMore(catalogPage, pageNumber, mode);
         setHasMore(nextHasMore);
         hasMoreRef.current = nextHasMore;
 
