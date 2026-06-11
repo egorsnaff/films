@@ -93,8 +93,8 @@ const catalogHeadings: Record<
     text: "Показываем первую страницу результатов. Уточните запрос, если нужен другой фильм."
   },
   films: {
-    eyebrow: "films",
-    title: "Фильмы",
+    eyebrow: "",
+    title: "Список последних новинок",
     text: ""
   },
   serials: {
