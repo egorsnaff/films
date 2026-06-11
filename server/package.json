@@ -7,7 +7,8 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "create-user": "tsx scripts/create-user.ts"
+    "create-user": "tsx scripts/create-user.ts",
+    "sync-imdb-top-250": "tsx scripts/sync-imdb-top-250.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

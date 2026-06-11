@@ -17,7 +17,7 @@ const FILM_THEME_EXTRAS: Array<{ type: ThemeCollectionType; title: string }> = [
 ];
 
 const FILM_TOP_ITEMS: Array<{ type: TopCollectionType; title: string }> = [
-  { type: "TOP_250_BEST_FILMS", title: "250 лучших фильмов" },
+  { type: "IMDB_TOP_250", title: "250 лучших фильмов (IMDb)" },
   { type: "TOP_100_POPULAR_FILMS", title: "Топ по популярности" }
 ];
 

@@ -12,6 +12,7 @@ import {
   getThemeList,
   getTopList
 } from "./kinopoiskProxy.js";
+import { getImdbTop250KinopoiskIds, IMDB_TOP_250_PAGE_SIZE } from "./imdbTop250.js";
 
 const STATUS_WEIGHTS: Record<WatchStatus, number> = {
   watched: 3,
@@ -296,8 +297,16 @@ async function gatherCandidates(profile: Record<string, number>): Promise<Cached
   }
 
   try {
-    const top = await getTopList("TOP_250_BEST_FILMS", 1);
-    addFilms(top.page.films);
+    const topIds = getImdbTop250KinopoiskIds().slice(0, IMDB_TOP_250_PAGE_SIZE);
+    const topFilms = await ensureAllFilmsCached(topIds);
+    addFilms(topIds.map((id) => topFilms[id]).filter(Boolean));
+  } catch {
+    // skip failed pool
+  }
+
+  try {
+    const legacyTop = await getTopList("TOP_250_BEST_FILMS", 1);
+    addFilms(legacyTop.page.films);
   } catch {
     // skip failed pool
   }
@@ -315,8 +324,13 @@ async function gatherCandidates(profile: Record<string, number>): Promise<Cached
 }
 
 async function buildColdStart(userFilmIds: Set<number>): Promise<RecommendationResult> {
-  const { page } = await getTopList("TOP_250_BEST_FILMS", 1);
-  const films = page.films.filter((film) => !userFilmIds.has(film.kinopoiskId)).slice(0, RESULT_LIMIT);
+  const selectedIds = getImdbTop250KinopoiskIds()
+    .filter((kinopoiskId) => !userFilmIds.has(kinopoiskId))
+    .slice(0, RESULT_LIMIT);
+  const filmsById = await ensureAllFilmsCached(selectedIds);
+  const films = selectedIds
+    .map((kinopoiskId) => filmsById[kinopoiskId])
+    .filter((film): film is CachedFilm => Boolean(film));
 
   return {
     films,
