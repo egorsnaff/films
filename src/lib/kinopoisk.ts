@@ -315,7 +315,7 @@ export function createKinopoiskClient({
 
     async getFilmAwards(kinopoiskId: number): Promise<FilmAwardsPayload> {
       const cacheKey = `awards:${kinopoiskId}`;
-      const local = readLocalCache<FilmAwardsPayload>(cacheKey, "film");
+      const local = readLocalCache<FilmAwardsPayload>(cacheKey, "awards");
       if (local) {
         return local;
       }

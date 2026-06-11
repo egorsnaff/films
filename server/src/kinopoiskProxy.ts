@@ -670,7 +670,7 @@ export async function getFilmAwards(
   kinopoiskId: number
 ): Promise<{ awards: FilmAwardsPayload; fromCache: boolean }> {
   const cacheKey = `awards:${kinopoiskId}`;
-  const cached = readCache<FilmAwardsPayload>(cacheKey, "film");
+  const cached = readCache<FilmAwardsPayload>(cacheKey, "awards");
   if (cached) {
     return { awards: cached, fromCache: true };
   }
