@@ -43,7 +43,7 @@ describe("buildBrowseSections", () => {
     ]);
     expect(sections[2]?.items.map((item) => item.title)).toEqual(["драмы", "комедии"]);
     expect(sections[3]?.items[0]?.kind).toBe("year");
-    expect(sections[1]?.items.some((item) => item.topType === "TOP_250_BEST_FILMS")).toBe(true);
+    expect(sections[1]?.items.some((item) => item.topType === "IMDB_TOP_250")).toBe(true);
   });
 
   it("builds serial sections with categories and genres", () => {

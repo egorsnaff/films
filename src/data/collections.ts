@@ -16,9 +16,9 @@ export const filmCollections: FilmCollection[] = [
   {
     id: "top-250",
     title: "250 лучших фильмов",
-    description: "Официальный топ Кинопоиска — проверенная классика.",
+    description: "IMDb Top 250 по версии русской Wikipedia — сопоставлено с Кинопоиском.",
     accent: "#f0b75b",
-    source: { kind: "top", type: "TOP_250_BEST_FILMS" }
+    source: { kind: "top", type: "IMDB_TOP_250" }
   },
   {
     id: "top-await",
