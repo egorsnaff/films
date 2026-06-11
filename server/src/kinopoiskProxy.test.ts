@@ -26,11 +26,35 @@ describe("bufferCatalogPage", () => {
       totalPages: 4
     }));
 
-    const result = await bufferCatalogPage(fetchPage, 1, { minFilms: 3, maxFetches: 5 });
+    const result = await bufferCatalogPage(fetchPage, 1, {
+      minFilms: 3,
+      maxFetches: 5,
+      batchSize: 1
+    });
 
     expect(result.films).toHaveLength(3);
     expect(result.page).toBe(3);
     expect(fetchPage).toHaveBeenCalledTimes(3);
+  });
+
+  it("fetches source pages in parallel batches", async () => {
+    const fetchPage = vi.fn(async (page: number) => ({
+      films: [
+        {
+          kinopoiskId: page,
+          title: `Film ${page}`,
+          posterUrl: "https://example.test/poster.jpg"
+        }
+      ],
+      page,
+      totalPages: 6
+    }));
+
+    await bufferCatalogPage(fetchPage, 1, { minFilms: 4, maxFetches: 6, batchSize: 4 });
+
+    expect(fetchPage).toHaveBeenCalledTimes(5);
+    expect(fetchPage.mock.calls.map(([page]) => page)).toEqual([1, 2, 3, 4, 5]);
+    expect(new Set(fetchPage.mock.calls.slice(1).map(([page]) => page)).size).toBe(4);
   });
 
   it("stops at the last available source page", async () => {
