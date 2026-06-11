@@ -10,6 +10,11 @@ import {
   getTvSeriesCatalogTotalPages,
   resolveTvSeriesCatalogPage
 } from "./tvSeriesCatalog.js";
+import {
+  aggregateFilmAwards,
+  type FilmAwardsPayload,
+  type KinopoiskAwardRaw
+} from "./filmAwards.js";
 import { recordKinopoiskApiCall } from "./kpApiStats.js";
 import {
   readCache,
@@ -652,6 +657,28 @@ export async function getSimilarFilms(
   }
 
   return { films, fromCache: false };
+}
+
+type AwardsResponse = {
+  total?: number;
+  items?: KinopoiskAwardRaw[];
+};
+
+export type { FilmAwardsPayload };
+
+export async function getFilmAwards(
+  kinopoiskId: number
+): Promise<{ awards: FilmAwardsPayload; fromCache: boolean }> {
+  const cacheKey = `awards:${kinopoiskId}`;
+  const cached = readCache<FilmAwardsPayload>(cacheKey, "film");
+  if (cached) {
+    return { awards: cached, fromCache: true };
+  }
+
+  const response = await requestKinopoisk<AwardsResponse>(`/v2.2/films/${kinopoiskId}/awards`);
+  const awards = aggregateFilmAwards(response.items ?? [], response.total);
+  writeCache(cacheKey, awards);
+  return { awards, fromCache: false };
 }
 
 export async function ensureFilmsCached(

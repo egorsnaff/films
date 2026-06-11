@@ -10,6 +10,13 @@ import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
 import { PosterImage } from "./components/PosterImage";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
+import {
+  WatchAwardChips,
+  WatchAwardsChipsSkeleton,
+  WatchAwardsPanel,
+  WatchAwardsPanelSkeleton,
+  useWatchAwardsReveal
+} from "./components/WatchAwards";
 import { UserMenu } from "./components/UserMenu";
 import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
@@ -27,6 +34,7 @@ import {
 import type { BrowseMedia, CatalogFilter, KinopoiskFilters } from "./lib/catalogFilter";
 import { getCatalogFilterMediaType } from "./lib/catalogFilter";
 import {
+  FilmAwardsPayload,
   KinopoiskFilm,
   KinopoiskFilmDetails,
   createKinopoiskClient,
@@ -139,6 +147,9 @@ export function App() {
   const [imdbShelfStatus, setImdbShelfStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
+  const [filmAwards, setFilmAwards] = useState<FilmAwardsPayload | null>(null);
+  const [awardsStatus, setAwardsStatus] = useState<LoadState>("idle");
+  const revealAwards = useWatchAwardsReveal();
   const [browseMedia, setBrowseMedia] = useState<BrowseMedia>("films");
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter | null>(null);
   const [kinopoiskFilters, setKinopoiskFilters] = useState<KinopoiskFilters | null>(null);
@@ -307,6 +318,36 @@ export function App() {
         if (!cancelled) {
           setSimilarFilms([]);
           setSimilarFilmsStatus("error");
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, selectedFilm, view]);
+
+  useEffect(() => {
+    if (view !== "watch" || !selectedFilm) {
+      setFilmAwards(null);
+      setAwardsStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setAwardsStatus("loading");
+
+    void client.getFilmAwards(selectedFilm.kinopoiskId).then(
+      (awards) => {
+        if (!cancelled) {
+          setFilmAwards(awards);
+          setAwardsStatus("success");
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setFilmAwards(null);
+          setAwardsStatus("error");
         }
       }
     );
@@ -1392,6 +1433,10 @@ export function App() {
                       ))}
                     </div>
                   ) : null}
+                  {awardsStatus === "loading" ? <WatchAwardsChipsSkeleton /> : null}
+                  {filmAwards && filmAwards.total > 0 ? (
+                    <WatchAwardChips awards={filmAwards} onReveal={revealAwards} />
+                  ) : null}
                   {selectedFilm.description ? (
                     <p className="watch-hero__description">{selectedFilm.description}</p>
                   ) : detailsStatus === "success" ? (
@@ -1424,6 +1469,8 @@ export function App() {
               <p>Вернитесь на главную и откройте карточку из подборки.</p>
             </div>
           ) : null}
+          {awardsStatus === "loading" ? <WatchAwardsPanelSkeleton /> : null}
+          {filmAwards && filmAwards.total > 0 ? <WatchAwardsPanel awards={filmAwards} /> : null}
           {similarFilmsStatus === "loading" ? (
             <p className="player-status watch-page__similars-status">Загружаем похожие...</p>
           ) : null}
