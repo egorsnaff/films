@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { aggregateFilmAwards } from "./filmAwards.js";
+import {
+  aggregateFilmAwards,
+  attachCachedAwardChipsToFilms,
+  readCachedFilmAwardChips
+} from "./filmAwards.js";
+import { readCache, writeCache } from "./kpCache.js";
 
 describe("aggregateFilmAwards", () => {
   it("groups awards by ceremony and year with wins first", () => {
@@ -57,5 +62,39 @@ describe("aggregateFilmAwards", () => {
       summary: [],
       groups: []
     });
+  });
+
+  it("reads cached award chips without extra API calls", () => {
+    writeCache(`awards:3498`, {
+      total: 11,
+      summary: [
+        { name: "Оскар", wins: 11, nominations: 0, imageUrl: "https://example.test/oscar.png" },
+        { name: "Сатурн", wins: 2, nominations: 1 }
+      ],
+      groups: []
+    });
+
+    expect(readCachedFilmAwardChips(3498)).toEqual([
+      { name: "Оскар", wins: 11, imageUrl: "https://example.test/oscar.png" },
+      { name: "Сатурн", wins: 2, imageUrl: undefined }
+    ]);
+    expect(readCachedFilmAwardChips(999999)).toBeUndefined();
+    expect(readCache(`awards:3498`, "awards")).not.toBeNull();
+  });
+
+  it("attaches cached chips only to films with awards in cache", () => {
+    writeCache(`awards:42`, {
+      total: 1,
+      summary: [{ name: "Оскар", wins: 1, nominations: 0 }],
+      groups: []
+    });
+
+    const films = attachCachedAwardChipsToFilms([
+      { kinopoiskId: 42, title: "Awarded" },
+      { kinopoiskId: 7, title: "Plain" }
+    ]);
+
+    expect(films[0]?.awardChips).toEqual([{ name: "Оскар", wins: 1, imageUrl: undefined }]);
+    expect(films[1]?.awardChips).toBeUndefined();
   });
 });

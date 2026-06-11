@@ -1,3 +1,5 @@
+import { readCache } from "./kpCache.js";
+
 type KinopoiskAwardPerson = {
   nameRu?: string | null;
   nameEn?: string | null;
@@ -39,6 +41,14 @@ export type FilmAwardsPayload = {
   summary: FilmAwardSummaryChip[];
   groups: FilmAwardGroup[];
 };
+
+export type FilmAwardCardChip = {
+  name: string;
+  wins: number;
+  imageUrl?: string;
+};
+
+const CARD_AWARD_CHIP_LIMIT = 2;
 
 function personLabel(person: KinopoiskAwardPerson): string | null {
   const name = person.nameRu?.trim() || person.nameEn?.trim();
@@ -166,4 +176,27 @@ export function aggregateFilmAwards(
     summary,
     groups
   };
+}
+
+export function readCachedFilmAwardChips(kinopoiskId: number): FilmAwardCardChip[] | undefined {
+  const cached = readCache<FilmAwardsPayload>(`awards:${kinopoiskId}`, "awards");
+
+  if (!cached || cached.total === 0 || cached.summary.length === 0) {
+    return undefined;
+  }
+
+  return cached.summary.slice(0, CARD_AWARD_CHIP_LIMIT).map(({ name, wins, imageUrl }) => ({
+    name,
+    wins,
+    imageUrl
+  }));
+}
+
+export function attachCachedAwardChipsToFilms<T extends { kinopoiskId: number }>(
+  films: T[]
+): Array<T & { awardChips?: FilmAwardCardChip[] }> {
+  return films.map((film) => {
+    const awardChips = readCachedFilmAwardChips(film.kinopoiskId);
+    return awardChips ? { ...film, awardChips } : film;
+  });
 }

@@ -9,6 +9,13 @@ export type KinopoiskFilm = {
   posterUrl?: string;
   rating?: string;
   imdbRating?: string;
+  awardChips?: FilmAwardCardChip[];
+};
+
+export type FilmAwardCardChip = {
+  name: string;
+  wins: number;
+  imageUrl?: string;
 };
 
 export type KinopoiskFilmDetails = KinopoiskFilm & {

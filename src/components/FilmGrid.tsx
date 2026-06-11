@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
+import { FilmCardAwards } from "./FilmCardAwards";
 import { PosterImage } from "./PosterImage";
 
 type FilmGridProps = {
@@ -43,6 +44,9 @@ export function FilmGrid({
                 .filter(Boolean)
                 .join(" · ")}
             </small>
+            {film.awardChips && film.awardChips.length > 0 ? (
+              <FilmCardAwards chips={film.awardChips} />
+            ) : null}
           </span>
         </button>
       ))}
