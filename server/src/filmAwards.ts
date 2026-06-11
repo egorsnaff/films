@@ -68,16 +68,16 @@ export function aggregateFilmAwards(
   for (const raw of items) {
     const name = raw.name?.trim();
     const nominationName = raw.nominationName?.trim();
-    const year = raw.year;
+    const awardYear = raw.year;
 
-    if (!name || !nominationName || !Number.isFinite(year)) {
+    if (!name || !nominationName || awardYear == null || !Number.isFinite(awardYear)) {
       continue;
     }
 
-    const groupKey = `${name}:${year}`;
-    const existing = groupMap.get(groupKey) ?? {
+    const groupKey = `${name}:${awardYear}`;
+    const existing: FilmAwardGroup = groupMap.get(groupKey) ?? {
       name,
-      year,
+      year: awardYear,
       imageUrl: raw.imageUrl,
       wins: 0,
       nominations: 0,
