@@ -13,7 +13,7 @@ import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import { UserMenu } from "./components/UserMenu";
 import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
-import { useCatalogInfiniteScroll } from "./hooks/useCatalogInfiniteScroll";
+import { useWindowCatalogScroll } from "./hooks/useWindowCatalogScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
 import { buildBrowseSections } from "./data/browseSections";
 import { filmCollections, getCollectionById } from "./data/collections";
@@ -35,6 +35,12 @@ import {
   readHistorySnapshot,
   replaceAppHistory
 } from "./lib/appHistory";
+import {
+  countVisibleFilms,
+  LOAD_MORE_SKELETON_COUNT,
+  mergeFilms,
+  MIN_VISIBLE_BUFFER
+} from "./lib/catalogFeed";
 import {
   getBackLabel,
   type CatalogMode,
@@ -126,7 +132,6 @@ export function App() {
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter | null>(null);
   const [kinopoiskFilters, setKinopoiskFilters] = useState<KinopoiskFilters | null>(null);
   const [filtersStatus, setFiltersStatus] = useState<LoadState>("idle");
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingMoreRef = useRef(false);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
@@ -606,47 +611,32 @@ export function App() {
       mode,
       nextPage,
       replace,
-      filter,
-      autoChaseDepth = 0
+      filter
     }: {
       mode: CatalogMode;
       nextPage: number;
       replace: boolean;
       filter?: CatalogFilter | null;
-      autoChaseDepth?: number;
     }) => {
       if (replace) {
         setStatus("loading");
-      } else if (autoChaseDepth === 0) {
+      } else {
         setIsLoadingMore(true);
         isFetchingMoreRef.current = true;
       }
 
       setError(null);
 
-      let shouldChaseNextPage = false;
-
-      try {
+      const appendPage = async (pageNumber: number, reset: boolean) => {
         const activeFilter = filter ?? catalogFilterRef.current;
         const catalogPage = await fetchCatalogPage(
           client,
           mode,
-          nextPage,
+          pageNumber,
           queryRef.current,
           activeFilter
         );
-
-        const previousFilms = filmsRef.current;
-        const merged = replace ? catalogPage.films : mergeFilms(previousFilms, catalogPage.films);
-        const excludeRecommendationIds =
-          mode === "premieres" ? recommendationFilmIdsRef.current : new Set<number>();
-        const previousVisibleCount = countVisibleFilms(previousFilms, mode, excludeRecommendationIds);
-        const nextVisibleCount = countVisibleFilms(merged, mode, excludeRecommendationIds);
-        shouldChaseNextPage =
-          !replace &&
-          catalogPage.page < catalogPage.totalPages &&
-          nextVisibleCount === previousVisibleCount &&
-          autoChaseDepth < 30;
+        const merged = reset ? catalogPage.films : mergeFilms(filmsRef.current, catalogPage.films);
 
         setFilms(merged);
         filmsRef.current = merged;
@@ -655,21 +645,16 @@ export function App() {
         setTotalPages(catalogPage.totalPages);
         setCatalogMode(mode);
         catalogModeRef.current = mode;
-        const nextHasMore =
-          mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
+        const nextHasMore = mode === "search" ? false : catalogPage.page < catalogPage.totalPages;
         setHasMore(nextHasMore);
         hasMoreRef.current = nextHasMore;
-        setStatus("success");
 
-        if (shouldChaseNextPage) {
-          await loadCatalogPage({
-            mode,
-            nextPage: catalogPage.page + 1,
-            replace: false,
-            filter: activeFilter,
-            autoChaseDepth: autoChaseDepth + 1
-          });
-        }
+        return catalogPage;
+      };
+
+      try {
+        await appendPage(nextPage, replace);
+        setStatus("success");
       } catch (loadError) {
         setError(getErrorMessage(loadError));
         if (replace) {
@@ -678,10 +663,8 @@ export function App() {
           hasMoreRef.current = false;
         }
       } finally {
-        if (autoChaseDepth === 0) {
-          setIsLoadingMore(false);
-          isFetchingMoreRef.current = false;
-        }
+        setIsLoadingMore(false);
+        isFetchingMoreRef.current = false;
       }
     },
     [client]
@@ -696,8 +679,6 @@ export function App() {
       return;
     }
 
-    isFetchingMoreRef.current = true;
-    setIsLoadingMore(true);
     await loadCatalogPage({
       mode: catalogModeRef.current,
       nextPage: pageRef.current + 1,
@@ -713,15 +694,35 @@ export function App() {
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
   }, [loadCatalogPage]);
 
-  useCatalogInfiniteScroll({
+  useWindowCatalogScroll({
     enabled: view === "catalog",
     catalogMode,
     hasMore,
     isLoadingMore,
-    sentinelRef: loadMoreRef,
-    onLoadMore: () => void loadNextPageRef.current(),
-    resetKey: catalogGridFilms.length
+    onLoadMore: () => void loadNextPageRef.current()
   });
+
+  useEffect(() => {
+    if (view !== "catalog" || catalogMode !== "premieres" || recommendationsPending) {
+      return;
+    }
+
+    if (!hasMoreRef.current || isFetchingMoreRef.current) {
+      return;
+    }
+
+    const visible = countVisibleFilms(filmsRef.current, "premieres", recommendationFilmIds);
+    if (visible >= MIN_VISIBLE_BUFFER) {
+      return;
+    }
+
+    void loadCatalogPage({
+      mode: "premieres",
+      nextPage: pageRef.current + 1,
+      replace: false,
+      filter: null
+    });
+  }, [catalogMode, loadCatalogPage, recommendationFilmIds, recommendationsPending, view]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1053,23 +1054,28 @@ export function App() {
               films={catalogGridFilms}
               animate={status === "success"}
               loadingSkeletonCount={
-                isLoadingMore && catalogMode !== "search" ? 10 : 0
+                isLoadingMore && catalogMode !== "search" ? LOAD_MORE_SKELETON_COUNT : 0
               }
               onSelect={(film) => void openFilm(film)}
             />
           ) : null}
 
           {catalogMode !== "search" && !recommendationsPending ? (
-            <div
-              ref={loadMoreRef}
-              className={`load-more-sentinel${isLoadingMore ? " load-more-sentinel--loading" : ""}`}
-              aria-live="polite"
-            >
+            <div className="catalog-feed-footer" aria-live="polite">
               {isLoadingMore ? (
-                <span className="load-more-sentinel__hint">Подгружаем...</span>
+                <p className="catalog-feed-footer__status">Подгружаем фильмы...</p>
+              ) : null}
+              {!isLoadingMore && hasMore && catalogGridFilms.length > 0 ? (
+                <button
+                  type="button"
+                  className="load-more-button"
+                  onClick={() => void loadNextPageRef.current()}
+                >
+                  Загрузить ещё
+                </button>
               ) : null}
               {!isLoadingMore && !hasMore && catalogGridFilms.length > 0 ? (
-                <span>Это всё на сейчас</span>
+                <p className="catalog-feed-footer__status">Это всё на сейчас</p>
               ) : null}
             </div>
           ) : null}
@@ -1364,23 +1370,6 @@ async function fetchCatalogPage(
   return client.getRecentFilms(nextPage, "TV_SERIES");
 }
 
-function countVisibleFilms(
-  films: KinopoiskFilm[],
-  mode: CatalogMode,
-  excludeIds: ReadonlySet<number> = new Set()
-): number {
-  const candidates =
-    mode === "search"
-      ? films
-      : films.filter((film) => hasValidPosterUrl(film.posterUrl));
-
-  if (excludeIds.size === 0) {
-    return candidates.length;
-  }
-
-  return candidates.filter((film) => !excludeIds.has(film.kinopoiskId)).length;
-}
-
 function resolvePlaybackStatus(lists: WatchStatus[]): WatchStatus | null {
   if (lists.includes("watched")) {
     return "watched";
@@ -1391,20 +1380,6 @@ function resolvePlaybackStatus(lists: WatchStatus[]): WatchStatus | null {
   }
 
   return null;
-}
-
-function mergeFilms(current: KinopoiskFilm[], next: KinopoiskFilm[]): KinopoiskFilm[] {
-  const seen = new Set(current.map((film) => film.kinopoiskId));
-  const uniqueNext = next.filter((film) => {
-    if (seen.has(film.kinopoiskId)) {
-      return false;
-    }
-
-    seen.add(film.kinopoiskId);
-    return true;
-  });
-
-  return [...current, ...uniqueNext];
 }
 
 function getErrorMessage(error: unknown): string {

@@ -1,11 +1,58 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  bufferCatalogPage,
   isFilmDetailsCacheComplete,
   mapFilmDetails,
   resolveCatalogTotalPages,
   sortFilmsByImdbRating
 } from "./kinopoiskProxy.js";
+
+describe("bufferCatalogPage", () => {
+  it("aggregates multiple source pages until the minimum displayable count is reached", async () => {
+    const fetchPage = vi.fn(async (page: number) => ({
+      films: [
+        {
+          kinopoiskId: page * 10 + 1,
+          title: `With poster ${page}`,
+          posterUrl: "https://example.test/poster.jpg"
+        },
+        {
+          kinopoiskId: page * 10 + 2,
+          title: `Without poster ${page}`
+        }
+      ],
+      page,
+      totalPages: 4
+    }));
+
+    const result = await bufferCatalogPage(fetchPage, 1, { minFilms: 3, maxFetches: 5 });
+
+    expect(result.films).toHaveLength(3);
+    expect(result.page).toBe(3);
+    expect(fetchPage).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops at the last available source page", async () => {
+    const fetchPage = vi.fn(async (page: number) => ({
+      films: [
+        {
+          kinopoiskId: page,
+          title: `Film ${page}`,
+          posterUrl: "https://example.test/poster.jpg"
+        }
+      ],
+      page,
+      totalPages: 2
+    }));
+
+    const result = await bufferCatalogPage(fetchPage, 1, { minFilms: 24, maxFetches: 10 });
+
+    expect(result.films).toHaveLength(2);
+    expect(result.page).toBe(2);
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("resolveCatalogTotalPages", () => {
   it("uses explicit totalPages when provided", () => {

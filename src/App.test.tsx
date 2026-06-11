@@ -149,7 +149,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
-    expect(document.querySelector(".load-more-sentinel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Загрузить ещё" })).toBeInTheDocument();
   });
 
   it("hides premieres without posters on the home page", async () => {

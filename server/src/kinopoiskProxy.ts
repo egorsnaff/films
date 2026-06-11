@@ -173,12 +173,61 @@ export async function getFilmDetails(kinopoiskId: number): Promise<{ film: Cache
   return { film, fromCache: false };
 }
 
-export async function getRecentCatalog(
+export const BUFFERED_CATALOG_MIN_FILMS = 24;
+export const BUFFERED_CATALOG_MAX_FETCHES = 10;
+
+export function hasDisplayablePoster(film: CachedFilm): boolean {
+  return Boolean(film.posterUrl?.trim());
+}
+
+export async function bufferCatalogPage(
+  fetchPage: (page: number) => Promise<KinopoiskCatalogPage>,
+  startPage: number,
+  options: { minFilms?: number; maxFetches?: number } = {}
+): Promise<KinopoiskCatalogPage> {
+  const minFilms = options.minFilms ?? BUFFERED_CATALOG_MIN_FILMS;
+  const maxFetches = options.maxFetches ?? BUFFERED_CATALOG_MAX_FETCHES;
+  const collected: CachedFilm[] = [];
+  const seen = new Set<number>();
+  let currentPage = startPage;
+  let totalPages = 1;
+  let fetches = 0;
+
+  while (fetches < maxFetches) {
+    const result = await fetchPage(currentPage);
+    totalPages = result.totalPages;
+
+    for (const film of result.films) {
+      if (!hasDisplayablePoster(film) || seen.has(film.kinopoiskId)) {
+        continue;
+      }
+
+      seen.add(film.kinopoiskId);
+      collected.push(film);
+    }
+
+    fetches += 1;
+
+    if (collected.length >= minFilms || currentPage >= totalPages) {
+      break;
+    }
+
+    currentPage += 1;
+  }
+
+  return {
+    films: collected,
+    page: currentPage,
+    totalPages
+  };
+}
+
+async function fetchRecentCatalogPage(
   page: number,
   type: "FILM" | "TV_SERIES"
-): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+): Promise<KinopoiskCatalogPage> {
   const cacheKey = `catalog:recent:${type}:${page}`;
-  const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () => {
+  const { data } = await cachedRequest(cacheKey, "catalog", async () => {
     const params = new URLSearchParams({
       order: "YEAR",
       type,
@@ -191,6 +240,18 @@ export async function getRecentCatalog(
     const response = await requestKinopoisk<SearchFilmResponse>(`/v2.2/films?${params.toString()}`);
     return mapCatalogPage(response, page);
   });
+
+  return data;
+}
+
+export async function getRecentCatalog(
+  page: number,
+  type: "FILM" | "TV_SERIES"
+): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+  const cacheKey = `catalog:recent:${type}:buffered:${page}`;
+  const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () =>
+    bufferCatalogPage((nextPage) => fetchRecentCatalogPage(nextPage, type), page)
+  );
 
   for (const film of data.films) {
     writeFilmCache(film);
@@ -227,6 +288,19 @@ export async function searchCatalog(
   return { page: data, fromCache };
 }
 
+async function fetchTopListPage(type: string, page: number): Promise<KinopoiskCatalogPage> {
+  const cacheKey = `top:${type}:${page}`;
+  const { data } = await cachedRequest(cacheKey, "list", async () => {
+    const params = new URLSearchParams({ type, page: String(page) });
+    const response = await requestKinopoisk<SearchFilmResponse>(
+      `/v2.2/films/top?${params.toString()}`
+    );
+    return mapCatalogPage(response, page);
+  });
+
+  return data;
+}
+
 export async function getTopList(
   type: string,
   page: number
@@ -235,14 +309,10 @@ export async function getTopList(
     throw new Error("Некорректный тип топа");
   }
 
-  const cacheKey = `top:${type}:${page}`;
-  const { data, fromCache } = await cachedRequest(cacheKey, "list", async () => {
-    const params = new URLSearchParams({ type, page: String(page) });
-    const response = await requestKinopoisk<SearchFilmResponse>(
-      `/v2.2/films/top?${params.toString()}`
-    );
-    return mapCatalogPage(response, page);
-  });
+  const cacheKey = `top:${type}:buffered:${page}`;
+  const { data, fromCache } = await cachedRequest(cacheKey, "list", async () =>
+    bufferCatalogPage((nextPage) => fetchTopListPage(type, nextPage), page)
+  );
 
   for (const film of data.films) {
     writeFilmCache(film);
@@ -274,18 +344,27 @@ export async function getThemeList(
   }
 }
 
-async function fetchThemeList(
-  type: string,
-  page: number
-): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+async function fetchThemeListPage(type: string, page: number): Promise<KinopoiskCatalogPage> {
   const cacheKey = `theme:${type}:${page}`;
-  const { data, fromCache } = await cachedRequest(cacheKey, "list", async () => {
+  const { data } = await cachedRequest(cacheKey, "list", async () => {
     const params = new URLSearchParams({ type, page: String(page) });
     const response = await requestKinopoisk<SearchFilmResponse>(
       `/v2.2/films/collections?${params.toString()}`
     );
     return mapCatalogPage(response, page);
   });
+
+  return data;
+}
+
+async function fetchThemeList(
+  type: string,
+  page: number
+): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+  const cacheKey = `theme:${type}:buffered:${page}`;
+  const { data, fromCache } = await cachedRequest(cacheKey, "list", async () =>
+    bufferCatalogPage((nextPage) => fetchThemeListPage(type, nextPage), page)
+  );
 
   for (const film of data.films) {
     writeFilmCache(film);
@@ -330,11 +409,10 @@ export async function getKinopoiskFilters(): Promise<{
   };
 }
 
-export async function getFilterCatalog(
-  params: FilterCatalogParams
-): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+function buildFilterCatalogCacheKey(params: FilterCatalogParams, page: number): string {
   const order = params.order ?? "RATING";
-  const cacheKey = [
+
+  return [
     "filter",
     params.type,
     params.genreId ?? "-",
@@ -342,10 +420,14 @@ export async function getFilterCatalog(
     params.yearFrom ?? "-",
     params.yearTo ?? "-",
     order,
-    params.page
+    page
   ].join(":");
+}
 
-  const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () => {
+async function fetchFilterCatalogPage(params: FilterCatalogParams): Promise<KinopoiskCatalogPage> {
+  const order = params.order ?? "RATING";
+  const cacheKey = buildFilterCatalogCacheKey(params, params.page);
+  const { data } = await cachedRequest(cacheKey, "catalog", async () => {
     const searchParams = new URLSearchParams({
       type: params.type,
       order,
@@ -375,6 +457,20 @@ export async function getFilterCatalog(
     );
     return mapCatalogPage(response, params.page);
   });
+
+  return data;
+}
+
+export async function getFilterCatalog(
+  params: FilterCatalogParams
+): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
+  const cacheKey = `${buildFilterCatalogCacheKey(params, params.page)}:buffered`;
+  const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () =>
+    bufferCatalogPage(
+      (nextPage) => fetchFilterCatalogPage({ ...params, page: nextPage }),
+      params.page
+    )
+  );
 
   for (const film of data.films) {
     writeFilmCache(film);
