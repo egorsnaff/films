@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readCache, writeCache, writeFilmCache, type CachedFilm } from "./kpCache.js";
+import { attachCachedAwardChipsToFilms } from "./filmAwards.js";
 import { ensureFilmsCached } from "./kinopoiskProxy.js";
 
 export const IMDB_TOP_250_TV_TYPE = "IMDB_TOP_250_TV";
@@ -66,7 +67,7 @@ export async function getImdbTop250TvPage(
   const cacheKey = `top:${IMDB_TOP_250_TV_TYPE}:${safePage}`;
   const cached = readCache<KinopoiskCatalogPage>(cacheKey, "list");
   if (cached) {
-    return { page: cached, fromCache: true };
+    return { page: enrichImdbTop250TvPage(cached), fromCache: true };
   }
 
   const ids = getImdbTop250TvKinopoiskIds();
@@ -90,7 +91,14 @@ export async function getImdbTop250TvPage(
   };
 
   writeCache(cacheKey, payload);
-  return { page: payload, fromCache: false };
+  return { page: enrichImdbTop250TvPage(payload), fromCache: false };
+}
+
+function enrichImdbTop250TvPage(page: KinopoiskCatalogPage): KinopoiskCatalogPage {
+  return {
+    ...page,
+    films: attachCachedAwardChipsToFilms(page.films)
+  };
 }
 
 export function resetImdbTop250TvManifestCache(): void {

@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
+import { FilmCardAwards } from "./FilmCardAwards";
 import { PosterImage } from "./PosterImage";
 
 type FilmShelfProps = {
@@ -89,6 +90,9 @@ export function FilmShelf({
                 <small>
                   {[film.year, film.rating && `КП ${film.rating}`].filter(Boolean).join(" · ")}
                 </small>
+                {film.awardChips && film.awardChips.length > 0 ? (
+                  <FilmCardAwards chips={film.awardChips} className="film-shelf__awards" />
+                ) : null}
               </span>
             </button>
           );

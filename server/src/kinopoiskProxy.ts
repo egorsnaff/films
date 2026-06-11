@@ -12,6 +12,7 @@ import {
 } from "./tvSeriesCatalog.js";
 import {
   aggregateFilmAwards,
+  attachCachedAwardChipsToFilms,
   type FilmAwardsPayload,
   type KinopoiskAwardRaw
 } from "./filmAwards.js";
@@ -33,6 +34,13 @@ type KinopoiskCatalogPage = {
   page: number;
   totalPages: number;
 };
+
+function enrichCatalogPage(page: KinopoiskCatalogPage): KinopoiskCatalogPage {
+  return {
+    ...page,
+    films: attachCachedAwardChipsToFilms(page.films)
+  };
+}
 
 type SearchFilmResponse = {
   films?: Array<Record<string, unknown>>;
@@ -339,7 +347,7 @@ export async function getRecentCatalog(
     writeFilmCache(film);
   }
 
-  return { page: data, fromCache };
+  return { page: enrichCatalogPage(data), fromCache };
 }
 
 export async function searchCatalog(
@@ -367,7 +375,7 @@ export async function searchCatalog(
     writeFilmCache(film);
   }
 
-  return { page: data, fromCache };
+  return { page: enrichCatalogPage(data), fromCache };
 }
 
 async function fetchTopListPage(type: string, page: number): Promise<KinopoiskCatalogPage> {
@@ -408,7 +416,7 @@ export async function getTopList(
     writeFilmCache(film);
   }
 
-  return { page: data, fromCache };
+  return { page: enrichCatalogPage(data), fromCache };
 }
 
 export async function getThemeList(
@@ -460,7 +468,7 @@ async function fetchThemeList(
     writeFilmCache(film);
   }
 
-  return { page: data, fromCache };
+  return { page: enrichCatalogPage(data), fromCache };
 }
 
 type FiltersResponse = {
@@ -566,7 +574,7 @@ export async function getFilterCatalog(
     writeFilmCache(film);
   }
 
-  return { page: data, fromCache };
+  return { page: enrichCatalogPage(data), fromCache };
 }
 
 export async function probeKinopoisk(): Promise<{
@@ -624,7 +632,7 @@ export async function getSimilarFilms(
   const cacheKey = `similars:${kinopoiskId}:${limit}`;
   const cached = readCache<CachedFilm[]>(cacheKey, "list");
   if (cached) {
-    return { films: cached, fromCache: true };
+    return { films: attachCachedAwardChipsToFilms(cached), fromCache: true };
   }
 
   const response = await requestKinopoisk<SimilarFilmResponse>(
@@ -656,7 +664,7 @@ export async function getSimilarFilms(
     writeFilmCache(film);
   }
 
-  return { films, fromCache: false };
+  return { films: attachCachedAwardChipsToFilms(films), fromCache: false };
 }
 
 type AwardsResponse = {

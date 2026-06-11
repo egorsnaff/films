@@ -149,7 +149,11 @@ export function App() {
   const [similarFilmsStatus, setSimilarFilmsStatus] = useState<LoadState>("idle");
   const [filmAwards, setFilmAwards] = useState<FilmAwardsPayload | null>(null);
   const [awardsStatus, setAwardsStatus] = useState<LoadState>("idle");
-  const revealAwards = useWatchAwardsReveal();
+  const [awardsOpenGroupKey, setAwardsOpenGroupKey] = useState<string | null>(null);
+  const revealAwards = useWatchAwardsReveal({
+    awards: filmAwards,
+    onOpenGroupKeyChange: setAwardsOpenGroupKey
+  });
   const [browseMedia, setBrowseMedia] = useState<BrowseMedia>("films");
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter | null>(null);
   const [kinopoiskFilters, setKinopoiskFilters] = useState<KinopoiskFilters | null>(null);
@@ -331,11 +335,13 @@ export function App() {
     if (view !== "watch" || !selectedFilm) {
       setFilmAwards(null);
       setAwardsStatus("idle");
+      setAwardsOpenGroupKey(null);
       return;
     }
 
     let cancelled = false;
     setAwardsStatus("loading");
+    setAwardsOpenGroupKey(null);
 
     void client.getFilmAwards(selectedFilm.kinopoiskId).then(
       (awards) => {
@@ -1470,7 +1476,13 @@ export function App() {
             </div>
           ) : null}
           {awardsStatus === "loading" ? <WatchAwardsPanelSkeleton /> : null}
-          {filmAwards && filmAwards.total > 0 ? <WatchAwardsPanel awards={filmAwards} /> : null}
+          {filmAwards && filmAwards.total > 0 ? (
+            <WatchAwardsPanel
+              awards={filmAwards}
+              openGroupKey={awardsOpenGroupKey}
+              onOpenGroupKeyChange={setAwardsOpenGroupKey}
+            />
+          ) : null}
           {similarFilmsStatus === "loading" ? (
             <p className="player-status watch-page__similars-status">Загружаем похожие...</p>
           ) : null}

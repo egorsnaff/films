@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { FilmAwardGroup, FilmAwardsPayload } from "../lib/kinopoisk";
 
@@ -25,9 +25,18 @@ function groupScore(group: FilmAwardGroup): string {
   return `${group.wins}/${total}`;
 }
 
+function resolveGroupKeyForCeremony(awards: FilmAwardsPayload, ceremonyName?: string): string | null {
+  if (!ceremonyName) {
+    return null;
+  }
+
+  const match = awards.groups.find((group) => group.name === ceremonyName);
+  return match ? `${match.name}:${match.year}` : null;
+}
+
 type WatchAwardChipsProps = {
   awards: FilmAwardsPayload;
-  onReveal?: () => void;
+  onReveal?: (ceremonyName?: string) => void;
 };
 
 export function WatchAwardChips({ awards, onReveal }: WatchAwardChipsProps) {
@@ -44,7 +53,7 @@ export function WatchAwardChips({ awards, onReveal }: WatchAwardChipsProps) {
           key={chip.name}
           type="button"
           className="watch-awards-chips__chip"
-          onClick={onReveal}
+          onClick={() => onReveal?.(chip.name)}
         >
           {chip.imageUrl ? (
             <img
@@ -71,15 +80,23 @@ export function WatchAwardChips({ awards, onReveal }: WatchAwardChipsProps) {
 type WatchAwardsPanelProps = {
   awards: FilmAwardsPayload;
   panelId?: string;
+  openGroupKey?: string | null;
+  onOpenGroupKeyChange?: (groupKey: string | null) => void;
 };
 
-export function WatchAwardsPanel({ awards, panelId = "watch-awards-panel" }: WatchAwardsPanelProps) {
-  const defaultOpenKey = awards.groups[0] ? `${awards.groups[0].name}:${awards.groups[0].year}` : null;
-  const [openGroupKey, setOpenGroupKey] = useState<string | null>(defaultOpenKey);
+export function WatchAwardsPanel({
+  awards,
+  panelId = "watch-awards-panel",
+  openGroupKey: openGroupKeyProp,
+  onOpenGroupKeyChange
+}: WatchAwardsPanelProps) {
+  const [internalOpenGroupKey, setInternalOpenGroupKey] = useState<string | null>(null);
+  const openGroupKey = openGroupKeyProp ?? internalOpenGroupKey;
+  const setOpenGroupKey = onOpenGroupKeyChange ?? setInternalOpenGroupKey;
   const highlights = awards.summary.slice(0, SUMMARY_CHIP_LIMIT);
 
   const toggleGroup = (groupKey: string) => {
-    setOpenGroupKey((current) => (current === groupKey ? null : groupKey));
+    setOpenGroupKey(openGroupKey === groupKey ? null : groupKey);
   };
 
   if (awards.total === 0 || awards.groups.length === 0) {
@@ -153,28 +170,33 @@ export function WatchAwardsPanel({ awards, panelId = "watch-awards-panel" }: Wat
                 <span className="watch-awards__group-score">{groupScore(group)}</span>
               </button>
 
-              {isOpen ? (
-                <ul className="watch-awards__items">
-                  {group.items.map((item) => {
-                    const persons = formatPersons(item.persons);
-                    return (
-                      <li
-                        key={`${item.nominationName}:${item.win ? "win" : "nom"}`}
-                        className={`watch-awards__item${item.win ? " watch-awards__item--win" : " watch-awards__item--nomination"}`}
-                      >
-                        <span className="watch-awards__item-marker" aria-hidden="true">
-                          {item.win ? "●" : "○"}
-                        </span>
-                        <span className="watch-awards__item-copy">
-                          <strong>{item.nominationName}</strong>
-                          {persons ? <small>{persons}</small> : null}
-                        </span>
-                        <span className="watch-awards__item-status">{item.win ? "Победа" : "Номинация"}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
+              <div
+                className={`watch-awards__group-body${isOpen ? " watch-awards__group-body--open" : ""}`}
+                aria-hidden={!isOpen}
+              >
+                <div className="watch-awards__group-body-inner">
+                  <ul className="watch-awards__items">
+                    {group.items.map((item) => {
+                      const persons = formatPersons(item.persons);
+                      return (
+                        <li
+                          key={`${item.nominationName}:${item.win ? "win" : "nom"}`}
+                          className={`watch-awards__item${item.win ? " watch-awards__item--win" : " watch-awards__item--nomination"}`}
+                        >
+                          <span className="watch-awards__item-marker" aria-hidden="true">
+                            {item.win ? "●" : "○"}
+                          </span>
+                          <span className="watch-awards__item-copy">
+                            <strong>{item.nominationName}</strong>
+                            {persons ? <small>{persons}</small> : null}
+                          </span>
+                          <span className="watch-awards__item-status">{item.win ? "Победа" : "Номинация"}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
             </article>
           );
         })}
@@ -211,11 +233,34 @@ export function WatchAwardsPanelSkeleton() {
   );
 }
 
-export function useWatchAwardsReveal(panelId = "watch-awards-panel") {
-  return useMemo(
-    () => () => {
-      document.getElementById(panelId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+type WatchAwardsRevealOptions = {
+  panelId?: string;
+  awards?: FilmAwardsPayload | null;
+  onOpenGroupKeyChange?: (groupKey: string | null) => void;
+};
+
+export function useWatchAwardsReveal({
+  panelId = "watch-awards-panel",
+  awards = null,
+  onOpenGroupKeyChange
+}: WatchAwardsRevealOptions = {}) {
+  return useCallback(
+    (ceremonyName?: string) => {
+      if (awards && onOpenGroupKeyChange) {
+        onOpenGroupKeyChange(resolveGroupKeyForCeremony(awards, ceremonyName));
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.getElementById(panelId)?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+          });
+        });
+      });
     },
-    [panelId]
+    [awards, onOpenGroupKeyChange, panelId]
   );
 }
+
+export { resolveGroupKeyForCeremony };

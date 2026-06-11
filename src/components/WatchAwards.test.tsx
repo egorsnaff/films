@@ -40,15 +40,33 @@ describe("WatchAwards", () => {
     expect(screen.getByRole("button", { name: /Сатурн ×1/ })).toBeInTheDocument();
   });
 
-  it("expands award groups in the panel", async () => {
+  it("keeps award groups collapsed until toggled", async () => {
     const user = userEvent.setup();
     render(<WatchAwardsPanel awards={sampleAwards} />);
 
-    expect(screen.getByText("Лучший фильм")).toBeInTheDocument();
-    expect(screen.queryByText("Лучший фэнтези-фильм")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Оскар 2004/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Сатурн 2004/ })).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(screen.getByRole("button", { name: /Оскар 2004/ }));
+
+    expect(screen.getByRole("button", { name: /Оскар 2004/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /Сатурн 2004/ })).toHaveAttribute("aria-expanded", "false");
 
     await user.click(screen.getByRole("button", { name: /Сатурн 2004/ }));
 
-    expect(screen.getByText("Лучший фэнтези-фильм")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Сатурн 2004/ })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("opens the requested ceremony group when controlled", () => {
+    render(
+      <WatchAwardsPanel
+        awards={sampleAwards}
+        openGroupKey="Сатурн:2004"
+        onOpenGroupKeyChange={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /Оскар 2004/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Сатурн 2004/ })).toHaveAttribute("aria-expanded", "true");
   });
 });

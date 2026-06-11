@@ -103,6 +103,7 @@ export type CachedFilm = {
   description?: string;
   filmLengthMinutes?: number;
   genres?: string[];
+  awardChips?: Array<{ name: string; wins: number; imageUrl?: string }>;
 };
 
 export function readFilmCache(kinopoiskId: number): CachedFilm | null {
