@@ -1,6 +1,8 @@
 import type { CatalogMode } from "./navigation";
 import { hasValidPosterUrl, type KinopoiskFilm } from "./kinopoisk";
 
+export { isCatalogPageResponseValid, resolveCatalogHasMore } from "./catalogPage";
+
 export const MIN_VISIBLE_BUFFER = 12;
 export const SCROLL_PREFETCH_VIEWPORTS = 1.25;
 export const MIN_SCROLL_PREFETCH_PX = 900;

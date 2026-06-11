@@ -312,9 +312,9 @@ GET /kp/search?keyword=...&page=1
 ## Кэширование (два уровня)
 
 1. **Сервер** (`kpCache.ts`) — SQLite/файл, TTL по типу (`catalog`, `list`, `search`).
-2. **Клиент** (`kpLocalCache.ts`) — `localStorage`, ключи вида `top:TOP_100_POPULAR_FILMS:1`.
+2. **Клиент** (`kpLocalCache.ts`) — `localStorage`, ключи вида `v2:top:TOP_100_POPULAR_FILMS:1`.
 
-Клиент кэширует **логический** запрос (`page=N`), сервер внутри может сходить в Kinopoisk на страницы N…N+3.
+Клиент кэширует **логический** запрос (`page=N`), сервер внутри может сходить в Kinopoisk на страницы N…N+3. Пустые/битые ответы (артефакт старой буферизации) **не читаются и не пишутся** в кэш — см. `catalogPage.ts`.
 
 ---
 

@@ -152,6 +152,46 @@ describe("createKinopoiskClient", () => {
     });
   });
 
+  it("ignores stale empty catalog cache entries and refetches", async () => {
+    window.localStorage.setItem(
+      "films-kp:v2:theme:TOP_POPULAR_MOVIES:5",
+      JSON.stringify({
+        savedAt: Date.now(),
+        payload: {
+          films: [],
+          page: 1,
+          totalPages: 1
+        }
+      })
+    );
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        page: {
+          films: [
+            {
+              kinopoiskId: 501,
+              title: "Свежая страница",
+              posterUrl: "https://example.test/fresh.jpg"
+            }
+          ],
+          page: 5,
+          totalPages: 35
+        }
+      })
+    });
+    const client = createKinopoiskClient({
+      fetchImpl: fetchMock,
+      proxyBaseUrl: "/api"
+    });
+
+    const page = await client.getThemeFilms("TOP_POPULAR_MOVIES", 5);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(page.films[0]?.title).toBe("Свежая страница");
+  });
+
   it("loads similar films through the Kinopoisk proxy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

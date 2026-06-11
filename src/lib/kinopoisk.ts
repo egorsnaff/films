@@ -1,3 +1,4 @@
+import { isCatalogPageResponseValid } from "./catalogPage";
 import { readLocalCache, writeLocalCache } from "./kpLocalCache";
 
 export type KinopoiskFilm = {
@@ -64,6 +65,8 @@ type KinopoiskClientOptions = {
 const PROXY_BASE =
   import.meta.env.VITE_SITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
 
+const CLIENT_CATALOG_PAGE_CACHE_VERSION = "v2";
+
 export function hasValidPosterUrl(posterUrl?: string): boolean {
   const trimmed = posterUrl?.trim();
 
@@ -122,16 +125,23 @@ export function createKinopoiskClient({
   async function getCachedCatalogPage(
     cacheKey: string,
     kind: "catalog" | "search" | "list",
-    path: string
+    path: string,
+    requestedPage: number
   ): Promise<KinopoiskCatalogPage> {
-    const local = readLocalCache<KinopoiskCatalogPage>(cacheKey, kind);
-    if (local) {
+    const versionedKey = `${CLIENT_CATALOG_PAGE_CACHE_VERSION}:${cacheKey}`;
+    const local = readLocalCache<KinopoiskCatalogPage>(versionedKey, kind);
+    if (local && isCatalogPageResponseValid(local, requestedPage)) {
       return local;
     }
 
     const result = await proxyRequest<{ page: KinopoiskCatalogPage }>(path);
-    writeLocalCache(cacheKey, result.page);
-    return result.page;
+    const page = result.page;
+
+    if (isCatalogPageResponseValid(page, requestedPage)) {
+      writeLocalCache(versionedKey, page);
+    }
+
+    return page;
   }
 
   return {
@@ -149,7 +159,8 @@ export function createKinopoiskClient({
       return getCachedCatalogPage(
         `search:${trimmedKeyword.toLowerCase()}:${page}`,
         "search",
-        `/search?${params.toString()}`
+        `/search?${params.toString()}`,
+        page
       );
     },
 
@@ -162,7 +173,8 @@ export function createKinopoiskClient({
       return getCachedCatalogPage(
         `catalog:recent:${type}:${page}`,
         "catalog",
-        `/catalog/recent?${params.toString()}`
+        `/catalog/recent?${params.toString()}`,
+        page
       );
     },
 
@@ -172,7 +184,12 @@ export function createKinopoiskClient({
         page: String(page)
       });
 
-      return getCachedCatalogPage(`top:${type}:${page}`, "list", `/top?${params.toString()}`);
+      return getCachedCatalogPage(
+        `top:${type}:${page}`,
+        "list",
+        `/top?${params.toString()}`,
+        page
+      );
     },
 
     async getFilters(): Promise<KinopoiskFiltersPayload> {
@@ -218,7 +235,12 @@ export function createKinopoiskClient({
         page
       ].join(":");
 
-      return getCachedCatalogPage(cacheKey, "catalog", `/catalog/filter?${params.toString()}`);
+      return getCachedCatalogPage(
+        cacheKey,
+        "catalog",
+        `/catalog/filter?${params.toString()}`,
+        page
+      );
     },
 
     async getThemeFilms(type: ThemeCollectionType, page = 1): Promise<KinopoiskCatalogPage> {
@@ -230,7 +252,8 @@ export function createKinopoiskClient({
       return getCachedCatalogPage(
         `theme:${type}:${page}`,
         "list",
-        `/collections?${params.toString()}`
+        `/collections?${params.toString()}`,
+        page
       );
     },
 
