@@ -29,9 +29,9 @@ describe("catalogFeed", () => {
     expect(countVisibleFilms(films, "search")).toBe(2);
   });
 
-  it("prefetches earlier on tall viewports", () => {
-    expect(getScrollPrefetchThreshold(900)).toBe(2475);
-    expect(getScrollPrefetchThreshold(500)).toBe(1800);
+  it("prefetches earlier on tall viewports without over-fetching", () => {
+    expect(getScrollPrefetchThreshold(900)).toBe(1125);
+    expect(getScrollPrefetchThreshold(500)).toBe(900);
   });
 
   it("fills at least three skeleton rows for the current viewport", () => {
@@ -39,14 +39,22 @@ describe("catalogFeed", () => {
     expect(getAdaptiveSkeletonCount(768)).toBe(12);
   });
 
-  it("shows skeletons while loading or near the end of the feed", () => {
+  it("shows skeletons while loading or near the end of a scrollable feed", () => {
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      configurable: true,
+      value: 4000
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 800
+    });
+
     expect(
       shouldShowCatalogSkeletons({
         catalogMode: "premieres",
         hasMore: true,
         isLoadingMore: false,
-        nearEnd: true,
-        hasUserScrolled: true
+        nearEnd: true
       })
     ).toBe(true);
 
@@ -54,19 +62,17 @@ describe("catalogFeed", () => {
       shouldShowCatalogSkeletons({
         catalogMode: "premieres",
         hasMore: true,
-        isLoadingMore: false,
-        nearEnd: true,
-        hasUserScrolled: false
+        isLoadingMore: true,
+        nearEnd: false
       })
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       shouldShowCatalogSkeletons({
         catalogMode: "search",
         hasMore: true,
         isLoadingMore: true,
-        nearEnd: true,
-        hasUserScrolled: true
+        nearEnd: true
       })
     ).toBe(false);
   });

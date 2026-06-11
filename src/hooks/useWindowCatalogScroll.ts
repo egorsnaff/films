@@ -22,10 +22,10 @@ export function useWindowCatalogScroll({
   onLoadMore
 }: UseWindowCatalogScrollOptions) {
   const [nearEnd, setNearEnd] = useState(false);
-  const [hasUserScrolled, setHasUserScrolled] = useState(false);
   const onLoadMoreRef = useRef(onLoadMore);
   const hasMoreRef = useRef(hasMore);
   const isLoadingMoreRef = useRef(isLoadingMore);
+  const nearEndRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
   onLoadMoreRef.current = onLoadMore;
@@ -34,19 +34,24 @@ export function useWindowCatalogScroll({
 
   useEffect(() => {
     if (!enabled || catalogMode === "search") {
+      nearEndRef.current = false;
       setNearEnd(false);
-      setHasUserScrolled(false);
       return;
     }
 
-    const syncScrollState = () => {
-      if (window.scrollY > 72) {
-        setHasUserScrolled(true);
+    const setNearEndIfChanged = (value: boolean) => {
+      if (nearEndRef.current === value) {
+        return;
       }
 
+      nearEndRef.current = value;
+      setNearEnd(value);
+    };
+
+    const syncScrollState = () => {
       const threshold = getScrollPrefetchThreshold();
       const isNearEnd = shouldPrefetchByScroll(threshold);
-      setNearEnd(isNearEnd);
+      setNearEndIfChanged(isNearEnd);
 
       if (isNearEnd && hasMoreRef.current && !isLoadingMoreRef.current) {
         onLoadMoreRef.current();
@@ -77,25 +82,7 @@ export function useWindowCatalogScroll({
         rafRef.current = null;
       }
     };
-  }, [catalogMode, enabled, hasMore]);
+  }, [catalogMode, enabled]);
 
-  useEffect(() => {
-    if (!enabled || catalogMode === "search" || isLoadingMore || !hasMore) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      if (!hasMoreRef.current || isLoadingMoreRef.current) {
-        return;
-      }
-
-      if (shouldPrefetchByScroll(getScrollPrefetchThreshold())) {
-        onLoadMoreRef.current();
-      }
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [catalogMode, enabled, hasMore, isLoadingMore]);
-
-  return { nearEnd, hasUserScrolled };
+  return { nearEnd };
 }

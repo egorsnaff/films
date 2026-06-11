@@ -190,27 +190,20 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
-  it("loads the next catalog page when the sentinel enters the viewport", async () => {
-    class MockIntersectionObserver {
-      private readonly callback: IntersectionObserverCallback;
-
-      constructor(callback: IntersectionObserverCallback) {
-        this.callback = callback;
-      }
-
-      observe() {
-        this.callback(
-          [{ isIntersecting: true } as IntersectionObserverEntry],
-          this as unknown as IntersectionObserver
-        );
-      }
-
-      unobserve() {}
-      disconnect() {}
-    }
-
-    window.IntersectionObserver =
-      MockIntersectionObserver as unknown as typeof IntersectionObserver;
+  it("loads the next catalog page when the user scrolls near the bottom", async () => {
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      configurable: true,
+      value: 4000
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 800
+    });
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 2800,
+      writable: true
+    });
 
     const fetchMock = createFetchMock((url) => {
       if (url.includes("page=2")) {
@@ -247,18 +240,15 @@ describe("App", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    try {
-      render(<App />);
+    render(<App />);
 
-      expect(await screen.findByText("Первая страница")).toBeInTheDocument();
-      await waitFor(() => {
-        expect(screen.getByText("Вторая страница")).toBeInTheDocument();
-      });
-      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
-    } finally {
-      window.IntersectionObserver =
-        NoopIntersectionObserver as unknown as typeof IntersectionObserver;
-    }
+    expect(await screen.findByText("Первая страница")).toBeInTheDocument();
+    window.dispatchEvent(new Event("scroll"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Вторая страница")).toBeInTheDocument();
+    });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
   });
 
   it("does not paginate search results", async () => {
