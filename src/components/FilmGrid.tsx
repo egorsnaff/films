@@ -50,11 +50,11 @@ export function FilmGrid({
         ? Array.from({ length: loadingSkeletonCount }).map((_, index) => (
             <span
               key={`catalog-skeleton-${index}`}
-              className="film-card film-card--skeleton"
+              className="catalog-skeleton-card film-card--skeleton"
               aria-hidden="true"
             >
-              <span className="film-card__poster film-skeleton" />
-              <span className="film-card__body">
+              <span className="catalog-skeleton-card__poster film-skeleton" />
+              <span className="catalog-skeleton-card__body">
                 <span className="catalog-skeleton-card__line catalog-skeleton-card__line--title" />
                 <span className="catalog-skeleton-card__line catalog-skeleton-card__line--meta" />
               </span>

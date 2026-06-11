@@ -2,8 +2,10 @@ import type { CatalogMode } from "./navigation";
 import { hasValidPosterUrl, type KinopoiskFilm } from "./kinopoisk";
 
 export const MIN_VISIBLE_BUFFER = 12;
-export const SCROLL_PREFETCH_VIEWPORTS = 2.75;
-export const MIN_SCROLL_PREFETCH_PX = 1800;
+export const SCROLL_PREFETCH_VIEWPORTS = 1.25;
+export const MIN_SCROLL_PREFETCH_PX = 900;
+export const MIN_CATALOG_LOAD_INTERVAL_MS = 450;
+export const MAX_AUTO_BUFFER_LOADS = 4;
 export const GRID_COLUMN_MIN_PX = 172;
 export const SKELETON_ROWS = 3;
 export const MIN_LOAD_MORE_SKELETON_COUNT = 12;
@@ -66,18 +68,28 @@ export function shouldShowCatalogSkeletons({
   catalogMode,
   hasMore,
   isLoadingMore,
-  nearEnd,
-  hasUserScrolled
+  nearEnd
 }: {
   catalogMode: CatalogMode;
   hasMore: boolean;
   isLoadingMore: boolean;
   nearEnd: boolean;
-  hasUserScrolled: boolean;
 }): boolean {
-  return (
-    catalogMode !== "search" &&
-    hasMore &&
-    (isLoadingMore || (nearEnd && hasUserScrolled))
-  );
+  if (catalogMode === "search" || !hasMore) {
+    return false;
+  }
+
+  if (isLoadingMore) {
+    return true;
+  }
+
+  if (!nearEnd) {
+    return false;
+  }
+
+  if (typeof document === "undefined") {
+    return true;
+  }
+
+  return document.documentElement.scrollHeight > window.innerHeight + 120;
 }

@@ -40,6 +40,8 @@ import {
   getAdaptiveSkeletonCount,
   mergeFilms,
   MIN_VISIBLE_BUFFER,
+  MIN_CATALOG_LOAD_INTERVAL_MS,
+  MAX_AUTO_BUFFER_LOADS,
   shouldShowCatalogSkeletons
 } from "./lib/catalogFeed";
 import {
@@ -134,6 +136,8 @@ export function App() {
   const [kinopoiskFilters, setKinopoiskFilters] = useState<KinopoiskFilters | null>(null);
   const [filtersStatus, setFiltersStatus] = useState<LoadState>("idle");
   const isFetchingMoreRef = useRef(false);
+  const lastCatalogLoadAtRef = useRef(0);
+  const autoBufferLoadsRef = useRef(0);
   const pageRef = useRef(1);
   const filmsRef = useRef<KinopoiskFilm[]>([]);
   const hasMoreRef = useRef(hasMore);
@@ -622,6 +626,7 @@ export function App() {
     }) => {
       if (replace) {
         setStatus("loading");
+        autoBufferLoadsRef.current = 0;
       } else {
         setIsLoadingMore(true);
         isFetchingMoreRef.current = true;
@@ -681,6 +686,12 @@ export function App() {
       return;
     }
 
+    const elapsed = Date.now() - lastCatalogLoadAtRef.current;
+    if (elapsed < MIN_CATALOG_LOAD_INTERVAL_MS) {
+      return;
+    }
+
+    lastCatalogLoadAtRef.current = Date.now();
     await loadCatalogPage({
       mode: catalogModeRef.current,
       nextPage: pageRef.current + 1,
@@ -696,21 +707,19 @@ export function App() {
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
   }, [loadCatalogPage]);
 
-  const { nearEnd: catalogNearEnd, hasUserScrolled: catalogHasUserScrolled } =
-    useWindowCatalogScroll({
-      enabled: view === "catalog",
-      catalogMode,
-      hasMore,
-      isLoadingMore,
-      onLoadMore: () => void loadNextPageRef.current()
-    });
+  const { nearEnd: catalogNearEnd } = useWindowCatalogScroll({
+    enabled: view === "catalog",
+    catalogMode,
+    hasMore,
+    isLoadingMore,
+    onLoadMore: () => void loadNextPageRef.current()
+  });
 
   const showCatalogSkeletons = shouldShowCatalogSkeletons({
     catalogMode,
     hasMore,
     isLoadingMore,
-    nearEnd: catalogNearEnd,
-    hasUserScrolled: catalogHasUserScrolled
+    nearEnd: catalogNearEnd
   });
 
   useEffect(() => {
@@ -732,11 +741,17 @@ export function App() {
       return;
     }
 
-    const visible = countVisibleFilms(filmsRef.current, "premieres", recommendationFilmIds);
-    if (visible >= MIN_VISIBLE_BUFFER) {
+    if (autoBufferLoadsRef.current >= MAX_AUTO_BUFFER_LOADS) {
       return;
     }
 
+    const visible = countVisibleFilms(filmsRef.current, "premieres", recommendationFilmIds);
+    if (visible >= MIN_VISIBLE_BUFFER) {
+      autoBufferLoadsRef.current = 0;
+      return;
+    }
+
+    autoBufferLoadsRef.current += 1;
     void loadCatalogPage({
       mode: "premieres",
       nextPage: pageRef.current + 1,
@@ -1076,7 +1091,7 @@ export function App() {
             >
               <FilmGrid
                 films={catalogGridFilms}
-                animate={status === "success" && !showCatalogSkeletons}
+                animate={status === "success" && !showCatalogSkeletons && catalogGridFilms.length <= 24}
                 loadingSkeletonCount={showCatalogSkeletons ? catalogSkeletonCount : 0}
                 onSelect={(film) => void openFilm(film)}
               />

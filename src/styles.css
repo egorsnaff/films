@@ -2122,7 +2122,12 @@ h1 em {
 }
 
 .catalog-feed--loading {
-  padding-bottom: min(10vh, 96px);
+  padding-bottom: min(6vh, 64px);
+}
+
+.catalog-feed .catalog-skeleton-card {
+  display: grid;
+  gap: 12px;
 }
 
 .catalog-feed--loading .film-card--skeleton .film-card__poster {
