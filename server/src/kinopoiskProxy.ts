@@ -6,6 +6,10 @@ import {
   getImdbTop250TvPage,
   IMDB_TOP_250_TV_TYPE
 } from "./imdbTop250Tv.js";
+import {
+  getTvSeriesCatalogTotalPages,
+  resolveTvSeriesCatalogPage
+} from "./tvSeriesCatalog.js";
 import { recordKinopoiskApiCall } from "./kpApiStats.js";
 import {
   readCache,
@@ -271,6 +275,10 @@ async function fetchRecentCatalogPage(
   page: number,
   type: "FILM" | "TV_SERIES"
 ): Promise<KinopoiskCatalogPage> {
+  if (type === "TV_SERIES") {
+    return fetchTvSeriesRecentCatalogPage(page);
+  }
+
   const cacheKey = `catalog:recent:${type}:${page}`;
   const { data } = await cachedRequest(cacheKey, "catalog", async () => {
     const params = new URLSearchParams({
@@ -289,11 +297,35 @@ async function fetchRecentCatalogPage(
   return data;
 }
 
+async function fetchTvSeriesRecentCatalogPage(globalPage: number): Promise<KinopoiskCatalogPage> {
+  const mapping = resolveTvSeriesCatalogPage(globalPage);
+  const cacheKey = `catalog:recent:TV_SERIES:${mapping.yearFrom}-${mapping.yearTo}:${mapping.segmentPage}`;
+  const { data } = await cachedRequest(cacheKey, "catalog", async () => {
+    const params = new URLSearchParams({
+      order: "YEAR",
+      type: "TV_SERIES",
+      ratingFrom: "6",
+      ratingTo: "10",
+      yearFrom: String(mapping.yearFrom),
+      yearTo: String(mapping.yearTo),
+      page: String(mapping.segmentPage)
+    });
+    const response = await requestKinopoisk<SearchFilmResponse>(`/v2.2/films?${params.toString()}`);
+    return mapCatalogPage(response, mapping.segmentPage);
+  });
+
+  return {
+    films: data.films,
+    page: mapping.globalPage,
+    totalPages: getTvSeriesCatalogTotalPages()
+  };
+}
+
 export async function getRecentCatalog(
   page: number,
   type: "FILM" | "TV_SERIES"
 ): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
-  const cacheKey = `catalog:recent:${type}:buffered:v2:${page}`;
+  const cacheKey = `catalog:recent:${type}:buffered:v3:${page}`;
   const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () =>
     bufferCatalogPage((nextPage) => fetchRecentCatalogPage(nextPage, type), page)
   );
