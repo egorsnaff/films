@@ -225,6 +225,46 @@ describe("App", () => {
     expect(screen.getAllByText("Побег из Шоушенка").length).toBeGreaterThan(0);
   });
 
+  it("opens the full IMDb top list when the shelf show-more card is clicked", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock((url) => {
+        const top = mockTopCatalog(url, {
+          imdbFilms: [
+            {
+              kinopoiskId: 326,
+              title: "Побег из Шоушенка",
+              year: "1994",
+              posterUrl: "https://example.test/imdb-shelf.jpg"
+            }
+          ],
+          feedFilms: [
+            {
+              kinopoiskId: 77,
+              title: "Премьера недели",
+              year: "2026",
+              posterUrl: "https://example.test/premiere.jpg"
+            }
+          ]
+        });
+        if (top) {
+          return top;
+        }
+
+        return undefined;
+      })
+    );
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Показать ещё" }));
+
+    expect(
+      await screen.findByRole("heading", { name: IMDB_FILMS_SHELF_TITLE })
+    ).toBeInTheDocument();
+  });
+
   it("hides premieres without posters on the home page", async () => {
     vi.stubGlobal(
       "fetch",

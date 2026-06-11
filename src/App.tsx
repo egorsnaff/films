@@ -21,7 +21,8 @@ import {
   createImdbFilmsTopFilter,
   createImdbSerialsTopFilter,
   IMDB_FILMS_SHELF_TITLE,
-  IMDB_SERIALS_SHELF_TITLE
+  IMDB_SERIALS_SHELF_TITLE,
+  isImdbTopCatalogFilter
 } from "./data/imdbShelves";
 import type { BrowseMedia, CatalogFilter, KinopoiskFilters } from "./lib/catalogFilter";
 import { getCatalogFilterMediaType } from "./lib/catalogFilter";
@@ -103,8 +104,8 @@ const catalogHeadings: Record<
     text: ""
   },
   serials: {
-    eyebrow: "series",
-    title: "Сериалы",
+    eyebrow: "",
+    title: "Список последних новинок",
     text: ""
   }
 };
@@ -1005,6 +1006,8 @@ export function App() {
     catalogMode !== "premieres" &&
     catalogMode !== "serials" &&
     Boolean(heading.eyebrow || heading.title || heading.text);
+  const showCompactCatalogHeading =
+    catalogMode === "filtered" && isImdbTopCatalogFilter(catalogFilter) && Boolean(heading.title);
   const homeCatalogTitle =
     catalogMode === "premieres" ? catalogHeadings.premieres.title : "";
   const serialCatalogTitle = catalogMode === "serials" ? catalogHeadings.serials.title : "";
@@ -1081,11 +1084,17 @@ export function App() {
         <div key={view} className="page-stage page-stage--enter">
       {view === "catalog" ? (
         <section className="home-view" id="main">
-          {showTopCatalogHeading ? (
+          {showTopCatalogHeading && !showCompactCatalogHeading ? (
             <div className="section-heading section-heading--home">
               {heading.eyebrow ? <p className="eyebrow">{heading.eyebrow}</p> : null}
               {heading.title ? <h1>{heading.title}</h1> : null}
               {heading.text ? <p>{heading.text}</p> : null}
+            </div>
+          ) : null}
+
+          {showCompactCatalogHeading ? (
+            <div className="section-heading section-heading--shelf">
+              <h2>{heading.title}</h2>
             </div>
           ) : null}
 
@@ -1105,8 +1114,10 @@ export function App() {
               <FilmShelf
                 title={imdbShelfTitle}
                 films={visibleImdbShelfFilms}
+                showCount={false}
                 onSelect={(film) => void openFilm(film)}
                 onTitleClick={openImdbTopShelfPage}
+                onShowMore={openImdbTopShelfPage}
               />
             </aside>
           ) : null}

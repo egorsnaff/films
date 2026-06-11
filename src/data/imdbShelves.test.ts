@@ -4,7 +4,8 @@ import {
   createImdbFilmsTopFilter,
   createImdbSerialsTopFilter,
   IMDB_FILMS_SHELF_TITLE,
-  IMDB_SERIALS_SHELF_TITLE
+  IMDB_SERIALS_SHELF_TITLE,
+  isImdbTopCatalogFilter
 } from "./imdbShelves";
 
 describe("imdbShelves", () => {
@@ -21,5 +22,11 @@ describe("imdbShelves", () => {
       media: "serials",
       topType: "IMDB_TOP_250_TV"
     });
+  });
+
+  it("detects IMDb top catalog filters", () => {
+    expect(isImdbTopCatalogFilter(createImdbFilmsTopFilter())).toBe(true);
+    expect(isImdbTopCatalogFilter(createImdbSerialsTopFilter())).toBe(true);
+    expect(isImdbTopCatalogFilter(null)).toBe(false);
   });
 });
