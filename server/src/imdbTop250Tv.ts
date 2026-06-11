@@ -72,7 +72,7 @@ export async function getImdbTop250TvPage(
   const ids = getImdbTop250TvKinopoiskIds();
   const totalPages = getImdbTop250TvTotalPages();
   const start = (safePage - 1) * IMDB_TOP_250_TV_PAGE_SIZE;
-  const slice = ids.slice(start, start + IMDB_TOP_250_PAGE_SIZE);
+  const slice = ids.slice(start, start + IMDB_TOP_250_TV_PAGE_SIZE);
   const filmsById = await ensureFilmsCached(slice, slice.length);
 
   const films = slice

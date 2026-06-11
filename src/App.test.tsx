@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+import { IMDB_FILMS_SHELF_TITLE } from "./data/imdbShelves";
 
 type MockFilm = {
   kinopoiskId: number;
@@ -35,6 +36,34 @@ type FetchResponse = {
   status?: number;
   json: () => Promise<unknown>;
 };
+
+function mockTopCatalog(
+  url: string,
+  options: {
+    imdbFilms?: MockFilm[];
+    feedFilms?: MockFilm[];
+    feedPage?: number;
+    feedTotalPages?: number;
+  }
+): FetchResponse | undefined {
+  if (!url.includes("/api/kp/top")) {
+    return undefined;
+  }
+
+  if (url.includes("IMDB_TOP_250")) {
+    return catalogResponse(options.imdbFilms ?? [], 1, 13);
+  }
+
+  if (url.includes("TOP_100_POPULAR_FILMS")) {
+    return catalogResponse(
+      options.feedFilms ?? [],
+      options.feedPage ?? 1,
+      options.feedTotalPages ?? 1
+    );
+  }
+
+  return undefined;
+}
 
 function createFetchMock(handlers: (url: string) => FetchResponse | undefined) {
   return vi.fn().mockImplementation((input: RequestInfo) => {
@@ -123,21 +152,63 @@ describe("App", () => {
   it("renders a default premieres collection on the home page", async () => {
     vi.stubGlobal(
       "fetch",
+      createFetchMock((url) =>
+        mockTopCatalog(url, {
+          imdbFilms: [
+            {
+              kinopoiskId: 326,
+              title: "Побег из Шоушенка",
+              year: "1994",
+              posterUrl: "https://example.test/imdb-shelf.jpg"
+            }
+          ],
+          feedFilms: [
+            {
+              kinopoiskId: 77,
+              title: "Премьера недели",
+              year: "2026",
+              posterUrl: "https://example.test/premiere.jpg",
+              rating: "7.7"
+            }
+          ],
+          feedTotalPages: 3
+        })
+      )
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("button", { name: IMDB_FILMS_SHELF_TITLE })).toBeInTheDocument();
+    expect(await screen.findByText("Побег из Шоушенка")).toBeInTheDocument();
+    expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Загрузить ещё" })).toBeInTheDocument();
+  });
+
+  it("opens the full IMDb top list when the shelf title is clicked", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
       createFetchMock((url) => {
-        if (url.includes("/api/kp/top")) {
-          return catalogResponse(
-            [
-              {
-                kinopoiskId: 77,
-                title: "Премьера недели",
-                year: "2026",
-                posterUrl: "https://example.test/premiere.jpg",
-                rating: "7.7"
-              }
-            ],
-            1,
-            3
-          );
+        const top = mockTopCatalog(url, {
+          imdbFilms: [
+            {
+              kinopoiskId: 326,
+              title: "Побег из Шоушенка",
+              year: "1994",
+              posterUrl: "https://example.test/imdb-shelf.jpg"
+            }
+          ],
+          feedFilms: [
+            {
+              kinopoiskId: 77,
+              title: "Премьера недели",
+              year: "2026",
+              posterUrl: "https://example.test/premiere.jpg"
+            }
+          ]
+        });
+        if (top) {
+          return top;
         }
 
         return undefined;
@@ -146,17 +217,20 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
-    expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Загрузить ещё" })).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: IMDB_FILMS_SHELF_TITLE }));
+
+    expect(
+      await screen.findByRole("heading", { name: IMDB_FILMS_SHELF_TITLE })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Побег из Шоушенка").length).toBeGreaterThan(0);
   });
 
   it("hides premieres without posters on the home page", async () => {
     vi.stubGlobal(
       "fetch",
-      createFetchMock((url) => {
-        if (url.includes("/api/kp/top")) {
-          return catalogResponse([
+      createFetchMock((url) =>
+        mockTopCatalog(url, {
+          feedFilms: [
             {
               kinopoiskId: 11,
               title: "С постером",
@@ -174,11 +248,9 @@ describe("App", () => {
               year: "2026",
               posterUrl: "https://kinopoiskapiunofficial.tech/images/posters/kp/no-poster.png"
             }
-          ]);
-        }
-
-        return undefined;
-      })
+          ]
+        })
+      )
     );
 
     render(<App />);
@@ -218,17 +290,18 @@ describe("App", () => {
       }
 
       if (url.includes("/api/kp/top")) {
-        return catalogResponse(
-          [
-            {
-              kinopoiskId: 77,
-              title: "Премьера недели",
-              year: "2026",
-              posterUrl: "https://example.test/premiere.jpg"
-            }
-          ],
-          1,
-          3
+        return (
+          mockTopCatalog(url, {
+            feedFilms: [
+              {
+                kinopoiskId: 77,
+                title: "Премьера недели",
+                year: "2026",
+                posterUrl: "https://example.test/premiere.jpg"
+              }
+            ],
+            feedTotalPages: 3
+          }) ?? catalogResponse([])
         );
       }
 
@@ -449,15 +522,28 @@ describe("App", () => {
       }
 
       if (url.includes("/api/kp/top")) {
-        return catalogResponse([
-          {
-            kinopoiskId: 301,
-            title: "Матрица",
-            year: "1999",
-            posterUrl: "https://example.test/matrix.jpg",
-            rating: "8.5"
-          }
-        ]);
+        return (
+          mockTopCatalog(url, {
+            imdbFilms: [
+              {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg",
+                rating: "8.5"
+              }
+            ],
+            feedFilms: [
+              {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg",
+                rating: "8.5"
+              }
+            ]
+          }) ?? catalogResponse([])
+        );
       }
 
       return undefined;
@@ -489,15 +575,28 @@ describe("App", () => {
       }
 
       if (url.includes("/api/kp/top")) {
-        return catalogResponse([
-          {
-            kinopoiskId: 301,
-            title: "Матрица",
-            year: "1999",
-            posterUrl: "https://example.test/matrix.jpg",
-            rating: "8.5"
-          }
-        ]);
+        return (
+          mockTopCatalog(url, {
+            imdbFilms: [
+              {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg",
+                rating: "8.5"
+              }
+            ],
+            feedFilms: [
+              {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg",
+                rating: "8.5"
+              }
+            ]
+          }) ?? catalogResponse([])
+        );
       }
 
       return undefined;
@@ -608,15 +707,28 @@ describe("App", () => {
       }
 
       if (url.includes("/api/kp/top")) {
-        return catalogResponse([
-          {
-            kinopoiskId: 326,
-            title: "Побег из Шоушенка",
-            year: "1994",
-            posterUrl: "https://example.test/shawshank.jpg",
-            rating: "9.1"
-          }
-        ]);
+        return (
+          mockTopCatalog(url, {
+            imdbFilms: [
+              {
+                kinopoiskId: 326,
+                title: "Побег из Шоушенка",
+                year: "1994",
+                posterUrl: "https://example.test/shawshank.jpg",
+                rating: "9.1"
+              }
+            ],
+            feedFilms: [
+              {
+                kinopoiskId: 326,
+                title: "Побег из Шоушенка",
+                year: "1994",
+                posterUrl: "https://example.test/shawshank.jpg",
+                rating: "9.1"
+              }
+            ]
+          }) ?? catalogResponse([])
+        );
       }
 
       return undefined;

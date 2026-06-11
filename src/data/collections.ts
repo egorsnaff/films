@@ -15,7 +15,7 @@ export type FilmCollection = {
 export const filmCollections: FilmCollection[] = [
   {
     id: "top-250",
-    title: "250 лучших фильмов",
+    title: "250 лучших фильмов (IMDb)",
     description: "IMDb Top 250 по версии русской Wikipedia — сопоставлено с Кинопоиском.",
     accent: "#f0b75b",
     source: { kind: "top", type: "IMDB_TOP_250" }
