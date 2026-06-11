@@ -208,12 +208,12 @@ export function App() {
   const recommendationFilmIdsRef = useRef(recommendationFilmIds);
   recommendationFilmIdsRef.current = showRecommendations ? recommendationFilmIds : new Set<number>();
   const catalogGridFilms = useMemo(() => {
-    if (recommendationFilmIds.size === 0) {
+    if (!showRecommendations || recommendationFilmIds.size === 0) {
       return visibleFilms;
     }
 
     return visibleFilms.filter((film) => !recommendationFilmIds.has(film.kinopoiskId));
-  }, [recommendationFilmIds, visibleFilms]);
+  }, [recommendationFilmIds, showRecommendations, visibleFilms]);
   const visibleSimilarFilms = useMemo(
     () => similarFilms.filter((film) => hasValidPosterUrl(film.posterUrl)),
     [similarFilms]
@@ -635,7 +635,7 @@ export function App() {
       setError(null);
 
       const appendPage = async (pageNumber: number, reset: boolean) => {
-        const activeFilter = filter ?? catalogFilterRef.current;
+        const activeFilter = filter !== undefined ? filter : catalogFilterRef.current;
         const catalogPage = await fetchCatalogPage(
           client,
           mode,
@@ -863,17 +863,23 @@ export function App() {
       setView("catalog");
 
       if (item === "Главная") {
-        await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+        setCatalogMode("premieres");
+        catalogModeRef.current = "premieres";
+        await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true, filter: null });
         return;
       }
 
       if (item === "Фильмы") {
-        await loadCatalogPage({ mode: "films", nextPage: 1, replace: true });
+        setCatalogMode("films");
+        catalogModeRef.current = "films";
+        await loadCatalogPage({ mode: "films", nextPage: 1, replace: true, filter: null });
         return;
       }
 
       if (item === "Сериалы") {
-        await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true });
+        setCatalogMode("serials");
+        catalogModeRef.current = "serials";
+        await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true, filter: null });
       }
     } finally {
       requestHistoryCommit(pushHistory);
@@ -963,7 +969,11 @@ export function App() {
           title: catalogFilter.title,
           text: ""
         }
-      : catalogHeadings[catalogMode as Exclude<CatalogMode, "filtered">];
+      : (catalogHeadings[catalogMode as Exclude<CatalogMode, "filtered">] ?? {
+          eyebrow: "",
+          title: "",
+          text: ""
+        });
   const showCatalogHeading = Boolean(heading.eyebrow || heading.title || heading.text);
 
   return (

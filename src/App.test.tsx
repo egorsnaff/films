@@ -190,6 +190,81 @@ describe("App", () => {
     expect(screen.queryByText("Нет постера")).not.toBeInTheDocument();
   });
 
+  it("loads films section after leaving a filtered catalog view", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.includes("/api/kp/filters")) {
+        return {
+          ok: true,
+          json: async () => ({
+            genres: [{ id: 1, genre: "драма" }],
+            countries: []
+          })
+        };
+      }
+
+      if (url.includes("/api/kp/catalog/filter")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 501,
+              title: "Фильтрованная драма",
+              year: "2024",
+              posterUrl: "https://example.test/filtered.jpg"
+            }
+          ],
+          1,
+          3
+        );
+      }
+
+      if (url.includes("/api/kp/collections") && url.includes("TOP_POPULAR_MOVIES")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 601,
+              title: "Популярный фильм ленты",
+              year: "2025",
+              posterUrl: "https://example.test/films-feed.jpg"
+            }
+          ],
+          1,
+          3
+        );
+      }
+
+      if (url.includes("/api/kp/top")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 77,
+              title: "Премьера недели",
+              year: "2026",
+              posterUrl: "https://example.test/premiere.jpg"
+            }
+          ],
+          1,
+          3
+        );
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Каталог" }));
+    await user.click(await screen.findByRole("button", { name: "драма" }));
+
+    expect(await screen.findByText("Фильтрованная драма")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Фильмы" }));
+
+    expect(await screen.findByText("Популярный фильм ленты")).toBeInTheDocument();
+    expect(screen.queryByText("Фильтрованная драма")).not.toBeInTheDocument();
+  });
+
   it("loads the next catalog page when the user scrolls near the bottom", async () => {
     Object.defineProperty(document.documentElement, "scrollHeight", {
       configurable: true,

@@ -191,11 +191,12 @@ export async function bufferCatalogPage(
   const collected: CachedFilm[] = [];
   const seen = new Set<number>();
   let nextStartPage = startPage;
-  let totalPages = 1;
+  let totalPages: number | null = null;
   let consumedPages = 0;
 
   const collectFromPage = (result: KinopoiskCatalogPage, pageNumber: number) => {
-    totalPages = Math.max(totalPages, result.totalPages);
+    totalPages =
+      totalPages === null ? result.totalPages : Math.max(totalPages, result.totalPages);
 
     for (const film of result.films) {
       if (!hasDisplayablePoster(film) || seen.has(film.kinopoiskId)) {
@@ -215,7 +216,7 @@ export async function bufferCatalogPage(
     const pageNumbers = Array.from(
       { length: currentBatchSize },
       (_, index) => nextStartPage + index
-    ).filter((pageNumber) => pageNumber <= totalPages);
+    ).filter((pageNumber) => totalPages === null || pageNumber <= totalPages);
 
     if (pageNumbers.length === 0) {
       break;
@@ -228,26 +229,31 @@ export async function bufferCatalogPage(
       lastConsumedPage = collectFromPage(results[index], pageNumbers[index]);
       consumedPages += 1;
 
-      if (collected.length >= minFilms || pageNumbers[index] >= totalPages) {
+      if (
+        collected.length >= minFilms ||
+        (totalPages !== null && pageNumbers[index] >= totalPages)
+      ) {
         return {
           films: collected,
           page: lastConsumedPage,
-          totalPages
+          totalPages: totalPages ?? pageNumbers[index]
         };
       }
     }
 
     nextStartPage += pageNumbers.length;
 
-    if (nextStartPage > totalPages) {
+    if (totalPages !== null && nextStartPage > totalPages) {
       break;
     }
   }
 
+  const resolvedTotalPages = totalPages ?? Math.max(startPage, nextStartPage - 1);
+
   return {
     films: collected,
-    page: Math.min(Math.max(startPage, nextStartPage - 1), totalPages),
-    totalPages
+    page: Math.min(Math.max(startPage, nextStartPage - 1), resolvedTotalPages),
+    totalPages: resolvedTotalPages
   };
 }
 
@@ -277,7 +283,7 @@ export async function getRecentCatalog(
   page: number,
   type: "FILM" | "TV_SERIES"
 ): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
-  const cacheKey = `catalog:recent:${type}:buffered:${page}`;
+  const cacheKey = `catalog:recent:${type}:buffered:v2:${page}`;
   const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () =>
     bufferCatalogPage((nextPage) => fetchRecentCatalogPage(nextPage, type), page)
   );
@@ -338,7 +344,7 @@ export async function getTopList(
     throw new Error("Некорректный тип топа");
   }
 
-  const cacheKey = `top:${type}:buffered:${page}`;
+  const cacheKey = `top:${type}:buffered:v2:${page}`;
   const { data, fromCache } = await cachedRequest(cacheKey, "list", async () =>
     bufferCatalogPage((nextPage) => fetchTopListPage(type, nextPage), page)
   );
@@ -390,7 +396,7 @@ async function fetchThemeList(
   type: string,
   page: number
 ): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
-  const cacheKey = `theme:${type}:buffered:${page}`;
+  const cacheKey = `theme:${type}:buffered:v2:${page}`;
   const { data, fromCache } = await cachedRequest(cacheKey, "list", async () =>
     bufferCatalogPage((nextPage) => fetchThemeListPage(type, nextPage), page)
   );
@@ -493,7 +499,7 @@ async function fetchFilterCatalogPage(params: FilterCatalogParams): Promise<Kino
 export async function getFilterCatalog(
   params: FilterCatalogParams
 ): Promise<{ page: KinopoiskCatalogPage; fromCache: boolean }> {
-  const cacheKey = `${buildFilterCatalogCacheKey(params, params.page)}:buffered`;
+  const cacheKey = `${buildFilterCatalogCacheKey(params, params.page)}:buffered:v2`;
   const { data, fromCache } = await cachedRequest(cacheKey, "catalog", async () =>
     bufferCatalogPage(
       (nextPage) => fetchFilterCatalogPage({ ...params, page: nextPage }),

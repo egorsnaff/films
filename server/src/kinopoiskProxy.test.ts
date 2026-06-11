@@ -50,11 +50,11 @@ describe("bufferCatalogPage", () => {
       totalPages: 6
     }));
 
-    await bufferCatalogPage(fetchPage, 1, { minFilms: 4, maxFetches: 6, batchSize: 4 });
+    const result = await bufferCatalogPage(fetchPage, 1, { minFilms: 4, maxFetches: 6, batchSize: 4 });
 
-    expect(fetchPage).toHaveBeenCalledTimes(5);
-    expect(fetchPage.mock.calls.map(([page]) => page)).toEqual([1, 2, 3, 4, 5]);
-    expect(new Set(fetchPage.mock.calls.slice(1).map(([page]) => page)).size).toBe(4);
+    expect(result.films).toHaveLength(4);
+    expect(fetchPage).toHaveBeenCalledTimes(4);
+    expect(fetchPage.mock.calls.map(([page]) => page)).toEqual([1, 2, 3, 4]);
   });
 
   it("stops at the last available source page", async () => {
@@ -70,11 +70,37 @@ describe("bufferCatalogPage", () => {
       totalPages: 2
     }));
 
-    const result = await bufferCatalogPage(fetchPage, 1, { minFilms: 24, maxFetches: 10 });
+    const result = await bufferCatalogPage(fetchPage, 1, {
+      minFilms: 24,
+      maxFetches: 10,
+      batchSize: 1
+    });
 
     expect(result.films).toHaveLength(2);
     expect(result.page).toBe(2);
     expect(fetchPage).toHaveBeenCalledTimes(2);
+    expect(fetchPage.mock.calls.map(([page]) => page)).toEqual([1, 2]);
+  });
+
+  it("loads later logical pages when startPage is greater than one", async () => {
+    const fetchPage = vi.fn(async (page: number) => ({
+      films: [
+        {
+          kinopoiskId: page * 10,
+          title: `Film ${page}`,
+          posterUrl: "https://example.test/poster.jpg"
+        }
+      ],
+      page,
+      totalPages: 8
+    }));
+
+    const result = await bufferCatalogPage(fetchPage, 5, { minFilms: 3, maxFetches: 4, batchSize: 4 });
+
+    expect(result.films.map((film) => film.kinopoiskId)).toEqual([50, 60, 70]);
+    expect(result.page).toBe(7);
+    expect(result.totalPages).toBe(8);
+    expect(fetchPage.mock.calls.map(([page]) => page)).toEqual([5, 6, 7, 8]);
   });
 });
 
