@@ -106,8 +106,7 @@ describe("App", () => {
 
     const header = screen.getByRole("banner", { name: "Навигация" });
 
-    expect(screen.getByRole("button", { name: "Главная" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Фильмы" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Фильмы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сериалы" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Каталог" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Профиль" })).toBeInTheDocument();
@@ -244,7 +243,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Фильтрованная драма")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Главная" }));
+    await user.click(screen.getByRole("button", { name: "Фильмы" }));
 
     expect(await screen.findByText("Премьера недели")).toBeInTheDocument();
     expect(screen.queryByText("Фильтрованная драма")).not.toBeInTheDocument();
@@ -510,7 +509,7 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: /Матрица/ }));
     expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "На главную" }));
+    await user.click(screen.getByRole("button", { name: "К фильмам" }));
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Матрица/ })).toBeInTheDocument();

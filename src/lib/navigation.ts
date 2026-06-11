@@ -2,9 +2,9 @@ import type { BrowseMedia, CatalogFilter } from "./catalogFilter";
 
 export type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile" | "browse";
 export type CatalogMode = "premieres" | "search" | "films" | "serials" | "filtered";
-export type MenuItem = "Главная" | "Сериалы" | "Каталог" | "Профиль";
+export type MenuItem = "Фильмы" | "Сериалы" | "Каталог" | "Профиль";
 
-export type LegacyMenuItem = MenuItem | "Фильмы";
+export type LegacyMenuItem = MenuItem | "Главная";
 
 export type NavigationSnapshot = {
   view: ViewState;
@@ -20,7 +20,7 @@ export type NavigationSnapshot = {
 
 export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
   if (!snapshot) {
-    return "На главную";
+    return "К фильмам";
   }
 
   switch (snapshot.view) {
@@ -47,7 +47,7 @@ export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
       if (snapshot.catalogMode === "serials") {
         return "К сериалам";
       }
-      return "На главную";
+      return "К фильмам";
     default:
       return "Назад";
   }

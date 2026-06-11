@@ -76,7 +76,7 @@ const playerTemplates =
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const menuItems: MenuItem[] = ["Главная", "Сериалы", "Каталог", "Профиль"];
+const menuItems: MenuItem[] = ["Фильмы", "Сериалы", "Каталог", "Профиль"];
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
@@ -114,7 +114,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [view, setView] = useState<ViewState>("catalog");
-  const [activeMenu, setActiveMenu] = useState<MenuItem>("Главная");
+  const [activeMenu, setActiveMenu] = useState<MenuItem>("Фильмы");
   const [catalogMode, setCatalogMode] = useState<CatalogMode>("premieres");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -418,7 +418,7 @@ export function App() {
 
   const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => ({
     view: "catalog",
-    activeMenu: "Главная",
+    activeMenu: "Фильмы",
     catalogMode: "premieres",
     collectionId: null,
     filmId: null,
@@ -465,8 +465,10 @@ export function App() {
       const restoredCatalogMode =
         snapshot.catalogMode === "films" ? "premieres" : snapshot.catalogMode;
       const restoredActiveMenu =
-        snapshot.activeMenu === "Фильмы" || snapshot.catalogMode === "films"
-          ? "Главная"
+        snapshot.activeMenu === "Главная" ||
+        snapshot.activeMenu === "Фильмы" ||
+        snapshot.catalogMode === "films"
+          ? "Фильмы"
           : snapshot.activeMenu;
 
       setActiveMenu(restoredActiveMenu);
@@ -624,7 +626,7 @@ export function App() {
       }
 
       setView("catalog");
-      setActiveMenu("Главная");
+      setActiveMenu("Фильмы");
       setSelectedFilm(null);
       setWatchPreviewFilm(null);
       setDetailsStatus("idle");
@@ -677,7 +679,7 @@ export function App() {
         void restoreSnapshot(snapshot);
       } else {
         setView("catalog");
-        setActiveMenu("Главная");
+        setActiveMenu("Фильмы");
         setCatalogMode("premieres");
         setCollectionId(null);
         setSelectedFilm(null);
@@ -881,7 +883,7 @@ export function App() {
     beginHistoryEntry();
     setSelectedFilm(null);
     setView("catalog");
-    setActiveMenu("Главная");
+    setActiveMenu("Фильмы");
     setIsSearchOpen(false);
     await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
     requestHistoryCommit();
@@ -973,7 +975,7 @@ export function App() {
       catalogFilterRef.current = null;
       setView("catalog");
 
-      if (item === "Главная") {
+      if (item === "Фильмы") {
         setCatalogMode("premieres");
         catalogModeRef.current = "premieres";
         await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true, filter: null });
@@ -1032,7 +1034,7 @@ export function App() {
     setCatalogFilter(null);
     catalogFilterRef.current = null;
     setView("catalog");
-    setActiveMenu("Главная");
+    setActiveMenu("Фильмы");
     setSelectedFilm(null);
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
