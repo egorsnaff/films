@@ -84,7 +84,7 @@ const catalogHeadings: Record<
 > = {
   premieres: {
     eyebrow: "",
-    title: "",
+    title: "Список последних новинок",
     text: ""
   },
   search: {
