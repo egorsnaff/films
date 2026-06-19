@@ -1,10 +1,10 @@
 type BrandMarkProps = {
-  onClick: () => void;
+  onClick?: () => void;
 };
 
 export function BrandMark({ onClick }: BrandMarkProps) {
-  return (
-    <button className="brand-mark" type="button" onClick={onClick} aria-label="Сеанс — на главную">
+  const content = (
+    <>
       <span className="brand-mark__glyph" aria-hidden="true">
         <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -20,6 +20,25 @@ export function BrandMark({ onClick }: BrandMarkProps) {
         <strong>Сеанс</strong>
         <small>кино для вечера</small>
       </span>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className="brand-mark brand-mark--static" aria-label="Сеанс">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      className="brand-mark"
+      type="button"
+      onClick={onClick}
+      aria-label="Сеанс — на главную"
+    >
+      {content}
     </button>
   );
 }

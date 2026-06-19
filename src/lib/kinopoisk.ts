@@ -142,6 +142,10 @@ export function createKinopoiskClient({
         throw new Error(payload.error);
       }
 
+      if (response.status === 401) {
+        throw new Error("Требуется авторизация");
+      }
+
       if (response.status === 502 || response.status === 503) {
         const fallback =
           response.status === 503
