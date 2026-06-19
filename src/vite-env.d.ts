@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_BASE_PATH?: string;
   readonly VITE_KINOPOISK_API_KEY?: string;
   readonly VITE_KINOPOISK_API_BASE_URL?: string;
+  readonly VITE_AUTH_GATE?: string;
   readonly VITE_ALLOHA_TOKEN?: string;
   readonly VITE_API_ALOHA_KEY?: string;
   readonly VITE_ENABLE_ALLOHA?: string;

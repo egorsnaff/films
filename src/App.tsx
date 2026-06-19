@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
+import { AuthGateScreen } from "./components/AuthGateScreen";
 import { BackButton } from "./components/BackButton";
 import { BrandMark } from "./components/BrandMark";
 import { BrowseMenu } from "./components/BrowseMenu";
@@ -45,6 +46,7 @@ import {
   getDefaultPlayerTemplates,
   parsePlayerTemplates
 } from "./lib/playerSources";
+import { isAuthGateEnabled } from "./lib/authGate";
 import {
   pushAppHistory,
   readHistorySnapshot,
@@ -139,6 +141,7 @@ export function App() {
   const [collectionStatus, setCollectionStatus] = useState<LoadState>("idle");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authStatus, setAuthStatus] = useState<LoadState>("idle");
+  const [sessionChecked, setSessionChecked] = useState(!isAuthGateEnabled());
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
@@ -167,6 +170,7 @@ export function App() {
   const catalogModeRef = useRef(catalogMode);
   const catalogFilterRef = useRef<CatalogFilter | null>(null);
   const queryRef = useRef(query);
+  const authGateEnabled = isAuthGateEnabled();
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
   const pendingWatchFilmIdRef = useRef<number | null>(null);
   const [topbarScrolled, setTopbarScrolled] = useState(false);
@@ -278,13 +282,24 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!authGateEnabled) {
+      void siteApi.getSession().then((user) => {
+        setAuthUser(user);
+        if (user) {
+          void refreshUserLists();
+        }
+      });
+      return;
+    }
+
     void siteApi.getSession().then((user) => {
       setAuthUser(user);
+      setSessionChecked(true);
       if (user) {
         void refreshUserLists();
       }
     });
-  }, [refreshUserLists]);
+  }, [authGateEnabled, refreshUserLists]);
 
   useEffect(() => {
     if (view !== "catalog") {
@@ -778,8 +793,12 @@ export function App() {
   loadNextPageRef.current = loadNextPage;
 
   useEffect(() => {
+    if (authGateEnabled && !authUser) {
+      return;
+    }
+
     void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-  }, [loadCatalogPage]);
+  }, [authGateEnabled, authUser, loadCatalogPage]);
 
   const { nearEnd: catalogNearEnd } = useWindowCatalogScroll({
     enabled: view === "catalog",
@@ -1025,6 +1044,7 @@ export function App() {
       const user = await siteApi.login(loginForm.username, loginForm.password);
       setAuthUser(user);
       setAuthStatus("success");
+      setLoginForm({ username: "", password: "" });
       await refreshUserLists();
     } catch (loginError) {
       setError(getErrorMessage(loginError));
@@ -1038,6 +1058,14 @@ export function App() {
     setUserLists([]);
     setListFilms({});
     setSelectedLists([]);
+    setError(null);
+    if (authGateEnabled) {
+      setView("catalog");
+      setActiveMenu("Фильмы");
+      setSelectedFilm(null);
+      setWatchPreviewFilm(null);
+      setDetailsStatus("idle");
+    }
   }
 
   const heading =
@@ -1061,6 +1089,35 @@ export function App() {
   const homeCatalogTitle =
     catalogMode === "premieres" ? catalogHeadings.premieres.title : "";
   const serialCatalogTitle = catalogMode === "serials" ? catalogHeadings.serials.title : "";
+
+  if (authGateEnabled && !sessionChecked) {
+    return (
+      <AuthGateScreen
+        username={loginForm.username}
+        password={loginForm.password}
+        error={error}
+        isSubmitting={false}
+        isCheckingSession
+        onUsernameChange={(value) => setLoginForm((current) => ({ ...current, username: value }))}
+        onPasswordChange={(value) => setLoginForm((current) => ({ ...current, password: value }))}
+        onSubmit={handleLogin}
+      />
+    );
+  }
+
+  if (authGateEnabled && !authUser) {
+    return (
+      <AuthGateScreen
+        username={loginForm.username}
+        password={loginForm.password}
+        error={error}
+        isSubmitting={authStatus === "loading"}
+        onUsernameChange={(value) => setLoginForm((current) => ({ ...current, username: value }))}
+        onPasswordChange={(value) => setLoginForm((current) => ({ ...current, password: value }))}
+        onSubmit={handleLogin}
+      />
+    );
+  }
 
   return (
     <>
@@ -1306,57 +1363,27 @@ export function App() {
 
       {view === "profile" ? (
         <section className="profile-view" id="main">
-          {!authUser ? (
-            <div className="profile-login-wrap">
-              <form className="profile-login" onSubmit={handleLogin}>
-                <h1>Вход</h1>
-                <label>
-                  Логин
-                  <input
-                    value={loginForm.username}
-                    onChange={(event) =>
-                      setLoginForm((current) => ({ ...current, username: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  Пароль
-                  <input
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(event) =>
-                      setLoginForm((current) => ({ ...current, password: event.target.value }))
-                    }
-                  />
-                </label>
-                <button type="submit" disabled={authStatus === "loading"}>
-                  {authStatus === "loading" ? "Входим..." : "Войти"}
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div className="profile-shelves">
-              {(["favorite", "watching", "plan", "waiting", "watched"] as WatchStatus[]).map(
-                (statusKey) => {
-                  const items = userLists.filter((item) => item.lists.includes(statusKey));
-                  const films = items
-                    .map((item) => listFilms[item.kinopoiskId])
-                    .filter((film): film is KinopoiskFilm => Boolean(film));
-                  const showProgress = statusKey === "watching" || statusKey === "watched";
+          <div className="profile-shelves">
+            {(["favorite", "watching", "plan", "waiting", "watched"] as WatchStatus[]).map(
+              (statusKey) => {
+                const items = userLists.filter((item) => item.lists.includes(statusKey));
+                const films = items
+                  .map((item) => listFilms[item.kinopoiskId])
+                  .filter((film): film is KinopoiskFilm => Boolean(film));
+                const showProgress = statusKey === "watching" || statusKey === "watched";
 
-                  return (
-                    <FilmShelf
-                      key={statusKey}
-                      title={watchStatusLabels[statusKey]}
-                      films={films}
-                      progressByFilm={showProgress ? progressByFilm : undefined}
-                      onSelect={(film) => void openFilm(film)}
-                    />
-                  );
-                }
-              )}
-            </div>
-          )}
+                return (
+                  <FilmShelf
+                    key={statusKey}
+                    title={watchStatusLabels[statusKey]}
+                    films={films}
+                    progressByFilm={showProgress ? progressByFilm : undefined}
+                    onSelect={(film) => void openFilm(film)}
+                  />
+                );
+              }
+            )}
+          </div>
         </section>
       ) : null}
 

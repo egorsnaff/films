@@ -100,6 +100,23 @@ function requireUser(req: express.Request, res: express.Response, next: express.
   next();
 }
 
+function isAuthGateEnabled(): boolean {
+  return process.env.AUTH_GATE_ENABLED !== "false";
+}
+
+function requireUserIfAuthGate(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  if (!isAuthGateEnabled()) {
+    next();
+    return;
+  }
+
+  requireUser(req, res, next);
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
@@ -129,6 +146,8 @@ function handleKpError(error: unknown, res: express.Response) {
   const status = message.includes("не настроен") ? 503 : 502;
   res.status(status).json({ error: message });
 }
+
+app.use("/kp", requireUserIfAuthGate);
 
 app.get("/kp/films/:kinopoiskId", async (req, res) => {
   const kinopoiskId = Number(req.params.kinopoiskId);

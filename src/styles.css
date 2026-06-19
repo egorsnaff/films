@@ -188,6 +188,21 @@ code {
   text-decoration: none;
 }
 
+.brand-mark--static {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+button.brand-mark {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
 .brand-mark__glyph {
   display: grid;
   width: 42px;
@@ -2337,6 +2352,184 @@ h1 em {
   color: #150c07;
   cursor: pointer;
   font-weight: 700;
+}
+
+.auth-gate {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(20px, 4vw, 40px);
+}
+
+.auth-gate__ambient {
+  position: absolute;
+  width: min(42rem, 70vw);
+  height: min(42rem, 70vw);
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.auth-gate__ambient--left {
+  top: -8rem;
+  left: -10rem;
+  background: rgb(240 107 66 / 28%);
+}
+
+.auth-gate__ambient--right {
+  right: -8rem;
+  bottom: -6rem;
+  background: rgb(132 214 125 / 16%);
+}
+
+.auth-gate__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, black 20%, transparent 78%);
+}
+
+.auth-gate__shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(22px, 3vw, 34px);
+  width: min(520px, 100%);
+}
+
+.auth-gate__brand {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-gate__panel {
+  display: grid;
+  gap: 18px;
+  padding: clamp(24px, 4vw, 34px);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 32px;
+  background:
+    linear-gradient(165deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 2%)),
+    rgb(9 10 13 / 78%);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 42%);
+  backdrop-filter: blur(18px);
+}
+
+.auth-gate__eyebrow {
+  margin: 0;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth-gate__title {
+  margin: 0;
+  font-family: "Space Grotesk", Outfit, sans-serif;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  line-height: 0.98;
+  text-wrap: pretty;
+}
+
+.auth-gate__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.auth-gate__status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.auth-gate__form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-gate__field {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.auth-gate__field input {
+  min-height: 50px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: rgb(0 0 0 / 24%);
+  color: var(--ink);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.auth-gate__field input::placeholder {
+  color: rgb(167 160 145 / 72%);
+}
+
+.auth-gate__field input:focus {
+  border-color: rgb(240 183 91 / 48%);
+  background: rgb(0 0 0 / 34%);
+  outline: none;
+}
+
+.auth-gate__error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgb(240 107 66 / 28%);
+  border-radius: 14px;
+  background: rgb(240 107 66 / 10%);
+  color: #ffd8c8;
+  font-size: 0.88rem;
+}
+
+.auth-gate__submit {
+  min-height: 52px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f0b75b, #f06b42);
+  color: #150c07;
+  cursor: pointer;
+  font-size: 0.98rem;
+  font-weight: 800;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+}
+
+.auth-gate__submit:hover:not(:disabled),
+.auth-gate__submit:focus-visible:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.auth-gate__submit:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.auth-gate__footnote {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .film-shelf {
