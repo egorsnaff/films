@@ -28,22 +28,4 @@ describe("AuthGateScreen", () => {
     await user.click(screen.getByRole("button", { name: "Войти" }));
     expect(onSubmit).toHaveBeenCalled();
   });
-
-  it("shows session check state", () => {
-    render(
-      <AuthGateScreen
-        username=""
-        password=""
-        error={null}
-        isSubmitting={false}
-        isCheckingSession
-        onUsernameChange={() => undefined}
-        onPasswordChange={() => undefined}
-        onSubmit={() => undefined}
-      />
-    );
-
-    expect(screen.getByText("Проверяем сессию...")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Войти" })).not.toBeInTheDocument();
-  });
 });

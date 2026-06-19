@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
+import { AuthGateBoot } from "./components/AuthGateBoot";
 import { AuthGateScreen } from "./components/AuthGateScreen";
 import { BackButton } from "./components/BackButton";
 import { BrandMark } from "./components/BrandMark";
@@ -1091,18 +1092,7 @@ export function App() {
   const serialCatalogTitle = catalogMode === "serials" ? catalogHeadings.serials.title : "";
 
   if (authGateEnabled && !sessionChecked) {
-    return (
-      <AuthGateScreen
-        username={loginForm.username}
-        password={loginForm.password}
-        error={error}
-        isSubmitting={false}
-        isCheckingSession
-        onUsernameChange={(value) => setLoginForm((current) => ({ ...current, username: value }))}
-        onPasswordChange={(value) => setLoginForm((current) => ({ ...current, password: value }))}
-        onSubmit={handleLogin}
-      />
-    );
+    return <AuthGateBoot />;
   }
 
   if (authGateEnabled && !authUser) {
