@@ -2532,6 +2532,55 @@ h1 em {
   text-align: center;
 }
 
+.auth-gate-boot {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+}
+
+.auth-gate-boot__ambient {
+  position: absolute;
+  width: min(36rem, 62vw);
+  height: min(36rem, 62vw);
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.auth-gate-boot__ambient--left {
+  top: -10rem;
+  left: -8rem;
+  background: rgb(240 107 66 / 22%);
+}
+
+.auth-gate-boot__ambient--right {
+  right: -8rem;
+  bottom: -8rem;
+  background: rgb(132 214 125 / 12%);
+}
+
+.auth-gate-boot__shell {
+  position: relative;
+  z-index: 1;
+  animation: auth-gate-boot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes auth-gate-boot-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .film-shelf {
   display: grid;
   gap: 16px;

@@ -7,7 +7,6 @@ type AuthGateScreenProps = {
   password: string;
   error: string | null;
   isSubmitting: boolean;
-  isCheckingSession?: boolean;
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -18,7 +17,6 @@ export function AuthGateScreen({
   password,
   error,
   isSubmitting,
-  isCheckingSession = false,
   onUsernameChange,
   onPasswordChange,
   onSubmit
@@ -44,12 +42,7 @@ export function AuthGateScreen({
             администратором.
           </p>
 
-          {isCheckingSession ? (
-            <p className="auth-gate__status" role="status">
-              Проверяем сессию...
-            </p>
-          ) : (
-            <form className="auth-gate__form" onSubmit={onSubmit}>
+          <form className="auth-gate__form" onSubmit={onSubmit}>
               <label className="auth-gate__field">
                 <span>Логин</span>
                 <input
@@ -87,7 +80,6 @@ export function AuthGateScreen({
                 {isSubmitting ? "Входим..." : "Войти"}
               </button>
             </form>
-          )}
         </section>
 
         <p className="auth-gate__footnote">
