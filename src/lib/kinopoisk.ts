@@ -102,7 +102,7 @@ type KinopoiskClientOptions = {
 const PROXY_BASE =
   import.meta.env.VITE_SITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
 
-const CLIENT_CATALOG_PAGE_CACHE_VERSION = "v2";
+const CLIENT_CATALOG_PAGE_CACHE_VERSION = "v3";
 
 export function hasValidPosterUrl(posterUrl?: string): boolean {
   const trimmed = posterUrl?.trim();
@@ -112,6 +112,16 @@ export function hasValidPosterUrl(posterUrl?: string): boolean {
   }
 
   return !trimmed.toLowerCase().includes("no-poster");
+}
+
+/** Upgrade Kinopoisk preview thumbs to full posters (avoids broken shelf layout). */
+export function normalizeClientPosterUrl(posterUrl?: string): string | undefined {
+  const trimmed = posterUrl?.trim();
+  if (!trimmed || !hasValidPosterUrl(trimmed)) {
+    return undefined;
+  }
+
+  return trimmed.replace(/\/images\/posters\/kp_small\//gi, "/images/posters/kp/");
 }
 
 export function createKinopoiskClient({

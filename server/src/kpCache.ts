@@ -106,6 +106,44 @@ export type CachedFilm = {
   awardChips?: Array<{ name: string; wins: number; imageUrl?: string }>;
 };
 
+function upgradeCachedPosterUrl(posterUrl: string | null | undefined): string | undefined {
+  if (!posterUrl) {
+    return undefined;
+  }
+
+  if (posterUrl.toLowerCase().includes("no-poster")) {
+    return undefined;
+  }
+
+  return posterUrl.replace(/\/images\/posters\/kp_small\//gi, "/images/posters/kp/");
+}
+
+function mapFilmCacheRow(row: {
+  kinopoisk_id: number;
+  title: string;
+  original_title: string | null;
+  year: string | null;
+  poster_url: string | null;
+  rating: string | null;
+  imdb_rating: string | null;
+  description: string | null;
+  film_length_minutes: number | null;
+  genres: string | null;
+}): CachedFilm {
+  return {
+    kinopoiskId: row.kinopoisk_id,
+    title: row.title,
+    originalTitle: row.original_title ?? undefined,
+    year: row.year ?? undefined,
+    posterUrl: upgradeCachedPosterUrl(row.poster_url),
+    rating: row.rating ?? undefined,
+    imdbRating: row.imdb_rating ?? undefined,
+    description: row.description ?? undefined,
+    filmLengthMinutes: row.film_length_minutes ?? undefined,
+    genres: parseGenresJson(row.genres)
+  };
+}
+
 export function readFilmCache(kinopoiskId: number): CachedFilm | null {
   const row = db
     .prepare(
@@ -138,18 +176,7 @@ export function readFilmCache(kinopoiskId: number): CachedFilm | null {
     return null;
   }
 
-  return {
-    kinopoiskId: row.kinopoisk_id,
-    title: row.title,
-    originalTitle: row.original_title ?? undefined,
-    year: row.year ?? undefined,
-    posterUrl: row.poster_url ?? undefined,
-    rating: row.rating ?? undefined,
-    imdbRating: row.imdb_rating ?? undefined,
-    description: row.description ?? undefined,
-    filmLengthMinutes: row.film_length_minutes ?? undefined,
-    genres: parseGenresJson(row.genres)
-  };
+  return mapFilmCacheRow(row);
 }
 
 function parseGenresJson(value: string | null): string[] | undefined {
@@ -224,18 +251,7 @@ export function readFilmCacheStale(kinopoiskId: number): CachedFilm | null {
     return null;
   }
 
-  return {
-    kinopoiskId: row.kinopoisk_id,
-    title: row.title,
-    originalTitle: row.original_title ?? undefined,
-    year: row.year ?? undefined,
-    posterUrl: row.poster_url ?? undefined,
-    rating: row.rating ?? undefined,
-    imdbRating: row.imdb_rating ?? undefined,
-    description: row.description ?? undefined,
-    filmLengthMinutes: row.film_length_minutes ?? undefined,
-    genres: parseGenresJson(row.genres)
-  };
+  return mapFilmCacheRow(row);
 }
 
 export function readFilmsCache(kinopoiskIds: number[]): Record<number, CachedFilm> {

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes } from "react";
 
+import { normalizeClientPosterUrl } from "../lib/kinopoisk";
+
 type PosterImageProps = {
   src: string;
   alt: string;
@@ -15,10 +17,11 @@ export function PosterImage({
 }: PosterImageProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const resolvedSrc = normalizeClientPosterUrl(src) ?? src;
 
   useEffect(() => {
     setStatus("loading");
-  }, [src]);
+  }, [resolvedSrc]);
 
   useEffect(() => {
     const image = imageRef.current;
@@ -37,7 +40,7 @@ export function PosterImage({
     syncFromElement();
     image.addEventListener("load", syncFromElement);
     return () => image.removeEventListener("load", syncFromElement);
-  }, [src]);
+  }, [resolvedSrc]);
 
   return (
     <span
@@ -68,7 +71,7 @@ export function PosterImage({
       <img
         ref={imageRef}
         className={`poster-image__img ${className}`.trim()}
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         loading={loading}
         decoding={decoding}
