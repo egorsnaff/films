@@ -12,8 +12,9 @@ The watch page cannot hide the OS cursor **inside** cross-origin player iframes 
 ## Behaviour
 
 - Runs only on known embed hosts (`@match` list in the script).
-- After ~1.2s without pointer/keyboard activity, sets `cursor: none` on that frame.
+- After ~1.2s without **real** pointer/keyboard activity, sets `cursor: none` on that frame.
 - Moving the mouse (or clicking / scrolling) shows the cursor again so player controls stay usable.
+- Duplicate/edge-jitter `mousemove` (cursor half off the right of the screen) is ignored so idle still fires.
 
 ## If a player still shows the arrow
 
