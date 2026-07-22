@@ -808,7 +808,7 @@ function mapFilmSummary(raw: Record<string, unknown>): CachedFilm | null {
     title: toStringValue(raw.nameRu ?? raw.nameEn ?? raw.nameOriginal) ?? "Без названия",
     originalTitle: toStringValue(raw.nameEn ?? raw.nameOriginal),
     year: toStringValue(raw.year),
-    posterUrl: normalizePosterUrl(raw.posterUrlPreview ?? raw.posterUrl),
+    posterUrl: normalizePosterUrl(raw.posterUrl ?? raw.posterUrlPreview),
     rating: toStringValue(raw.rating ?? raw.ratingKinopoisk),
     imdbRating: formatRatingValue(raw.ratingImdb)
   };

@@ -26,9 +26,17 @@ export function PosterImage({
       return;
     }
 
-    if (image.complete) {
-      setStatus(image.naturalWidth > 0 ? "loaded" : "error");
-    }
+    const syncFromElement = () => {
+      if (!image.complete) {
+        return;
+      }
+
+      setStatus(image.naturalWidth > 0 && image.naturalHeight > 0 ? "loaded" : "error");
+    };
+
+    syncFromElement();
+    image.addEventListener("load", syncFromElement);
+    return () => image.removeEventListener("load", syncFromElement);
   }, [src]);
 
   return (
