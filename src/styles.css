@@ -3011,6 +3011,8 @@ h1 em {
   flex: 0 0 168px;
   gap: 10px;
   width: 168px;
+  max-width: 168px;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -3029,6 +3031,8 @@ h1 em {
 .film-shelf__poster {
   position: relative;
   display: block;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 20px;
@@ -3104,12 +3108,16 @@ h1 em {
 .film-shelf__meta {
   display: grid;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .film-shelf__meta strong {
   color: var(--ink);
   font-size: 0.95rem;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .film-shelf__meta small {

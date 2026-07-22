@@ -26,4 +26,18 @@ describe("PosterImage", () => {
     expect(shell).toHaveAttribute("data-poster-state", "error");
     expect(shell).toHaveClass("poster-image--error");
   });
+
+  it("upgrades kp_small poster urls before loading the image", () => {
+    render(
+      <PosterImage
+        src="https://kinopoiskapiunofficial.tech/images/posters/kp_small/346.jpg"
+        alt="12 разгневанных мужчин"
+      />
+    );
+
+    expect(screen.getByAltText("12 разгневанных мужчин")).toHaveAttribute(
+      "src",
+      "https://kinopoiskapiunofficial.tech/images/posters/kp/346.jpg"
+    );
+  });
 });

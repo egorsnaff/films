@@ -273,6 +273,14 @@ export function addUserFilmToList(
        updated_at = excluded.updated_at`
   ).run(userId, kinopoiskId, status, updatedAt);
 
+  // «Просмотренное» вытесняет «Смотрю сейчас».
+  if (status === "watched") {
+    db.prepare(
+      `DELETE FROM user_film_memberships
+       WHERE user_id = ? AND kinopoisk_id = ? AND list_key = 'watching'`
+    ).run(userId, kinopoiskId);
+  }
+
   return toAggregate(userId, kinopoiskId)!;
 }
 

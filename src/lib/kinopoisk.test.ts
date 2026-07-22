@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createKinopoiskClient, hasValidPosterUrl } from "./kinopoisk";
+import { createKinopoiskClient, hasValidPosterUrl, normalizeClientPosterUrl } from "./kinopoisk";
 
 describe("hasValidPosterUrl", () => {
   it("rejects Kinopoisk placeholder poster urls", () => {
@@ -11,6 +11,16 @@ describe("hasValidPosterUrl", () => {
     expect(hasValidPosterUrl(undefined)).toBe(false);
     expect(hasValidPosterUrl("   ")).toBe(false);
     expect(hasValidPosterUrl("https://example.test/real-poster.jpg")).toBe(true);
+  });
+});
+
+describe("normalizeClientPosterUrl", () => {
+  it("upgrades kp_small thumbs to full posters", () => {
+    expect(
+      normalizeClientPosterUrl(
+        "https://kinopoiskapiunofficial.tech/images/posters/kp_small/346.jpg"
+      )
+    ).toBe("https://kinopoiskapiunofficial.tech/images/posters/kp/346.jpg");
   });
 });
 

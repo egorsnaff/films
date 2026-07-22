@@ -846,7 +846,9 @@ function normalizePosterUrl(value: unknown): string | undefined {
   if (!posterUrl || posterUrl.toLowerCase().includes("no-poster")) {
     return undefined;
   }
-  return posterUrl;
+
+  // Prefer full-size KP posters; preview thumbs can break shelf card layout.
+  return posterUrl.replace(/\/images\/posters\/kp_small\//gi, "/images/posters/kp/");
 }
 
 function toStringValue(value: unknown): string | undefined {

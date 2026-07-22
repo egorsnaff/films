@@ -138,6 +138,16 @@ describe("mapFilmDetails", () => {
     ).toBe("https://example.test/posters/kp/346.jpg");
   });
 
+  it("upgrades kp_small poster paths to full posters", () => {
+    expect(
+      mapFilmDetails({
+        kinopoiskId: 346,
+        nameRu: "12 разгневанных мужчин",
+        posterUrlPreview: "https://kinopoiskapiunofficial.tech/images/posters/kp_small/346.jpg"
+      }).posterUrl
+    ).toBe("https://kinopoiskapiunofficial.tech/images/posters/kp/346.jpg");
+  });
+
   it("maps description and shortDescription from Kinopoisk film payload", () => {
     expect(
       mapFilmDetails({
