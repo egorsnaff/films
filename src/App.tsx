@@ -54,6 +54,11 @@ import {
   replaceAppHistory
 } from "./lib/appHistory";
 import {
+  createHomeSnapshot,
+  isSameAppUrl,
+  parseLocationToSnapshot
+} from "./lib/appRoutes";
+import {
   countVisibleFilms,
   getAdaptiveSkeletonCount,
   mergeFilms,
@@ -94,6 +99,8 @@ const playerTemplates =
 type LoadState = "idle" | "loading" | "success" | "error";
 
 const menuItems: MenuItem[] = ["Фильмы", "Сериалы", "Каталог", "Профиль"];
+
+const MAX_DEEP_LINK_PAGES = 20;
 
 const catalogHeadings: Record<
   Exclude<CatalogMode, "filtered">,
@@ -397,15 +404,8 @@ export function App() {
     onStatusChange: handleWatchTrackerStatusChange
   });
 
-  const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => ({
-    view: "catalog",
-    activeMenu: "Фильмы",
-    catalogMode: "premieres",
-    collectionId: null,
-    filmId: null,
-    searchQuery: "",
-    scrollY: 0
-  }));
+  const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => createHomeSnapshot());
+  const bootstrappedRef = useRef(false);
 
   const captureSnapshot = useCallback((): NavigationSnapshot => {
     return {
@@ -420,9 +420,20 @@ export function App() {
       searchQuery: catalogMode === "search" ? query : "",
       browseMedia,
       catalogFilter: catalogMode === "filtered" ? catalogFilter : null,
+      page,
       scrollY: window.scrollY
     };
-  }, [activeMenu, browseMedia, catalogFilter, catalogMode, collectionId, query, selectedFilm, view]);
+  }, [
+    activeMenu,
+    browseMedia,
+    catalogFilter,
+    catalogMode,
+    collectionId,
+    page,
+    query,
+    selectedFilm,
+    view
+  ]);
 
   captureSnapshotRef.current = captureSnapshot;
 
@@ -531,13 +542,21 @@ export function App() {
           setError(null);
 
           try {
-            const page = await fetchCatalogPage(client, "filtered", 1, "", snapshot.catalogFilter);
-            setFilms(page.films);
-            filmsRef.current = page.films;
-            setPage(page.page);
-            setTotalPages(page.totalPages);
-            setHasMore(page.page < page.totalPages);
-            hasMoreRef.current = page.page < page.totalPages;
+            const targetPage = Math.min(Math.max(snapshot.page ?? 1, 1), MAX_DEEP_LINK_PAGES);
+            const loaded = await loadCatalogThroughPage(
+              client,
+              "filtered",
+              targetPage,
+              "",
+              snapshot.catalogFilter
+            );
+            setFilms(loaded.films);
+            filmsRef.current = loaded.films;
+            setPage(loaded.page);
+            pageRef.current = loaded.page;
+            setTotalPages(loaded.totalPages);
+            setHasMore(loaded.page < loaded.totalPages);
+            hasMoreRef.current = loaded.page < loaded.totalPages;
             setStatus("success");
           } catch (filteredError) {
             setError(getErrorMessage(filteredError));
@@ -572,13 +591,20 @@ export function App() {
           setError(null);
 
           try {
-            const page = await fetchCatalogPage(client, restoredCatalogMode, 1, "", null);
-            setFilms(page.films);
-            filmsRef.current = page.films;
-            setPage(page.page);
-            pageRef.current = page.page;
-            setTotalPages(page.totalPages);
-            const nextHasMore = page.page < page.totalPages;
+            const targetPage = Math.min(Math.max(snapshot.page ?? 1, 1), MAX_DEEP_LINK_PAGES);
+            const loaded = await loadCatalogThroughPage(
+              client,
+              restoredCatalogMode,
+              targetPage,
+              "",
+              null
+            );
+            setFilms(loaded.films);
+            filmsRef.current = loaded.films;
+            setPage(loaded.page);
+            pageRef.current = loaded.page;
+            setTotalPages(loaded.totalPages);
+            const nextHasMore = loaded.page < loaded.totalPages;
             setHasMore(nextHasMore);
             hasMoreRef.current = nextHasMore;
             setStatus("success");
@@ -628,20 +654,28 @@ export function App() {
   }, [restoreSnapshot]);
 
   useEffect(() => {
-    if (!readHistorySnapshot(window.history.state)) {
-      replaceAppHistory(captureSnapshot());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (!shouldCommitHistoryRef.current || isHistoryNavigationRef.current) {
       return;
     }
 
     shouldCommitHistoryRef.current = false;
-    pushAppHistory(captureSnapshotRef.current());
-  }, [view, activeMenu, catalogMode, collectionId, catalogFilter, browseMedia]);
+    const snapshot = captureSnapshotRef.current();
+    pushAppHistory(snapshot);
+  }, [view, activeMenu, catalogMode, collectionId, catalogFilter, browseMedia, query]);
+
+  useEffect(() => {
+    if (isHistoryNavigationRef.current || !bootstrappedRef.current) {
+      return;
+    }
+
+    if (view !== "catalog" || catalogMode === "search") {
+      return;
+    }
+
+    const snapshot = captureSnapshotRef.current();
+    // Keep ?page= in sync without creating extra history entries.
+    replaceAppHistory(snapshot);
+  }, [page, view, catalogMode]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
@@ -655,20 +689,17 @@ export function App() {
         navHistoryRef.current.pop();
       }
 
-      const snapshot = readHistorySnapshot(event.state);
-      if (snapshot) {
-        void restoreSnapshot(snapshot);
-      } else {
-        setView("catalog");
-        setActiveMenu("Фильмы");
-        setCatalogMode("premieres");
-        setCollectionId(null);
-        setSelectedFilm(null);
-        setDetailsStatus("idle");
-      }
+      const snapshot =
+        readHistorySnapshot(event.state) ??
+        parseLocationToSnapshot({
+          pathname: window.location.pathname,
+          search: window.location.search
+        });
 
-      window.requestAnimationFrame(() => {
-        isHistoryNavigationRef.current = false;
+      void restoreSnapshot(snapshot).finally(() => {
+        window.requestAnimationFrame(() => {
+          isHistoryNavigationRef.current = false;
+        });
       });
     };
 
@@ -798,8 +829,45 @@ export function App() {
       return;
     }
 
-    void loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-  }, [authGateEnabled, authUser, loadCatalogPage]);
+    if (bootstrappedRef.current) {
+      return;
+    }
+
+    bootstrappedRef.current = true;
+    isHistoryNavigationRef.current = true;
+
+    const urlSnapshot = parseLocationToSnapshot({
+      pathname: window.location.pathname,
+      search: window.location.search
+    });
+    const historySnapshot = readHistorySnapshot(window.history.state);
+    const home = createHomeSnapshot();
+    const shouldUseUrl =
+      !isSameAppUrl(urlSnapshot, home) ||
+      (typeof urlSnapshot.page === "number" && urlSnapshot.page > 1) ||
+      Boolean(urlSnapshot.searchQuery);
+
+    const bootstrap = async () => {
+      try {
+        if (shouldUseUrl) {
+          await restoreSnapshot(urlSnapshot);
+          replaceAppHistory({ ...urlSnapshot, scrollY: window.scrollY });
+        } else if (historySnapshot) {
+          await restoreSnapshot(historySnapshot);
+          replaceAppHistory(historySnapshot);
+        } else {
+          await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
+          replaceAppHistory(captureSnapshotRef.current());
+        }
+      } finally {
+        window.requestAnimationFrame(() => {
+          isHistoryNavigationRef.current = false;
+        });
+      }
+    };
+
+    void bootstrap();
+  }, [authGateEnabled, authUser, loadCatalogPage, restoreSnapshot]);
 
   const { nearEnd: catalogNearEnd } = useWindowCatalogScroll({
     enabled: view === "catalog",
@@ -1033,7 +1101,10 @@ export function App() {
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-    replaceAppHistory(captureSnapshot());
+    replaceAppHistory({
+      ...createHomeSnapshot(window.scrollY),
+      page: 1
+    });
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -1517,6 +1588,34 @@ export function App() {
       </main>
     </>
   );
+}
+
+async function loadCatalogThroughPage(
+  client: ReturnType<typeof createKinopoiskClient>,
+  mode: CatalogMode,
+  targetPage: number,
+  keyword: string,
+  filter?: CatalogFilter | null
+) {
+  const safeTarget = Math.min(Math.max(targetPage, 1), MAX_DEEP_LINK_PAGES);
+  let merged: KinopoiskFilm[] = [];
+  let lastPage = await fetchCatalogPage(client, mode, 1, keyword, filter);
+  merged = lastPage.films;
+
+  for (let pageNumber = 2; pageNumber <= safeTarget; pageNumber += 1) {
+    if (pageNumber > lastPage.totalPages) {
+      break;
+    }
+
+    lastPage = await fetchCatalogPage(client, mode, pageNumber, keyword, filter);
+    merged = mergeFilms(merged, lastPage.films);
+  }
+
+  return {
+    films: merged,
+    page: lastPage.page,
+    totalPages: lastPage.totalPages
+  };
 }
 
 async function fetchCatalogPage(

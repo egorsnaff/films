@@ -1,3 +1,4 @@
+import { buildAppUrl } from "./appRoutes";
 import type { NavigationSnapshot } from "./navigation";
 
 const HISTORY_STATE_KEY = "films";
@@ -20,9 +21,9 @@ export function readHistorySnapshot(state: unknown): NavigationSnapshot | null {
 }
 
 export function pushAppHistory(snapshot: NavigationSnapshot): void {
-  window.history.pushState(createHistoryState(snapshot), "", window.location.href);
+  window.history.pushState(createHistoryState(snapshot), "", buildAppUrl(snapshot));
 }
 
 export function replaceAppHistory(snapshot: NavigationSnapshot): void {
-  window.history.replaceState(createHistoryState(snapshot), "", window.location.href);
+  window.history.replaceState(createHistoryState(snapshot), "", buildAppUrl(snapshot));
 }

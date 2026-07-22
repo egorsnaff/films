@@ -15,6 +15,8 @@ export type NavigationSnapshot = {
   searchQuery?: string;
   browseMedia?: BrowseMedia;
   catalogFilter?: CatalogFilter | null;
+  /** Last loaded catalog page (synced to ?page=). */
+  page?: number;
   scrollY: number;
 };
 
