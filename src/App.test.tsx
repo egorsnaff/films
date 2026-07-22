@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { IMDB_FILMS_SHELF_TITLE } from "./data/imdbShelves";
+import { buildAppUrl, createHomeSnapshot } from "./lib/appRoutes";
 
 type MockFilm = {
   kinopoiskId: number;
@@ -118,6 +119,7 @@ describe("App", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+    window.history.replaceState(null, "", "/");
     window.IntersectionObserver =
       NoopIntersectionObserver as unknown as typeof IntersectionObserver;
     vi.stubGlobal("fetch", createFetchMock(() => undefined));
@@ -781,5 +783,136 @@ describe("App", () => {
 
     expect(await screen.findByText(/IMDb 9\.3/)).toBeInTheDocument();
     expect(screen.getByText(/КП 9\.1/)).toBeInTheDocument();
+  });
+
+  it("updates the URL when opening a film and supports watch deep links", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.endsWith("/api/kp/films/301")) {
+        return filmResponse({
+          kinopoiskId: 301,
+          title: "Матрица",
+          year: "1999",
+          posterUrl: "https://example.test/matrix.jpg",
+          description: "Следуй за белым кроликом."
+        });
+      }
+
+      if (url.includes("/api/kp/top")) {
+        return (
+          mockTopCatalog(url, {
+            feedFilms: [
+              {
+                kinopoiskId: 301,
+                title: "Матрица",
+                year: "1999",
+                posterUrl: "https://example.test/matrix.jpg"
+              }
+            ]
+          }) ?? catalogResponse([])
+        );
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: /Матрица/ }));
+
+    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/watch\/301$/);
+    });
+  });
+
+  it("opens a film from a cold watch deep link", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      buildAppUrl({
+        ...createHomeSnapshot(),
+        view: "watch",
+        filmId: 301
+      })
+    );
+
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock((url) => {
+        if (url.endsWith("/api/kp/films/301")) {
+          return filmResponse({
+            kinopoiskId: 301,
+            title: "Матрица",
+            year: "1999",
+            posterUrl: "https://example.test/matrix.jpg",
+            description: "Следуй за белым кроликом."
+          });
+        }
+
+        return undefined;
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
+    expect(window.location.pathname).toMatch(/\/watch\/301$/);
+  });
+
+  it("updates the URL when opening serials and search", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.includes("/api/kp/search")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 99,
+              title: "Поисковый фильм",
+              year: "2024",
+              posterUrl: "https://example.test/search.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
+
+      if (url.includes("/api/kp/catalog/recent") || url.includes("/api/kp/top")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 5,
+              title: "Сериал дня",
+              year: "2025",
+              posterUrl: "https://example.test/serial.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Сериалы" }));
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/serials\/?$/);
+    });
+
+    await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
+    await user.type(screen.getByRole("searchbox", { name: "Поиск фильма" }), "тест");
+    await user.click(screen.getByRole("button", { name: "Найти" }));
+
+    expect(await screen.findByText("Поисковый фильм")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/search\/?$/);
+      expect(window.location.search).toContain("q=");
+    });
   });
 });

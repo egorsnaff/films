@@ -11,7 +11,7 @@ function normalizeBasePath(value?: string): string {
 }
 
 export default defineConfig({
-  base: normalizeBasePath(process.env.VITE_BASE_PATH ?? "/films/"),
+  base: normalizeBasePath(process.env.VITE_BASE_PATH || "/films/"),
   plugins: [react()],
   server: {
     proxy: {
