@@ -119,6 +119,7 @@ describe("App", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+    // Reset to a clean entry so prior tests' pushState stack does not leak URLs.
     window.history.replaceState(null, "", "/");
     window.IntersectionObserver =
       NoopIntersectionObserver as unknown as typeof IntersectionObserver;
@@ -127,6 +128,7 @@ describe("App", () => {
 
   afterEach(() => {
     window.localStorage.clear();
+    window.history.replaceState(null, "", "/");
     window.IntersectionObserver = originalIntersectionObserver;
     vi.restoreAllMocks();
   });
@@ -883,6 +885,75 @@ describe("App", () => {
     await waitFor(() => {
       expect(window.location.pathname).toMatch(/\/watch\/301$/);
     });
+  });
+
+  it("goes back to the previous URL screen after opening a film from serials", async () => {
+    const user = userEvent.setup();
+    const fetchMock = createFetchMock((url) => {
+      if (url.endsWith("/api/kp/films/5")) {
+        return filmResponse({
+          kinopoiskId: 5,
+          title: "Сериал дня",
+          year: "2025",
+          posterUrl: "https://example.test/serial.jpg",
+          description: "Описание сериала."
+        });
+      }
+
+      if (url.includes("/api/kp/catalog/recent") || url.includes("TV_SERIES")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 5,
+              title: "Сериал дня",
+              year: "2025",
+              posterUrl: "https://example.test/serial.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
+
+      if (url.includes("/api/kp/top")) {
+        return catalogResponse(
+          [
+            {
+              kinopoiskId: 5,
+              title: "Сериал дня",
+              year: "2025",
+              posterUrl: "https://example.test/serial.jpg"
+            }
+          ],
+          1,
+          1
+        );
+      }
+
+      return undefined;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Сериалы" }));
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/serials\/?$/);
+    });
+
+    await user.click(await screen.findByRole("button", { name: /Сериал дня/ }));
+    expect(await screen.findByRole("heading", { name: "Сериал дня" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/watch\/5$/);
+    });
+
+    await user.click(screen.getByRole("button", { name: /К сериалам|Назад/ }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toMatch(/\/serials\/?$/);
+    });
+    expect(screen.queryByRole("heading", { name: "Сериал дня" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Сериал дня/ })).toBeInTheDocument();
   });
 
   it("opens a film from a cold watch deep link", async () => {
