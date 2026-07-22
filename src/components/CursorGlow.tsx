@@ -21,7 +21,6 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
 
     if (disabled || prefersReducedMotion()) {
       root.classList.remove("cursor-active");
-      root.classList.remove("is-player-fullscreen");
       return;
     }
 
@@ -37,15 +36,6 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
     let targetY = 42;
     let currentX = targetX;
     let currentY = targetY;
-    let fullscreen = isDocumentFullscreen();
-
-    const setFullscreenState = (next: boolean) => {
-      fullscreen = next;
-      root.classList.toggle("is-player-fullscreen", next);
-      if (next) {
-        root.classList.remove("cursor-active");
-      }
-    };
 
     const tick = () => {
       currentX += (targetX - currentX) * 0.14;
@@ -70,7 +60,9 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
     };
 
     const handleMove = (event: MouseEvent) => {
-      if (fullscreen) {
+      // Fullscreen class is owned by useDocumentFullscreenClass; skip glow there.
+      if (isDocumentFullscreen()) {
+        root.classList.remove("cursor-active");
         return;
       }
 
@@ -84,29 +76,19 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
       root.classList.remove("cursor-active");
     };
 
-    const handleFullscreenChange = () => {
-      setFullscreenState(isDocumentFullscreen());
-    };
-
     root.style.setProperty("--cursor-x", `${currentX}%`);
     root.style.setProperty("--cursor-y", `${currentY}%`);
-    setFullscreenState(fullscreen);
 
     window.addEventListener("mousemove", handleMove, { passive: true });
     window.addEventListener("mouseleave", handleLeave);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
     return () => {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseleave", handleLeave);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
       if (frameId) {
         window.cancelAnimationFrame(frameId);
       }
       root.classList.remove("cursor-active");
-      root.classList.remove("is-player-fullscreen");
     };
   }, [disabled]);
 

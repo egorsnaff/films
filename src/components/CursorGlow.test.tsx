@@ -15,7 +15,7 @@ describe("CursorGlow", () => {
     expect(document.documentElement.classList.contains("cursor-active")).toBe(false);
   });
 
-  it("hides the glow while the document is fullscreen", () => {
+  it("does not activate the glow while the document is fullscreen", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -28,16 +28,14 @@ describe("CursorGlow", () => {
       }))
     });
 
-    render(<CursorGlow />);
-
     Object.defineProperty(document, "fullscreenElement", {
       configurable: true,
       get: () => document.documentElement
     });
 
-    document.dispatchEvent(new Event("fullscreenchange"));
+    render(<CursorGlow />);
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 120, clientY: 80 }));
 
-    expect(document.documentElement.classList.contains("is-player-fullscreen")).toBe(true);
     expect(document.documentElement.classList.contains("cursor-active")).toBe(false);
 
     Object.defineProperty(document, "fullscreenElement", {
