@@ -22,6 +22,7 @@ import {
 import { UserMenu } from "./components/UserMenu";
 import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
+import { useDocumentFullscreenClass } from "./hooks/useDocumentFullscreenClass";
 import { useWindowCatalogScroll } from "./hooks/useWindowCatalogScroll";
 import { useWatchTracker } from "./hooks/useWatchTracker";
 import { buildBrowseSections } from "./data/browseSections";
@@ -195,6 +196,15 @@ export function App() {
   catalogFilterRef.current = catalogFilter;
 
   const client = useMemo(() => createKinopoiskClient(), []);
+  useDocumentFullscreenClass("is-player-fullscreen");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("is-watch-view", view === "watch");
+    return () => {
+      document.documentElement.classList.remove("is-watch-view");
+    };
+  }, [view]);
+
   const browseSections = useMemo(() => {
     if (!kinopoiskFilters) {
       return [];

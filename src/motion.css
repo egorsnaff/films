@@ -33,6 +33,13 @@ html.is-player-fullscreen * {
   cursor: none !important;
 }
 
+/* Best-effort on our chrome; cross-origin embed documents still own the OS cursor
+   while the pointer is over the iframe content. */
+html.is-watch-view .player-frame-wrap,
+html.is-watch-view .player-frame-wrap iframe {
+  cursor: none;
+}
+
 .cursor-glow--ambient {
   background: radial-gradient(
     circle 520px at var(--cursor-x) var(--cursor-y),
