@@ -23,6 +23,16 @@ html.cursor-active .cursor-glow {
   opacity: 1;
 }
 
+html.is-player-fullscreen .cursor-glow {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+html.is-player-fullscreen,
+html.is-player-fullscreen * {
+  cursor: none !important;
+}
+
 .cursor-glow--ambient {
   background: radial-gradient(
     circle 520px at var(--cursor-x) var(--cursor-y),

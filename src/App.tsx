@@ -1182,7 +1182,7 @@ export function App() {
 
   return (
     <>
-      <CursorGlow />
+      <CursorGlow disabled={view === "watch"} />
       <main className="app-shell">
         <div className="ambient ambient-left" aria-hidden="true" />
         <div className="ambient ambient-right" aria-hidden="true" />
