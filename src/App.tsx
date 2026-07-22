@@ -1425,7 +1425,7 @@ export function App() {
       {view === "profile" ? (
         <section className="profile-view" id="main">
           <div className="profile-shelves">
-            {(["favorite", "watching", "plan", "waiting", "watched"] as WatchStatus[]).map(
+            {(["watching", "favorite", "plan", "waiting", "watched"] as WatchStatus[]).map(
               (statusKey) => {
                 const items = userLists.filter((item) => item.lists.includes(statusKey));
                 const films = items

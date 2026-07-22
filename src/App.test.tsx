@@ -658,6 +658,64 @@ describe("App", () => {
     expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
   });
 
+  it("shows watching shelf before favorites on the profile page", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth/me")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ user: { id: 1, username: "viewer" } })
+          });
+        }
+
+        if (url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              items: [
+                { kinopoiskId: 1, lists: ["favorite"] },
+                { kinopoiskId: 2, lists: ["watching"] }
+              ],
+              films: {
+                1: {
+                  kinopoiskId: 1,
+                  title: "Любимый фильм",
+                  year: "1999",
+                  posterUrl: "https://example.test/fav.jpg"
+                },
+                2: {
+                  kinopoiskId: 2,
+                  title: "Смотрю фильм",
+                  year: "2000",
+                  posterUrl: "https://example.test/watch.jpg"
+                }
+              }
+            })
+          });
+        }
+
+        if (url.includes("/api/kp/top")) {
+          return Promise.resolve(catalogResponse([]));
+        }
+
+        return Promise.resolve(catalogResponse([]));
+      })
+    );
+
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Профиль" }));
+
+    const shelves = await screen.findAllByRole("heading", {
+      name: /Смотрю сейчас|Любимое|Буду смотреть|Жду продолжения|Просмотренное/
+    });
+    const titles = shelves.map((node) => node.textContent);
+    expect(titles.indexOf("Смотрю сейчас")).toBeLessThan(titles.indexOf("Любимое"));
+  });
+
   it("returns to the profile shelf from watch page back navigation", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
