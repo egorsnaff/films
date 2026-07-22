@@ -50,6 +50,7 @@ import {
 import { isAuthGateEnabled } from "./lib/authGate";
 import {
   pushAppHistory,
+  readHistorySession,
   readHistorySnapshot,
   replaceAppHistory
 } from "./lib/appHistory";
@@ -180,10 +181,13 @@ export function App() {
   const queryRef = useRef(query);
   const authGateEnabled = isAuthGateEnabled();
   const navHistoryRef = useRef<NavigationSnapshot[]>([]);
+  const historyDepthRef = useRef(0);
+  const historySessionRef = useRef(Date.now() + Math.floor(Math.random() * 1000));
   const pendingWatchFilmIdRef = useRef<number | null>(null);
   const [topbarScrolled, setTopbarScrolled] = useState(false);
   const isHistoryNavigationRef = useRef(false);
   const shouldCommitHistoryRef = useRef(false);
+  const bootstrappedRef = useRef(false);
   queryRef.current = query;
   filmsRef.current = films;
   hasMoreRef.current = hasMore;
@@ -405,7 +409,6 @@ export function App() {
   });
 
   const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => createHomeSnapshot());
-  const bootstrappedRef = useRef(false);
 
   const captureSnapshot = useCallback((): NavigationSnapshot => {
     return {
@@ -439,17 +442,50 @@ export function App() {
 
   const beginHistoryEntry = useCallback(
     (pushHistory = true) => {
-      if (pushHistory && !isHistoryNavigationRef.current) {
+      if (pushHistory) {
         navHistoryRef.current.push(captureSnapshot());
       }
     },
     [captureSnapshot]
   );
 
+  // Always queue the flag — even during bootstrap/popstate. The flush below
+  // runs once history navigation finishes so in-app clicks still get URL entries.
   const requestHistoryCommit = useCallback((pushHistory = true) => {
-    if (pushHistory && !isHistoryNavigationRef.current) {
+    if (pushHistory) {
       shouldCommitHistoryRef.current = true;
     }
+  }, []);
+
+  const flushHistoryCommit = useCallback(() => {
+    if (!shouldCommitHistoryRef.current || isHistoryNavigationRef.current) {
+      return;
+    }
+
+    shouldCommitHistoryRef.current = false;
+    const snapshot = captureSnapshotRef.current();
+    const current = parseLocationToSnapshot({
+      pathname: window.location.pathname,
+      search: window.location.search
+    });
+
+    if (isSameAppUrl(snapshot, current)) {
+      replaceAppHistory(snapshot, historySessionRef.current);
+      return;
+    }
+
+    pushAppHistory(snapshot, historySessionRef.current);
+    historyDepthRef.current += 1;
+  }, []);
+
+  const flushHistoryCommitRef = useRef(flushHistoryCommit);
+  flushHistoryCommitRef.current = flushHistoryCommit;
+
+  const endHistoryNavigation = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      isHistoryNavigationRef.current = false;
+      flushHistoryCommitRef.current();
+    });
   }, []);
 
   const restoreSnapshot = useCallback(
@@ -625,43 +661,32 @@ export function App() {
   );
 
   const goBack = useCallback(() => {
-    const snapshot = navHistoryRef.current.pop();
-    if (!snapshot) {
-      if (window.history.length > 1) {
-        window.history.back();
-        return;
-      }
-
-      setView("catalog");
-      setActiveMenu("Фильмы");
-      setSelectedFilm(null);
-      setWatchPreviewFilm(null);
-      setDetailsStatus("idle");
-      replaceAppHistory(captureSnapshotRef.current());
+    // Browser history + URL are the source of truth. The in-app stack is only for labels.
+    if (historyDepthRef.current > 0) {
+      window.history.back();
       return;
     }
 
     isHistoryNavigationRef.current = true;
-    void restoreSnapshot(snapshot);
-
-    if (window.history.length > 1) {
-      window.history.back();
-    }
-
-    requestAnimationFrame(() => {
-      isHistoryNavigationRef.current = false;
+    const home = createHomeSnapshot(window.scrollY);
+    void restoreSnapshot(home).finally(() => {
+      replaceAppHistory(home, historySessionRef.current);
+      endHistoryNavigation();
     });
-  }, [restoreSnapshot]);
+  }, [endHistoryNavigation, restoreSnapshot]);
 
   useEffect(() => {
-    if (!shouldCommitHistoryRef.current || isHistoryNavigationRef.current) {
-      return;
-    }
-
-    shouldCommitHistoryRef.current = false;
-    const snapshot = captureSnapshotRef.current();
-    pushAppHistory(snapshot);
-  }, [view, activeMenu, catalogMode, collectionId, catalogFilter, browseMedia, query]);
+    flushHistoryCommit();
+  }, [
+    view,
+    activeMenu,
+    catalogMode,
+    collectionId,
+    catalogFilter,
+    browseMedia,
+    query,
+    flushHistoryCommit
+  ]);
 
   useEffect(() => {
     if (isHistoryNavigationRef.current || !bootstrappedRef.current) {
@@ -674,38 +699,38 @@ export function App() {
 
     const snapshot = captureSnapshotRef.current();
     // Keep ?page= in sync without creating extra history entries.
-    replaceAppHistory(snapshot);
+    replaceAppHistory(snapshot, historySessionRef.current);
   }, [page, view, catalogMode]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
-      if (isHistoryNavigationRef.current) {
-        return;
-      }
-
       isHistoryNavigationRef.current = true;
+      historyDepthRef.current = Math.max(0, historyDepthRef.current - 1);
 
       if (navHistoryRef.current.length > 0) {
         navHistoryRef.current.pop();
       }
 
+      const session = readHistorySession(event.state);
+      const fromState =
+        session === historySessionRef.current ? readHistorySnapshot(event.state) : null;
       const snapshot =
-        readHistorySnapshot(event.state) ??
+        fromState ??
         parseLocationToSnapshot({
           pathname: window.location.pathname,
           search: window.location.search
         });
 
       void restoreSnapshot(snapshot).finally(() => {
-        window.requestAnimationFrame(() => {
-          isHistoryNavigationRef.current = false;
-        });
+        // Keep URL/state aligned with the restored screen for this session.
+        replaceAppHistory(snapshot, historySessionRef.current);
+        endHistoryNavigation();
       });
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [restoreSnapshot]);
+  }, [endHistoryNavigation, restoreSnapshot]);
 
   const loadKinopoiskFilters = useCallback(async () => {
     if (kinopoiskFilters) {
@@ -851,23 +876,30 @@ export function App() {
       try {
         if (shouldUseUrl) {
           await restoreSnapshot(urlSnapshot);
-          replaceAppHistory({ ...urlSnapshot, scrollY: window.scrollY });
+          if (!shouldCommitHistoryRef.current) {
+            replaceAppHistory(
+              { ...urlSnapshot, scrollY: window.scrollY },
+              historySessionRef.current
+            );
+          }
         } else if (historySnapshot) {
           await restoreSnapshot(historySnapshot);
-          replaceAppHistory(historySnapshot);
+          if (!shouldCommitHistoryRef.current) {
+            replaceAppHistory(historySnapshot, historySessionRef.current);
+          }
         } else {
           await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-          replaceAppHistory(captureSnapshotRef.current());
+          if (!shouldCommitHistoryRef.current) {
+            replaceAppHistory(captureSnapshotRef.current(), historySessionRef.current);
+          }
         }
       } finally {
-        window.requestAnimationFrame(() => {
-          isHistoryNavigationRef.current = false;
-        });
+        endHistoryNavigation();
       }
     };
 
     void bootstrap();
-  }, [authGateEnabled, authUser, loadCatalogPage, restoreSnapshot]);
+  }, [authGateEnabled, authUser, endHistoryNavigation, loadCatalogPage, restoreSnapshot]);
 
   const { nearEnd: catalogNearEnd } = useWindowCatalogScroll({
     enabled: view === "catalog",
@@ -936,9 +968,11 @@ export function App() {
     setSelectedFilm(null);
     setView("catalog");
     setActiveMenu("Фильмы");
+    setCatalogMode("search");
+    catalogModeRef.current = "search";
     setIsSearchOpen(false);
-    await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
     requestHistoryCommit();
+    await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
   }
 
   async function openFilm(film: KinopoiskFilm, options?: { pushHistory?: boolean }) {
@@ -983,6 +1017,7 @@ export function App() {
     setActiveMenu("Каталог");
     setCollectionStatus("loading");
     setCollectionFilms([]);
+    requestHistoryCommit(pushHistory);
 
     try {
       const page =
@@ -994,8 +1029,6 @@ export function App() {
     } catch {
       setCollectionStatus("error");
     }
-
-    requestHistoryCommit(pushHistory);
   }
 
   async function handleMenuClick(item: MenuItem, options?: { pushHistory?: boolean }) {
@@ -1009,38 +1042,37 @@ export function App() {
     setDetailsStatus("idle");
     setIsSearchOpen(false);
 
-    try {
-      if (item === "Профиль") {
-        setView("profile");
-        if (authUser) {
-          await refreshUserLists();
-        }
-        return;
-      }
-
-      if (item === "Каталог") {
-        await openBrowse(browseMedia, { pushHistory, activeMenu: "Каталог" });
-        return;
-      }
-
-      setCatalogFilter(null);
-      catalogFilterRef.current = null;
-      setView("catalog");
-
-      if (item === "Фильмы") {
-        setCatalogMode("premieres");
-        catalogModeRef.current = "premieres";
-        await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true, filter: null });
-        return;
-      }
-
-      if (item === "Сериалы") {
-        setCatalogMode("serials");
-        catalogModeRef.current = "serials";
-        await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true, filter: null });
-      }
-    } finally {
+    if (item === "Профиль") {
+      setView("profile");
       requestHistoryCommit(pushHistory);
+      if (authUser) {
+        await refreshUserLists();
+      }
+      return;
+    }
+
+    if (item === "Каталог") {
+      await openBrowse(browseMedia, { pushHistory, activeMenu: "Каталог" });
+      return;
+    }
+
+    setCatalogFilter(null);
+    catalogFilterRef.current = null;
+    setView("catalog");
+
+    if (item === "Фильмы") {
+      setCatalogMode("premieres");
+      catalogModeRef.current = "premieres";
+      requestHistoryCommit(pushHistory);
+      await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true, filter: null });
+      return;
+    }
+
+    if (item === "Сериалы") {
+      setCatalogMode("serials");
+      catalogModeRef.current = "serials";
+      requestHistoryCommit(pushHistory);
+      await loadCatalogPage({ mode: "serials", nextPage: 1, replace: true, filter: null });
     }
   }
 
@@ -1058,8 +1090,8 @@ export function App() {
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     setIsSearchOpen(false);
-    await loadKinopoiskFilters();
     requestHistoryCommit(pushHistory);
+    await loadKinopoiskFilters();
   }
 
   async function openFilteredCatalog(
@@ -1079,8 +1111,8 @@ export function App() {
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     setIsSearchOpen(false);
-    await loadCatalogPage({ mode: "filtered", nextPage: 1, replace: true, filter });
     requestHistoryCommit(pushHistory);
+    await loadCatalogPage({ mode: "filtered", nextPage: 1, replace: true, filter });
   }
 
   function openImdbTopShelfPage() {
@@ -1092,6 +1124,7 @@ export function App() {
 
   async function goHome() {
     navHistoryRef.current = [];
+    historyDepthRef.current = 0;
     pendingWatchFilmIdRef.current = null;
     setCatalogFilter(null);
     catalogFilterRef.current = null;
@@ -1101,10 +1134,13 @@ export function App() {
     setWatchPreviewFilm(null);
     setDetailsStatus("idle");
     await loadCatalogPage({ mode: "premieres", nextPage: 1, replace: true });
-    replaceAppHistory({
-      ...createHomeSnapshot(window.scrollY),
-      page: 1
-    });
+    replaceAppHistory(
+      {
+        ...createHomeSnapshot(window.scrollY),
+        page: 1
+      },
+      historySessionRef.current
+    );
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
