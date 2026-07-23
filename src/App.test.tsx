@@ -487,7 +487,7 @@ describe("App", () => {
   });
 
 
-  it("clears stale film details when a later detail request fails", async () => {
+  it("keeps search results as new-tab links to watch pages", async () => {
     const user = userEvent.setup();
     const fetchMock = createFetchMock((url) => {
       if (url.includes("/api/kp/search")) {
@@ -511,23 +511,6 @@ describe("App", () => {
         );
       }
 
-      if (url.endsWith("/api/kp/films/1")) {
-        return filmResponse({
-          kinopoiskId: 1,
-          title: "Первый подробно",
-          year: "2001",
-          description: "Старые детали"
-        });
-      }
-
-      if (url.endsWith("/api/kp/films/2")) {
-        return {
-          ok: false,
-          status: 500,
-          json: async () => ({ error: "Kinopoisk API failed with status 500" })
-        };
-      }
-
       return undefined;
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -537,22 +520,26 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Открыть поиск" }));
     await user.type(screen.getByRole("searchbox", { name: "Поиск фильма" }), "первый");
     await user.click(screen.getByRole("button", { name: "Найти" }));
-    await user.click(await screen.findByRole("button", { name: /Первый/ }));
-    expect(await screen.findByText("Первый подробно")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "К результатам" }));
-    await user.click(screen.getByRole("button", { name: /Второй/ }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("Первый подробно")).not.toBeInTheDocument()
-    );
-    expect(
-      await screen.findByText("Kinopoisk API failed with status 500")
-    ).toBeInTheDocument();
+    const first = await screen.findByRole("link", { name: /Первый/ });
+    const second = screen.getByRole("link", { name: /Второй/ });
+    expect(first).toHaveAttribute("target", "_blank");
+    expect(first).toHaveAttribute("href", expect.stringMatching(/\/watch\/1\/?$/));
+    expect(second).toHaveAttribute("target", "_blank");
+    expect(second).toHaveAttribute("href", expect.stringMatching(/\/watch\/2\/?$/));
   });
 
   it("opens players on a dedicated watch page", async () => {
-    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      "",
+      buildAppUrl({
+        ...createHomeSnapshot(),
+        view: "watch",
+        filmId: 301
+      })
+    );
+
     const fetchMock = createFetchMock((url) => {
       if (url.endsWith("/api/kp/films/301")) {
         return filmResponse({
@@ -565,38 +552,11 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/top")) {
-        return (
-          mockTopCatalog(url, {
-            imdbFilms: [
-              {
-                kinopoiskId: 301,
-                title: "Матрица",
-                year: "1999",
-                posterUrl: "https://example.test/matrix.jpg",
-                rating: "8.5"
-              }
-            ],
-            feedFilms: [
-              {
-                kinopoiskId: 301,
-                title: "Матрица",
-                year: "1999",
-                posterUrl: "https://example.test/matrix.jpg",
-                rating: "8.5"
-              }
-            ]
-          }) ?? catalogResponse([])
-        );
-      }
-
       return undefined;
     });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
-
-    await user.click(await screen.findByRole("button", { name: /Матрица/ }));
 
     expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
     expect(screen.getByText("Фильм о выборе реальности.")).toBeInTheDocument();
@@ -604,20 +564,8 @@ describe("App", () => {
     expect(screen.queryByText("Популярное сейчас")).not.toBeInTheDocument();
   });
 
-  it("returns to the home catalog from watch page back navigation", async () => {
-    const user = userEvent.setup();
+  it("links catalog films to watch URLs in a new tab", async () => {
     const fetchMock = createFetchMock((url) => {
-      if (url.endsWith("/api/kp/films/301")) {
-        return filmResponse({
-          kinopoiskId: 301,
-          title: "Матрица",
-          year: "1999",
-          posterUrl: "https://example.test/matrix.jpg",
-          rating: "8.5",
-          description: "Фильм о выборе реальности."
-        });
-      }
-
       if (url.includes("/api/kp/top")) {
         return (
           mockTopCatalog(url, {
@@ -649,15 +597,11 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: /Матрица/ }));
-    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "К фильмам" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Матрица/ })).toBeInTheDocument();
-    });
-    expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: /Матрица/ });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(link).toHaveAttribute("href", expect.stringMatching(/\/watch\/301\/?$/));
+    expect(window.location.pathname).not.toMatch(/\/watch\//);
   });
 
   it("shows watching shelf before favorites on the profile page", async () => {
@@ -718,7 +662,7 @@ describe("App", () => {
     expect(titles.indexOf("Смотрю сейчас")).toBeLessThan(titles.indexOf("Любимое"));
   });
 
-  it("returns to the profile shelf from watch page back navigation", async () => {
+  it("opens profile shelf films in a new tab", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {
       const url = String(input);
@@ -748,26 +692,6 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/similars")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ films: [] })
-        });
-      }
-
-      if (url.endsWith("/api/kp/films/301")) {
-        return Promise.resolve(
-          filmResponse({
-            kinopoiskId: 301,
-            title: "Матрица",
-            year: "1999",
-            posterUrl: "https://example.test/matrix.jpg",
-            rating: "8.5",
-            description: "Фильм о выборе реальности."
-          })
-        );
-      }
-
       if (url.includes("/api/kp/collections")) {
         return Promise.resolve(catalogResponse([]));
       }
@@ -781,20 +705,23 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Профиль" }));
     expect(await screen.findByText("Буду смотреть")).toBeInTheDocument();
 
-    const matrixTitle = await screen.findByText("Матрица");
-    await user.click(matrixTitle.closest("button")!);
-    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "В кабинет" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Буду смотреть")).toBeInTheDocument();
-    });
-    expect(screen.queryByRole("heading", { name: "Матрица" })).not.toBeInTheDocument();
+    const matrixLink = await screen.findByRole("link", { name: /Матрица/ });
+    expect(matrixLink).toHaveAttribute("target", "_blank");
+    expect(matrixLink).toHaveAttribute("href", expect.stringMatching(/\/watch\/301\/?$/));
+    expect(screen.getByText("Буду смотреть")).toBeInTheDocument();
   });
 
   it("shows IMDb rating on the watch page when it is available", async () => {
-    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      "",
+      buildAppUrl({
+        ...createHomeSnapshot(),
+        view: "watch",
+        filmId: 326
+      })
+    );
+
     const fetchMock = createFetchMock((url) => {
       if (url.endsWith("/api/kp/films/326")) {
         return filmResponse({
@@ -808,56 +735,18 @@ describe("App", () => {
         });
       }
 
-      if (url.includes("/api/kp/top")) {
-        return (
-          mockTopCatalog(url, {
-            imdbFilms: [
-              {
-                kinopoiskId: 326,
-                title: "Побег из Шоушенка",
-                year: "1994",
-                posterUrl: "https://example.test/shawshank.jpg",
-                rating: "9.1"
-              }
-            ],
-            feedFilms: [
-              {
-                kinopoiskId: 326,
-                title: "Побег из Шоушенка",
-                year: "1994",
-                posterUrl: "https://example.test/shawshank.jpg",
-                rating: "9.1"
-              }
-            ]
-          }) ?? catalogResponse([])
-        );
-      }
-
       return undefined;
     });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: /Побег из Шоушенка/ }));
-
     expect(await screen.findByText(/IMDb 9\.3/)).toBeInTheDocument();
     expect(screen.getByText(/КП 9\.1/)).toBeInTheDocument();
   });
 
-  it("updates the URL when opening a film and supports watch deep links", async () => {
-    const user = userEvent.setup();
+  it("exposes watch deep-link hrefs on film cards", async () => {
     const fetchMock = createFetchMock((url) => {
-      if (url.endsWith("/api/kp/films/301")) {
-        return filmResponse({
-          kinopoiskId: 301,
-          title: "Матрица",
-          year: "1999",
-          posterUrl: "https://example.test/matrix.jpg",
-          description: "Следуй за белым кроликом."
-        });
-      }
-
       if (url.includes("/api/kp/top")) {
         return (
           mockTopCatalog(url, {
@@ -879,27 +768,14 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: /Матрица/ }));
-
-    expect(await screen.findByRole("heading", { name: "Матрица" })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(window.location.pathname).toMatch(/\/watch\/301$/);
-    });
+    const link = await screen.findByRole("link", { name: /Матрица/ });
+    expect(link).toHaveAttribute("href", expect.stringMatching(/\/watch\/301\/?$/));
+    expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("goes back to the previous URL screen after opening a film from serials", async () => {
+  it("keeps serial catalog films as new-tab watch links", async () => {
     const user = userEvent.setup();
     const fetchMock = createFetchMock((url) => {
-      if (url.endsWith("/api/kp/films/5")) {
-        return filmResponse({
-          kinopoiskId: 5,
-          title: "Сериал дня",
-          year: "2025",
-          posterUrl: "https://example.test/serial.jpg",
-          description: "Описание сериала."
-        });
-      }
-
       if (url.includes("/api/kp/catalog/recent") || url.includes("TV_SERIES")) {
         return catalogResponse(
           [
@@ -941,19 +817,9 @@ describe("App", () => {
       expect(window.location.pathname).toMatch(/\/serials\/?$/);
     });
 
-    await user.click(await screen.findByRole("button", { name: /Сериал дня/ }));
-    expect(await screen.findByRole("heading", { name: "Сериал дня" })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(window.location.pathname).toMatch(/\/watch\/5$/);
-    });
-
-    await user.click(screen.getByRole("button", { name: /К сериалам|Назад/ }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toMatch(/\/serials\/?$/);
-    });
-    expect(screen.queryByRole("heading", { name: "Сериал дня" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /Сериал дня/ })).toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: /Сериал дня/ });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("href", expect.stringMatching(/\/watch\/5\/?$/));
   });
 
   it("opens a film from a cold watch deep link", async () => {

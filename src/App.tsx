@@ -985,33 +985,6 @@ export function App() {
     await loadCatalogPage({ mode: "search", nextPage: 1, replace: true });
   }
 
-  async function openFilm(film: KinopoiskFilm, options?: { pushHistory?: boolean }) {
-    const pushHistory = options?.pushHistory !== false;
-    beginHistoryEntry(pushHistory);
-    pendingWatchFilmIdRef.current = film.kinopoiskId;
-
-    setError(null);
-    setWatchPreviewFilm(film);
-    setSelectedFilm(null);
-    setDetailsStatus("loading");
-    setView("watch");
-    setSelectedLists(
-      userLists.find((item) => item.kinopoiskId === film.kinopoiskId)?.lists ?? []
-    );
-    requestHistoryCommit(pushHistory);
-
-    try {
-      const details = await client.getFilm(film.kinopoiskId);
-      setSelectedFilm(details);
-      setWatchPreviewFilm(null);
-      setDetailsStatus("success");
-    } catch (detailsError) {
-      setError(getErrorMessage(detailsError));
-      setWatchPreviewFilm(null);
-      setDetailsStatus("error");
-    }
-  }
-
   async function openCollection(id: string, options?: { pushHistory?: boolean }) {
     const collection = getCollectionById(id);
 
@@ -1329,7 +1302,6 @@ export function App() {
                 title={imdbShelfTitle}
                 films={visibleImdbShelfFilms}
                 showCount={false}
-                onSelect={(film) => void openFilm(film)}
                 onTitleClick={openImdbTopShelfPage}
                 onShowMore={openImdbTopShelfPage}
               />
@@ -1377,7 +1349,6 @@ export function App() {
                 films={catalogGridFilms}
                 animate={status === "success" && !showCatalogSkeletons && catalogGridFilms.length <= 24}
                 loadingSkeletonCount={showCatalogSkeletons ? catalogSkeletonCount : 0}
-                onSelect={(film) => void openFilm(film)}
               />
             </div>
           ) : null}
@@ -1459,7 +1430,7 @@ export function App() {
           </div>
           {collectionStatus === "loading" ? <p className="player-status">Загружаем подборку...</p> : null}
           {collectionFilms.length > 0 ? (
-            <FilmGrid films={collectionFilms} onSelect={(film) => void openFilm(film)} />
+            <FilmGrid films={collectionFilms} />
           ) : collectionStatus === "success" ? (
             <div className="empty-state">
               <strong>В подборке пока нет доступных карточек.</strong>
@@ -1485,7 +1456,6 @@ export function App() {
                     title={watchStatusLabels[statusKey]}
                     films={films}
                     progressByFilm={showProgress ? progressByFilm : undefined}
-                    onSelect={(film) => void openFilm(film)}
                   />
                 );
               }
@@ -1625,7 +1595,6 @@ export function App() {
               title="Похожие"
               subtitle="По данным Кинопоиска, отсортировано по рейтингу"
               films={visibleSimilarFilms}
-              onSelect={(film) => void openFilm(film)}
             />
           ) : null}
         </section>

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { buildWatchFilmUrl } from "../lib/appRoutes";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
@@ -11,7 +12,6 @@ type FilmShelfProps = {
   subtitle?: string;
   films: KinopoiskFilm[];
   progressByFilm?: Record<number, number>;
-  onSelect: (film: KinopoiskFilm) => void;
   onTitleClick?: () => void;
   onShowMore?: () => void;
   showMoreLabel?: string;
@@ -23,7 +23,6 @@ export function FilmShelf({
   subtitle,
   films,
   progressByFilm,
-  onSelect,
   onTitleClick,
   onShowMore,
   showMoreLabel = "Показать ещё",
@@ -64,12 +63,13 @@ export function FilmShelf({
         {films.map((film) => {
           const progress = progressByFilm?.[film.kinopoiskId];
           return (
-            <button
+            <a
               key={film.kinopoiskId}
-              type="button"
               className="film-shelf__card film-shelf__card--interactive"
+              href={buildWatchFilmUrl(film.kinopoiskId)}
+              target="_blank"
+              rel="noopener noreferrer"
               aria-label={film.title}
-              onClick={() => onSelect(film)}
             >
               <span className="film-shelf__poster">
                 {film.posterUrl ? (
@@ -94,7 +94,7 @@ export function FilmShelf({
                   <FilmCardAwards chips={film.awardChips} className="film-shelf__awards" />
                 ) : null}
               </span>
-            </button>
+            </a>
           );
         })}
         {onShowMore ? (
