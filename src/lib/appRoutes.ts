@@ -138,6 +138,20 @@ export function buildAppUrl(
   return `${buildAppPathname(snapshot, basePath)}${buildAppSearch(snapshot)}`;
 }
 
+export function buildWatchFilmUrl(
+  filmId: number,
+  basePath = getAppBasePath()
+): string {
+  return buildAppUrl(
+    {
+      ...createHomeSnapshot(),
+      view: "watch",
+      filmId
+    },
+    basePath
+  );
+}
+
 export function createHomeSnapshot(scrollY = 0): NavigationSnapshot {
   return {
     view: "catalog",

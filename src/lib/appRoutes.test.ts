@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAppUrl,
+  buildWatchFilmUrl,
   createHomeSnapshot,
   isSameAppUrl,
   parseLocationToSnapshot
@@ -22,6 +23,7 @@ describe("appRoutes", () => {
         BASE
       )
     ).toBe("/films/watch/301");
+    expect(buildWatchFilmUrl(301, BASE)).toBe("/films/watch/301");
 
     expect(
       buildAppUrl(

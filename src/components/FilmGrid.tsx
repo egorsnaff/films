@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { buildWatchFilmUrl } from "../lib/appRoutes";
 import type { KinopoiskFilm } from "../lib/kinopoisk";
 
 import { FilmRatingBadge } from "./FilmRatingBadge";
@@ -10,24 +11,19 @@ type FilmGridProps = {
   films: KinopoiskFilm[];
   animate?: boolean;
   loadingSkeletonCount?: number;
-  onSelect: (film: KinopoiskFilm) => void;
 };
 
-export function FilmGrid({
-  films,
-  animate = true,
-  loadingSkeletonCount = 0,
-  onSelect
-}: FilmGridProps) {
+export function FilmGrid({ films, animate = true, loadingSkeletonCount = 0 }: FilmGridProps) {
   return (
     <div className={`film-grid${animate ? " film-grid--revealed" : ""}`}>
       {films.map((film, index) => (
-        <button
+        <a
           key={film.kinopoiskId}
-          type="button"
           className="film-card film-card--interactive"
+          href={buildWatchFilmUrl(film.kinopoiskId)}
+          target="_blank"
+          rel="noopener noreferrer"
           style={animate ? ({ "--stagger": index } as CSSProperties) : undefined}
-          onClick={() => onSelect(film)}
         >
           <span className="film-card__poster">
             {film.posterUrl ? (
@@ -48,7 +44,7 @@ export function FilmGrid({
               <FilmCardAwards chips={film.awardChips} />
             ) : null}
           </span>
-        </button>
+        </a>
       ))}
       {loadingSkeletonCount > 0
         ? Array.from({ length: loadingSkeletonCount }).map((_, index) => (

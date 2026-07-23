@@ -619,6 +619,8 @@ h1 em {
   color: inherit;
   padding: 0;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .film-card--skeleton {
@@ -3022,6 +3024,8 @@ h1 em {
   padding: 0;
   scroll-snap-align: start;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .film-shelf__card:hover .film-shelf__poster,
