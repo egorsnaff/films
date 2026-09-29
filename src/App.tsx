@@ -1203,16 +1203,6 @@ export function App() {
   return (
     <>
       <CursorGlow disabled={view === "watch"} />
-      {authUser ? (
-        <PresenceDock
-          activity={resolveLocalActivity({
-            view,
-            catalogMode,
-            film: selectedFilm,
-            playbackStarted
-          })}
-        />
-      ) : null}
       <main className="app-shell">
         <div className="ambient ambient-left" aria-hidden="true" />
         <div className="ambient ambient-right" aria-hidden="true" />
@@ -1258,6 +1248,16 @@ export function App() {
           </nav>
         )}
         <div className="topbar__actions">
+          {authUser ? (
+            <PresenceDock
+              activity={resolveLocalActivity({
+                view,
+                catalogMode,
+                film: selectedFilm,
+                playbackStarted
+              })}
+            />
+          ) : null}
           <UserMenu
             isAuthenticated={Boolean(authUser)}
             onLogin={() => void handleMenuClick("Профиль")}
@@ -1453,33 +1453,35 @@ export function App() {
       {view === "profile" ? (
         <section className="profile-view" id="main">
           <div className="profile-shelves">
-            {sharedPlanIds ? (
-              <FilmShelf
-                title="Общий список"
-                subtitle="Всё, что мы вдвоём отметили «Буду смотреть»"
-                films={sharedPlanIds
-                  .map((kinopoiskId) => listFilms[kinopoiskId])
-                  .filter((film): film is KinopoiskFilm => Boolean(film))}
-              />
-            ) : null}
-            {(["watching", "plan", "watched"] as WatchStatus[]).map(
-              (statusKey) => {
-                const items = userLists.filter((item) => item.lists.includes(statusKey));
-                const films = items
-                  .map((item) => listFilms[item.kinopoiskId])
-                  .filter((film): film is KinopoiskFilm => Boolean(film));
-                const showProgress = statusKey === "watching" || statusKey === "watched";
-
-                return (
+            {(["watching", "shared", "plan", "watched"] as const).map((shelfKey) => {
+              if (shelfKey === "shared") {
+                return sharedPlanIds ? (
                   <FilmShelf
-                    key={statusKey}
-                    title={watchStatusLabels[statusKey]}
-                    films={films}
-                    progressByFilm={showProgress ? progressByFilm : undefined}
+                    key={shelfKey}
+                    title="Общий список"
+                    subtitle="Всё, что мы вдвоём отметили «Буду смотреть»"
+                    films={sharedPlanIds
+                      .map((kinopoiskId) => listFilms[kinopoiskId])
+                      .filter((film): film is KinopoiskFilm => Boolean(film))}
                   />
-                );
+                ) : null;
               }
-            )}
+
+              const films = userLists
+                .filter((item) => item.lists.includes(shelfKey))
+                .map((item) => listFilms[item.kinopoiskId])
+                .filter((film): film is KinopoiskFilm => Boolean(film));
+              const showProgress = shelfKey === "watching" || shelfKey === "watched";
+
+              return (
+                <FilmShelf
+                  key={shelfKey}
+                  title={watchStatusLabels[shelfKey]}
+                  films={films}
+                  progressByFilm={showProgress ? progressByFilm : undefined}
+                />
+              );
+            })}
           </div>
         </section>
       ) : null}

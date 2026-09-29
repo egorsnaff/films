@@ -137,6 +137,7 @@ code {
 }
 
 .topbar .topbar__actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3320,59 +3321,68 @@ h1 em {
   }
 }
 
-.presence-panel {
-  position: fixed;
-  top: 104px;
-  right: 18px;
-  z-index: 25;
-  display: grid;
-  gap: 12px;
-  width: 264px;
-  max-height: calc(100vh - 128px);
-  overflow: hidden auto;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--panel-strong);
-  box-shadow: var(--shadow);
-  padding: 12px;
-  transition: width 200ms ease, padding 200ms ease;
+/* Выпадающий список позиционируется по правому краю .topbar__actions, чтобы не уезжать за экран. */
+.presence-menu {
+  position: static;
 }
 
-.presence-panel--collapsed {
-  width: 56px;
-  justify-items: center;
-  padding: 8px;
-}
-
-.is-player-fullscreen .presence-panel {
-  display: none;
-}
-
-.presence-panel__toggle {
+.presence-trigger {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
+  height: 46px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 7%);
   color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
-  padding: 6px 8px;
+  padding: 0 12px 0 8px;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
-.presence-panel--collapsed .presence-panel__toggle {
-  justify-content: center;
-  padding: 6px 0;
-}
-
-.presence-panel__toggle:hover,
-.presence-panel__toggle:focus-visible {
-  background: rgb(255 255 255 / 6%);
+.presence-trigger:hover,
+.presence-trigger:focus-visible,
+.presence-trigger[aria-expanded="true"] {
+  border-color: rgb(240 183 91 / 46%);
+  background: rgb(255 255 255 / 11%);
   outline: none;
+}
+
+.presence-trigger__avatars {
+  display: flex;
+}
+
+.presence-trigger__avatars .presence-avatar + .presence-avatar {
+  margin-left: -8px;
+}
+
+.presence-trigger__count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.presence-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 10px;
+  width: min(280px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  overflow: hidden auto;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 18px;
+  background: rgb(16 18 20 / 97%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 42%);
+  padding: 12px;
 }
 
 .presence-panel__pulse {
@@ -3388,6 +3398,10 @@ h1 em {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin: 0;
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .presence-panel__count {
@@ -3395,7 +3409,6 @@ h1 em {
   font-variant-numeric: tabular-nums;
 }
 
-.presence-panel__avatars,
 .presence-panel__list {
   display: grid;
   gap: 8px;
@@ -3416,6 +3429,18 @@ h1 em {
   color: var(--ink);
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.presence-avatar--compact {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border: 2px solid rgb(28 30 32);
+  font-size: 0.75rem;
+}
+
+.presence-avatar--compact.presence-avatar--online::after {
+  display: none;
 }
 
 .presence-avatar--online::after {
@@ -3502,10 +3527,7 @@ h1 em {
 }
 
 @media (max-width: 720px) {
-  .presence-panel {
-    top: auto;
-    right: 12px;
-    bottom: 12px;
-    max-height: 60vh;
+  .presence-trigger__avatars {
+    display: none;
   }
 }

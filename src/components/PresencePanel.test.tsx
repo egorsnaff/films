@@ -19,7 +19,7 @@ const users: PresenceEntry[] = [
 
 describe("PresencePanel", () => {
   it("shows what each user is doing with a link to the film being watched", () => {
-    render(<PresencePanel users={users} collapsed={false} onToggle={() => undefined} />);
+    render(<PresencePanel users={users} open onToggle={() => undefined} />);
 
     expect(screen.getByText("kseniya")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Темный рыцарь/ })).toHaveAttribute(
@@ -30,14 +30,15 @@ describe("PresencePanel", () => {
     expect(screen.getByText("не в сети")).toBeInTheDocument();
   });
 
-  it("collapses to online avatars and toggles on click", async () => {
+  it("shows only the online count until opened", async () => {
     const onToggle = vi.fn();
-    render(<PresencePanel users={users} collapsed onToggle={onToggle} />);
+    render(<PresencePanel users={users} open={false} onToggle={onToggle} />);
 
     expect(screen.queryByText("kseniya")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    const trigger = screen.getByRole("button", { name: "Кто онлайн: 2" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
 
-    await userEvent.click(screen.getByRole("button", { name: "Показать, кто онлайн" }));
+    await userEvent.click(trigger);
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });

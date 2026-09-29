@@ -210,13 +210,37 @@ describe("isFilmDetailsCacheComplete", () => {
     ).toBe(false);
   });
 
+  it("treats entries without genres as incomplete even with a description", () => {
+    expect(
+      isFilmDetailsCacheComplete({
+        kinopoiskId: 361,
+        title: "Бойцовский клуб",
+        description: "Описание",
+        filmLengthMinutes: 139
+      })
+    ).toBe(false);
+  });
+
   it("treats detailed cache entries as complete", () => {
     expect(
       isFilmDetailsCacheComplete({
         kinopoiskId: 361,
         title: "Бойцовский клуб",
-        description: "Описание"
+        description: "Описание",
+        genres: ["драма"]
       })
     ).toBe(true);
+  });
+});
+
+describe("mapFilmDetails genres", () => {
+  it("reads genres in the kinopoisk { genre } shape", () => {
+    expect(
+      mapFilmDetails({
+        kinopoiskId: 258687,
+        nameRu: "Интерстеллар",
+        genres: [{ genre: "драма" }, { genre: "фантастика" }]
+      }).genres
+    ).toEqual(["драма", "фантастика"]);
   });
 });

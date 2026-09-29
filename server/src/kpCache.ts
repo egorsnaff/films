@@ -205,9 +205,9 @@ export function writeFilmCache(film: CachedFilm): void {
        poster_url = excluded.poster_url,
        rating = excluded.rating,
        imdb_rating = excluded.imdb_rating,
-       description = excluded.description,
-       film_length_minutes = excluded.film_length_minutes,
-       genres = excluded.genres,
+       description = COALESCE(excluded.description, films_cache.description),
+       film_length_minutes = COALESCE(excluded.film_length_minutes, films_cache.film_length_minutes),
+       genres = COALESCE(excluded.genres, films_cache.genres),
        fetched_at = excluded.fetched_at`
   ).run(
     film.kinopoiskId,

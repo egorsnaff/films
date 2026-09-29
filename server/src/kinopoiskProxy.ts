@@ -171,12 +171,9 @@ async function cachedRequest<T>(
   }
 }
 
+// Жанры есть только в полной карточке фильма, в выдаче каталога их нет.
 export function isFilmDetailsCacheComplete(film: CachedFilm): boolean {
-  return (
-    Boolean(film.description) ||
-    Boolean(film.genres?.length) ||
-    film.filmLengthMinutes !== undefined
-  );
+  return Boolean(film.genres?.length);
 }
 
 export async function getFilmDetails(kinopoiskId: number): Promise<{ film: CachedFilm; fromCache: boolean }> {
@@ -859,9 +856,13 @@ function mapNamedList(value: unknown): string[] | undefined {
   }
 
   const names = value
-    .map((item) =>
-      typeof item === "object" && item !== null ? toStringValue((item as { name?: unknown }).name) : undefined
-    )
+    .map((item) => {
+      if (typeof item !== "object" || item === null) {
+        return undefined;
+      }
+      const entry = item as { name?: unknown; genre?: unknown };
+      return toStringValue(entry.genre ?? entry.name);
+    })
     .filter((item): item is string => Boolean(item));
 
   return names.length > 0 ? names : undefined;
