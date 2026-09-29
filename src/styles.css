@@ -711,6 +711,7 @@ h1 em {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  content-visibility: auto;
   transition: opacity 360ms ease, visibility 360ms ease;
 }
 
@@ -806,6 +807,11 @@ h1 em {
 .poster-image--loaded .poster-image__stage {
   opacity: 0;
   visibility: hidden;
+}
+
+.poster-image--loaded .poster-image__stage *,
+.poster-image--error .poster-image__stage * {
+  animation: none;
 }
 
 .poster-image--loaded .poster-image__img {
