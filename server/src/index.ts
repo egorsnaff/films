@@ -33,6 +33,8 @@ import {
 } from "./kinopoiskProxy.js";
 import { createPresenceStore, parsePresenceActivity } from "./presence.js";
 import { getRecommendations, getSerialRecommendations } from "./recommendations.js";
+import { SHARED_LIST_MEMBERS, SHARED_LIST_USERNAMES } from "./sharedList.js";
+import { parseTelegramUsers, startTelegramBot } from "./telegramBot.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -43,9 +45,6 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,https:
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-
-// «Общий список» в профиле: объединённый «Буду смотреть» этих пользователей.
-const SHARED_LIST_USERNAMES = ["egor", "ksenia"];
 
 const presence = createPresenceStore();
 
@@ -533,3 +532,26 @@ app.use((error: unknown, _req: express.Request, res: express.Response, next: exp
 app.listen(port, () => {
   console.log(`films api listening on ${port}`);
 });
+
+const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+if (telegramBotToken) {
+  startTelegramBot(telegramBotToken, {
+    members: SHARED_LIST_MEMBERS,
+    telegramUsers: parseTelegramUsers(process.env.TELEGRAM_USERS),
+    siteUrl: process.env.SITE_URL ?? "https://films.qzz.io",
+    searchFilms: async (query) => (await searchCatalog(query, 1)).page.films,
+    getFilm: async (kinopoiskId) => {
+      const { film } = await getFilmDetails(kinopoiskId);
+      return { ...film, isSeries: await isSeriesFilm(kinopoiskId) };
+    },
+    getAwards: async (kinopoiskId) => (await getFilmAwards(kinopoiskId)).awards.summary,
+    addToPlan: (username, kinopoiskId) => {
+      const user = findUserByUsername(username);
+      if (!user) {
+        return false;
+      }
+      addUserFilmToList(user.id, kinopoiskId, "plan");
+      return true;
+    }
+  });
+}
