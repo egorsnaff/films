@@ -2371,6 +2371,107 @@ h1 em {
   padding-top: 12px;
 }
 
+.admin-page {
+  display: grid;
+  gap: 22px;
+  padding-top: 12px;
+}
+
+.admin-page__tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-page__tab {
+  padding: 8px 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.admin-page__tab[aria-selected="true"] {
+  border-color: rgb(240 183 91 / 48%);
+  background: rgb(240 183 91 / 10%);
+  color: var(--ink);
+}
+
+.admin-page__hint {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-page__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-page__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.admin-page__info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-page__info strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-page__info span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.admin-page__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-page__approve,
+.admin-page__reject {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-page__approve {
+  border: 0;
+  background: linear-gradient(135deg, #f0b75b, #f06b42);
+  color: #150c07;
+}
+
+.admin-page__reject {
+  border: 1px solid rgb(255 255 255 / 16%);
+  background: transparent;
+  color: var(--ink);
+}
+
+.admin-page__approve:disabled,
+.admin-page__reject:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .pagination {
   display: flex;
   flex-wrap: wrap;
@@ -2620,6 +2721,21 @@ h1 em {
   font-size: 0.82rem;
   line-height: 1.45;
   text-align: center;
+}
+
+.auth-gate__switch {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.auth-gate__switch:hover,
+.auth-gate__switch:focus-visible {
+  text-decoration: underline;
 }
 
 .auth-gate-boot {

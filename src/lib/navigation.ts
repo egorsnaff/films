@@ -1,6 +1,13 @@
 import type { BrowseMedia, CatalogFilter } from "./catalogFilter";
 
-export type ViewState = "catalog" | "watch" | "collections" | "collection" | "profile" | "browse";
+export type ViewState =
+  | "catalog"
+  | "watch"
+  | "collections"
+  | "collection"
+  | "profile"
+  | "browse"
+  | "admin";
 export type CatalogMode = "premieres" | "search" | "films" | "serials" | "filtered";
 export type MenuItem = "Фильмы" | "Сериалы" | "Каталог" | "Профиль";
 
@@ -59,6 +66,8 @@ export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
         return "К сериалам";
       }
       return "К фильмам";
+    case "admin":
+      return "В админку";
     default:
       return "Назад";
   }

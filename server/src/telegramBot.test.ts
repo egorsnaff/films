@@ -43,6 +43,10 @@ function createHarness(overrides: Partial<TelegramBotDeps> = {}) {
     })
   } as unknown as TelegramBotDeps["api"];
   const addToPlan = vi.fn(() => true);
+  const decideSignup = vi.fn<TelegramBotDeps["decideSignup"]>(() => ({
+    ok: true,
+    request: { id: 7, email: "new@example.com", status: "approved", createdAt: "", decidedAt: "" }
+  }));
 
   const bot = createTelegramBot({
     api,
@@ -56,10 +60,12 @@ function createHarness(overrides: Partial<TelegramBotDeps> = {}) {
     getFilm: async () => darkKnight,
     getAwards: async () => [{ name: "Оскар", wins: 2, nominations: 8 }],
     addToPlan,
+    isAdmin: (username: string) => username === "egor",
+    decideSignup,
     ...overrides
   });
 
-  return { bot, calls, addToPlan };
+  return { bot, calls, addToPlan, decideSignup };
 }
 
 function textUpdate(fromId: number, text: string) {
@@ -308,5 +314,95 @@ describe("telegram bot flow", () => {
     expect(keyboard.inline_keyboard).toEqual([
       [{ text: "Темный рыцарь: Возрождение (2012)", callback_data: "show:42" }]
     ]);
+  });
+});
+
+describe("signup requests", () => {
+  const request = {
+    id: 7,
+    email: "new@example.com",
+    status: "pending" as const,
+    createdAt: "2026-09-29T10:00:00.000Z",
+    decidedAt: null
+  };
+
+  it("parses signup callbacks", () => {
+    expect(parseCallbackData("signup:approve:7")).toEqual({ kind: "signup", decision: "approve", requestId: 7 });
+    expect(parseCallbackData("signup:reject:7")).toEqual({ kind: "signup", decision: "reject", requestId: 7 });
+    expect(parseCallbackData("signup:ban:7")).toBeNull();
+    expect(parseCallbackData("signup:approve:0")).toBeNull();
+  });
+
+  it("notifies only admins, in private chats", async () => {
+    const { bot, calls } = createHarness();
+
+    await bot.notifySignupRequest(request);
+
+    const sent = calls.filter((call) => call.method === "sendMessage");
+    expect(sent).toHaveLength(1);
+    expect(sent[0].payload).toMatchObject({
+      chat_id: EGOR_TG,
+      text: expect.stringContaining("new@example.com"),
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "✅ Одобрить", callback_data: "signup:approve:7" },
+            { text: "❌ Отклонить", callback_data: "signup:reject:7" }
+          ]
+        ]
+      }
+    });
+  });
+
+  it("refuses decisions from non-admins", async () => {
+    const { bot, calls, decideSignup } = createHarness();
+
+    await bot.handleUpdate(callbackUpdate(KSENIYA_TG, "signup:approve:7"));
+
+    expect(decideSignup).not.toHaveBeenCalled();
+    expect(calls).toContainEqual({
+      method: "answerCallbackQuery",
+      payload: { callback_query_id: "cb", text: "Нет доступа" }
+    });
+  });
+
+  it("refuses decisions from group members mapped only via the default user", async () => {
+    const { bot, calls, decideSignup } = createHarness({ group: { chatId: GROUP_ID, defaultUsername: "egor" } });
+
+    await bot.handleUpdate(groupCallbackUpdate(5555, 7, "signup:approve:7"));
+
+    expect(decideSignup).not.toHaveBeenCalled();
+    expect(calls).toContainEqual({
+      method: "answerCallbackQuery",
+      payload: { callback_query_id: "cb", text: "Нет доступа" }
+    });
+  });
+
+  it("applies the decision and replaces the buttons with the verdict", async () => {
+    const { bot, calls, decideSignup } = createHarness();
+
+    await bot.handleUpdate(callbackUpdate(EGOR_TG, "signup:approve:7"));
+
+    expect(decideSignup).toHaveBeenCalledWith(7, "approve", "egor");
+    expect(calls.find((call) => call.method === "editMessageText")?.payload).toMatchObject({
+      chat_id: EGOR_TG,
+      message_id: 5,
+      text: expect.stringContaining("✅ Одобрено"),
+      reply_markup: { inline_keyboard: [] }
+    });
+  });
+
+  it("tells the admin when the request was already handled", async () => {
+    const { bot, calls } = createHarness({
+      decideSignup: () => ({ ok: false, error: "already_decided" })
+    });
+
+    await bot.handleUpdate(callbackUpdate(EGOR_TG, "signup:reject:7"));
+
+    expect(calls).toContainEqual({
+      method: "answerCallbackQuery",
+      payload: { callback_query_id: "cb", text: "Уже обработано" }
+    });
+    expect(calls.some((call) => call.method === "editMessageReplyMarkup")).toBe(true);
   });
 });

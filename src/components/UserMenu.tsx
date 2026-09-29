@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 
 type UserMenuProps = {
   isAuthenticated: boolean;
+  isAdmin?: boolean;
   onLogin: () => void;
   onProfile: () => void;
+  onAdmin?: () => void;
   onLogout: () => void;
 };
 
-export function UserMenu({ isAuthenticated, onLogin, onProfile, onLogout }: UserMenuProps) {
+export function UserMenu({ isAuthenticated, isAdmin, onLogin, onProfile, onAdmin, onLogout }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,6 +48,18 @@ export function UserMenu({ isAuthenticated, onLogin, onProfile, onLogout }: User
           <button type="button" role="menuitem" onClick={() => { setIsOpen(false); onProfile(); }}>
             Кабинет
           </button>
+          {isAdmin && onAdmin ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setIsOpen(false);
+                onAdmin();
+              }}
+            >
+              Админка
+            </button>
+          ) : null}
           <button
             type="button"
             role="menuitem"

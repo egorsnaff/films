@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 
+import { AdminPage } from "./components/AdminPage";
 import { AuthGateBoot } from "./components/AuthGateBoot";
 import { AuthGateScreen } from "./components/AuthGateScreen";
 import { BackButton } from "./components/BackButton";
@@ -587,6 +588,10 @@ export function App() {
         if (authUser) {
           await refreshUserLists();
         }
+      } else if (snapshot.view === "admin") {
+        setView("admin");
+        setSelectedFilm(null);
+        setDetailsStatus("idle");
       } else if (snapshot.view === "browse") {
         setView("browse");
         setSelectedFilm(null);
@@ -1064,6 +1069,18 @@ export function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
+  function openAdmin() {
+    beginHistoryEntry(true);
+    setView("admin");
+    setActiveMenu("Профиль");
+    setSelectedFilm(null);
+    setWatchPreviewFilm(null);
+    setDetailsStatus("idle");
+    setIsSearchOpen(false);
+    requestHistoryCommit(true);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   function changeProfileListPage(nextPage: number) {
     setProfileListPage(nextPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1317,8 +1334,10 @@ export function App() {
           ) : null}
           <UserMenu
             isAuthenticated={Boolean(authUser)}
+            isAdmin={Boolean(authUser?.isAdmin)}
             onLogin={() => void handleMenuClick("Профиль")}
             onProfile={() => void handleMenuClick("Профиль")}
+            onAdmin={openAdmin}
             onLogout={() => void handleLogout()}
           />
           <button
@@ -1505,6 +1524,13 @@ export function App() {
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {view === "admin" ? (
+        <AdminPage
+          isAdmin={Boolean(authUser?.isAdmin)}
+          onBack={() => void handleMenuClick("Профиль")}
+        />
       ) : null}
 
       {view === "profile" && profileList ? (
