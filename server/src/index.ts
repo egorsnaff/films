@@ -14,6 +14,7 @@ import {
   listUsers,
   removeUserFilmFromList,
   updateUserFilmProgress,
+  type DbUser,
   type WatchStatus
 } from "./db.js";
 import { getKinopoiskApiStats } from "./kpApiStats.js";
@@ -34,7 +35,14 @@ import {
 import { createPresenceStore, parsePresenceActivity } from "./presence.js";
 import { getRecommendations, getSerialRecommendations } from "./recommendations.js";
 import { SHARED_LIST_MEMBERS, SHARED_LIST_USERNAMES } from "./sharedList.js";
-import { parseTelegramGroup, parseTelegramUsers, startTelegramBot } from "./telegramBot.js";
+import { decideSignupRequest, loginBlockedMessage } from "./signup.js";
+import { createSignupRouter } from "./signupRoutes.js";
+import {
+  parseTelegramGroup,
+  parseTelegramUsers,
+  startTelegramBot,
+  type RunningTelegramBot
+} from "./telegramBot.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -47,6 +55,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,https:
   .filter(Boolean);
 
 const presence = createPresenceStore();
+let telegramBot: RunningTelegramBot | null = null;
 
 type SessionPayload = {
   sub: number;
@@ -73,6 +82,10 @@ function createToken(user: { id: number; username: string }): string {
   return jwt.sign({ sub: user.id, username: user.username } satisfies SessionPayload, jwtSecret, {
     expiresIn: "30d"
   });
+}
+
+function toPublicUser(user: DbUser) {
+  return { id: user.id, username: user.username, isAdmin: user.is_admin === 1 };
 }
 
 function readSession(req: express.Request): SessionPayload | null {
@@ -308,7 +321,7 @@ app.get("/auth/me", (req, res) => {
     return;
   }
 
-  res.json({ user: { id: user.id, username: user.username } });
+  res.json({ user: toPublicUser(user) });
 });
 
 app.post("/auth/login", (req, res) => {
@@ -320,10 +333,11 @@ app.post("/auth/login", (req, res) => {
     return;
   }
 
-  const user = findUserByUsername(username);
+  const user = findUserByUsername(username) ?? findUserByUsername(username.toLowerCase());
 
   if (!user) {
-    res.status(401).json({ error: "Неверный логин или пароль" });
+    const blocked = loginBlockedMessage(username);
+    res.status(blocked ? 403 : 401).json({ error: blocked ?? "Неверный логин или пароль" });
     return;
   }
 
@@ -341,13 +355,24 @@ app.post("/auth/login", (req, res) => {
     secure: process.env.COOKIE_SECURE === "true",
     maxAge: 30 * 24 * 60 * 60 * 1000
   });
-  res.json({ user: { id: user.id, username: user.username } });
+  res.json({ user: toPublicUser(user) });
 });
 
 app.post("/auth/logout", (_req, res) => {
   res.clearCookie(cookieName);
   res.status(204).send();
 });
+
+app.use(
+  createSignupRouter({
+    requireUser,
+    onSignupRequest: (request) => {
+      void telegramBot?.notifySignupRequest(request).catch((error: unknown) => {
+        console.error("signup notify failed", error instanceof Error ? error.message : error);
+      });
+    }
+  })
+);
 
 app.get("/recommendations", requireUser, async (req, res) => {
   const user = res.locals.user as { id: number };
@@ -535,7 +560,7 @@ app.listen(port, () => {
 
 const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
 if (telegramBotToken) {
-  startTelegramBot(telegramBotToken, {
+  telegramBot = startTelegramBot(telegramBotToken, {
     members: SHARED_LIST_MEMBERS,
     telegramUsers: parseTelegramUsers(process.env.TELEGRAM_USERS),
     group: parseTelegramGroup({
@@ -557,6 +582,13 @@ if (telegramBotToken) {
       }
       addUserFilmToList(user.id, kinopoiskId, "plan");
       return true;
+    },
+    isAdmin: (username) => findUserByUsername(username)?.is_admin === 1,
+    decideSignup: (requestId, decision, adminUsername) => {
+      const admin = findUserByUsername(adminUsername);
+      return admin
+        ? decideSignupRequest(requestId, decision, admin.id)
+        : { ok: false, error: "not_found" };
     }
   });
 }
