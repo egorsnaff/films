@@ -30,7 +30,7 @@ export function AdminPage({ isAdmin, onBack }: AdminPageProps) {
   const [requests, setRequests] = useState<SignupRequestEntry[]>([]);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyIds, setBusyIds] = useState<ReadonlySet<number>>(new Set());
 
   useEffect(() => {
     if (!isAdmin) {
@@ -62,7 +62,7 @@ export function AdminPage({ isAdmin, onBack }: AdminPageProps) {
   }, [isAdmin, tab]);
 
   async function decide(id: number, decision: "approve" | "reject") {
-    setBusyId(id);
+    setBusyIds((current) => new Set(current).add(id));
     setError(null);
     try {
       await siteApi.decideSignupRequest(id, decision);
@@ -70,7 +70,11 @@ export function AdminPage({ isAdmin, onBack }: AdminPageProps) {
     } catch (decideError) {
       setError(decideError instanceof Error ? decideError.message : "Не удалось обработать заявку");
     } finally {
-      setBusyId(null);
+      setBusyIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
@@ -133,7 +137,7 @@ export function AdminPage({ isAdmin, onBack }: AdminPageProps) {
                       <button
                         type="button"
                         className="admin-page__approve"
-                        disabled={busyId === request.id}
+                        disabled={busyIds.has(request.id)}
                         onClick={() => void decide(request.id, "approve")}
                       >
                         Одобрить
@@ -141,7 +145,7 @@ export function AdminPage({ isAdmin, onBack }: AdminPageProps) {
                       <button
                         type="button"
                         className="admin-page__reject"
-                        disabled={busyId === request.id}
+                        disabled={busyIds.has(request.id)}
                         onClick={() => void decide(request.id, "reject")}
                       >
                         Отклонить

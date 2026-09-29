@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -71,5 +71,43 @@ describe("AdminPage", () => {
 
     expect(await screen.findByText(/Отклонена/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Одобрить" })).not.toBeInTheDocument();
+  });
+
+  it("keeps each row locked while its own request is in flight", async () => {
+    const user = userEvent.setup();
+    const first = { ...pending, id: 1, email: "a@example.com" };
+    const second = { ...pending, id: 2, email: "b@example.com" };
+    const resolvers: Record<string, (response: Response) => void> = {};
+    const fetchMock = vi.fn((url: string) =>
+      url.endsWith("/approve")
+        ? new Promise<Response>((resolve) => {
+            resolvers[url] = resolve;
+          })
+        : Promise.resolve(jsonResponse({ requests: [first, second] }))
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AdminPage isAdmin onBack={vi.fn()} />);
+
+    const rowA = within((await screen.findByText("a@example.com")).closest("li")!);
+    const rowB = within(screen.getByText("b@example.com").closest("li")!);
+
+    await user.click(rowA.getByRole("button", { name: "Одобрить" }));
+    await user.click(rowB.getByRole("button", { name: "Одобрить" }));
+
+    expect(rowA.getByRole("button", { name: "Одобрить" })).toBeDisabled();
+    expect(rowA.getByRole("button", { name: "Отклонить" })).toBeDisabled();
+
+    resolvers["/api/admin/signup-requests/1/approve"](
+      jsonResponse({ request: { ...first, status: "approved" } })
+    );
+    await waitFor(() => expect(screen.queryByText("a@example.com")).not.toBeInTheDocument());
+    expect(rowB.getByRole("button", { name: "Одобрить" })).toBeDisabled();
+    expect(rowB.getByRole("button", { name: "Отклонить" })).toBeDisabled();
+
+    resolvers["/api/admin/signup-requests/2/approve"](
+      jsonResponse({ request: { ...second, status: "approved" } })
+    );
+    await waitFor(() => expect(screen.queryByText("b@example.com")).not.toBeInTheDocument());
   });
 });
