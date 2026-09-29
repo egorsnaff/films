@@ -1,6 +1,7 @@
 import type { FilmAwardSummaryChip } from "./filmAwards.js";
 import type { CachedFilm } from "./kpCache.js";
 import type { SharedListMember } from "./sharedList.js";
+import type { DecisionResult, SignupDecision, SignupRequest } from "./signup.js";
 
 export type BotFilm = CachedFilm & { isSeries?: boolean };
 
@@ -53,6 +54,8 @@ export type TelegramBotDeps = {
   getFilm(kinopoiskId: number): Promise<BotFilm>;
   getAwards(kinopoiskId: number): Promise<FilmAwardSummaryChip[]>;
   addToPlan(username: string, kinopoiskId: number): boolean;
+  isAdmin(username: string): boolean;
+  decideSignup(requestId: number, decision: SignupDecision, adminUsername: string): DecisionResult;
 };
 
 const SHARED_TARGET = "shared";
@@ -207,14 +210,38 @@ export function buildFilmKeyboard(
   return { inline_keyboard: rows };
 }
 
+export function formatSignupRequestText(email: string): string {
+  return `🆕 Новая заявка на регистрацию\n<b>${escapeHtml(email)}</b>`;
+}
+
+export function buildSignupKeyboard(requestId: number): InlineKeyboard {
+  return {
+    inline_keyboard: [
+      [
+        { text: "✅ Одобрить", callback_data: `signup:approve:${requestId}` },
+        { text: "❌ Отклонить", callback_data: `signup:reject:${requestId}` }
+      ]
+    ]
+  };
+}
+
 export type BotCallback =
   | { kind: "add"; kinopoiskId: number; target: string }
   | { kind: "show"; kinopoiskId: number }
-  | { kind: "alts" };
+  | { kind: "alts" }
+  | { kind: "signup"; decision: SignupDecision; requestId: number };
 
 export function parseCallbackData(data: string | undefined): BotCallback | null {
   if (data === "alts") {
     return { kind: "alts" };
+  }
+
+  const signup = /^signup:(approve|reject):(\d+)$/.exec(data ?? "");
+  if (signup) {
+    const requestId = Number(signup[2]);
+    return Number.isSafeInteger(requestId) && requestId > 0
+      ? { kind: "signup", decision: signup[1] as SignupDecision, requestId }
+      : null;
   }
 
   const [kind, rawId, target] = (data ?? "").split(":");
@@ -420,6 +447,61 @@ export function createTelegramBot(deps: TelegramBotDeps) {
     });
   }
 
+  async function notifySignupRequest(request: SignupRequest) {
+    for (const [telegramId, username] of telegramUsers) {
+      if (!deps.isAdmin(username)) {
+        continue;
+      }
+      await send(
+        { chatId: telegramId },
+        formatSignupRequestText(request.email),
+        buildSignupKeyboard(request.id)
+      ).catch((error: unknown) => {
+        console.error("telegram bot: signup notify failed", error instanceof Error ? error.message : error);
+      });
+    }
+  }
+
+  // Решать может только тот, кто явно указан в TELEGRAM_USERS, — без подстановки TELEGRAM_CHAT_DEFAULT_USER.
+  async function handleSignupDecision(
+    callback: NonNullable<TelegramUpdate["callback_query"]>,
+    decision: SignupDecision,
+    requestId: number
+  ) {
+    const adminUsername = telegramUsers.get(callback.from.id);
+    if (!adminUsername || !deps.isAdmin(adminUsername) || !callback.message) {
+      await api.call("answerCallbackQuery", { callback_query_id: callback.id, text: "Нет доступа" });
+      return;
+    }
+
+    const { chat, message_id: messageId } = callback.message;
+    const result = deps.decideSignup(requestId, decision, adminUsername);
+    if (!result.ok) {
+      await api.call("answerCallbackQuery", {
+        callback_query_id: callback.id,
+        text: result.error === "already_decided" ? "Уже обработано" : "Заявка не найдена"
+      });
+      await api
+        .call("editMessageReplyMarkup", {
+          chat_id: chat.id,
+          message_id: messageId,
+          reply_markup: { inline_keyboard: [] }
+        })
+        .catch(() => undefined);
+      return;
+    }
+
+    const verdict = decision === "approve" ? "✅ Одобрено" : "❌ Отклонено";
+    await api.call("answerCallbackQuery", { callback_query_id: callback.id, text: verdict });
+    await api.call("editMessageText", {
+      chat_id: chat.id,
+      message_id: messageId,
+      text: `${formatSignupRequestText(result.request.email)}\n\n${verdict}`,
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: [] }
+    });
+  }
+
   async function handleUpdate(update: TelegramUpdate) {
     const message = update.message;
     if (message?.text && message.from && !message.from.is_bot) {
@@ -445,8 +527,13 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       return;
     }
 
-    const source = callback.message;
     const action = parseCallbackData(callback.data);
+    if (action?.kind === "signup") {
+      await handleSignupDecision(callback, action.decision, action.requestId);
+      return;
+    }
+
+    const source = callback.message;
     const username = source ? resolveUsername(callback.from.id, source.chat.id) : undefined;
     if (!source || !action || !username || !isAllowedPlace(source.chat, source.message_thread_id)) {
       await api.call("answerCallbackQuery", { callback_query_id: callback.id, text: "Нет доступа" });
@@ -464,7 +551,7 @@ export function createTelegramBot(deps: TelegramBotDeps) {
     }
   }
 
-  return { handleUpdate };
+  return { handleUpdate, notifySignupRequest };
 }
 
 export function createTelegramApi(token: string, fetchImpl: typeof fetch = fetch): TelegramApi {
@@ -492,7 +579,12 @@ export function createTelegramApi(token: string, fetchImpl: typeof fetch = fetch
 const POLL_TIMEOUT_SECONDS = 50;
 const POLL_RETRY_MS = 5_000;
 
-export function startTelegramBot(token: string, deps: Omit<TelegramBotDeps, "api">): () => void {
+export type RunningTelegramBot = {
+  stop(): void;
+  notifySignupRequest(request: SignupRequest): Promise<void>;
+};
+
+export function startTelegramBot(token: string, deps: Omit<TelegramBotDeps, "api">): RunningTelegramBot {
   const api = createTelegramApi(token);
   const bot = createTelegramBot({ ...deps, api });
   let stopped = false;
@@ -526,7 +618,10 @@ export function startTelegramBot(token: string, deps: Omit<TelegramBotDeps, "api
     ? `, group ${deps.group.chatId}${deps.group.threadId ? ` thread ${deps.group.threadId}` : ""}`
     : "";
   console.log(`telegram bot started for ${deps.telegramUsers.size} user(s)${groupInfo}`);
-  return () => {
-    stopped = true;
+  return {
+    stop: () => {
+      stopped = true;
+    },
+    notifySignupRequest: bot.notifySignupRequest
   };
 }
