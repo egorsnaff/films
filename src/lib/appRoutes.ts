@@ -1,5 +1,6 @@
 import type { CatalogFilter } from "./catalogFilter";
 import { parseCatalogFilterId } from "./catalogFilter";
+import { isProfileListKey } from "./navigation";
 import type { CatalogMode, LegacyMenuItem, NavigationSnapshot } from "./navigation";
 
 export type LocationLike = {
@@ -88,7 +89,10 @@ export function buildAppPathname(
   }
 
   if (snapshot.view === "profile") {
-    return joinAppPath(basePath, "profile");
+    return joinAppPath(
+      basePath,
+      snapshot.profileList ? `profile/${snapshot.profileList}` : "profile"
+    );
   }
 
   if (snapshot.view === "catalog") {
@@ -121,6 +125,15 @@ export function buildAppSearch(snapshot: NavigationSnapshot): string {
   if (
     snapshot.view === "catalog" &&
     snapshot.catalogMode !== "search" &&
+    typeof snapshot.page === "number" &&
+    snapshot.page > 1
+  ) {
+    params.set("page", String(snapshot.page));
+  }
+
+  if (
+    snapshot.view === "profile" &&
+    snapshot.profileList &&
     typeof snapshot.page === "number" &&
     snapshot.page > 1
   ) {
@@ -244,12 +257,14 @@ export function parseLocationToSnapshot(
   }
 
   if (segments[0] === "profile") {
+    const profileList = isProfileListKey(segments[1]) ? segments[1] : null;
     return {
       ...createHomeSnapshot(),
       view: "profile",
       activeMenu: "Профиль",
       catalogMode: "premieres",
-      page: 1
+      profileList,
+      page: profileList ? page : 1
     };
   }
 

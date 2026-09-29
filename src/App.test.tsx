@@ -668,6 +668,61 @@ describe("App", () => {
     expect(screen.queryByRole("link", { name: /Любимый фильм/ })).not.toBeInTheDocument();
   });
 
+  it("opens a paginated page for a long profile shelf", async () => {
+    const user = userEvent.setup();
+    const planIds = Array.from({ length: 30 }, (_, index) => 500 + index);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo) => {
+        const url = String(input);
+
+        if (url.includes("/api/auth/me")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ user: { id: 1, username: "egor" } })
+          });
+        }
+
+        if (url.includes("/api/lists")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              items: planIds.map((kinopoiskId) => ({ kinopoiskId, lists: ["plan"] })),
+              films: Object.fromEntries(
+                planIds.map((kinopoiskId, index) => [
+                  kinopoiskId,
+                  {
+                    kinopoiskId,
+                    title: `План ${index + 1}`,
+                    year: "2000",
+                    posterUrl: `https://example.test/${kinopoiskId}.jpg`
+                  }
+                ])
+              )
+            })
+          });
+        }
+
+        return Promise.resolve(catalogResponse([]));
+      })
+    );
+
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Профиль" }));
+    await user.click(await screen.findByRole("button", { name: "Все 30" }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Буду смотреть" })).toBeInTheDocument();
+    expect(window.location.pathname).toMatch(/\/profile\/plan\/?$/);
+    expect(screen.getByRole("link", { name: /План 24\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /План 25\b/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "2" }));
+
+    expect(await screen.findByRole("link", { name: /План 25\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /План 1\b/ })).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?page=2");
+  });
+
   it("opens profile shelf films in a new tab", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo) => {

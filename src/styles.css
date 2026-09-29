@@ -2365,6 +2365,61 @@ h1 em {
   gap: 34px;
 }
 
+.profile-list-view {
+  display: grid;
+  gap: 22px;
+  padding-top: 12px;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0 28px;
+}
+
+.pagination__button {
+  min-width: 42px;
+  height: 42px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 6%);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 0 12px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.pagination__button:hover:not(:disabled),
+.pagination__button:focus-visible {
+  outline: none;
+  border-color: rgb(240 183 91 / 42%);
+  background: rgb(255 255 255 / 11%);
+}
+
+.pagination__button.is-active {
+  border-color: rgb(240 183 91 / 60%);
+  background: rgb(240 183 91 / 16%);
+  color: var(--gold);
+}
+
+.pagination__button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.pagination__gap {
+  min-width: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .profile-login label {
   display: grid;
   gap: 8px;

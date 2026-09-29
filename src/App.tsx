@@ -10,6 +10,7 @@ import { CursorGlow } from "./components/CursorGlow";
 import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
+import { Pagination } from "./components/Pagination";
 import { PosterImage } from "./components/PosterImage";
 import { PresenceDock } from "./components/PresenceDock";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
@@ -77,6 +78,7 @@ import {
   type CatalogMode,
   type MenuItem,
   type NavigationSnapshot,
+  type ProfileListKey,
   type ViewState
 } from "./lib/navigation";
 import {
@@ -148,6 +150,8 @@ export function App() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [collectionId, setCollectionId] = useState<string | null>(null);
+  const [profileList, setProfileList] = useState<ProfileListKey | null>(null);
+  const [profileListPage, setProfileListPage] = useState(1);
   const [collectionFilms, setCollectionFilms] = useState<KinopoiskFilm[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<LoadState>("idle");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -232,6 +236,25 @@ export function App() {
     }
     return map;
   }, [userLists]);
+  const profileListFilms = useMemo(() => {
+    const toFilms = (ids: number[]) =>
+      ids
+        .map((kinopoiskId) => listFilms[kinopoiskId])
+        .filter((film): film is KinopoiskFilm => Boolean(film));
+    const byList = (status: WatchStatus) =>
+      toFilms(userLists.filter((item) => item.lists.includes(status)).map((item) => item.kinopoiskId));
+
+    return {
+      watching: byList("watching"),
+      shared: toFilms(sharedPlanIds ?? []),
+      plan: byList("plan"),
+      watched: byList("watched")
+    } satisfies Record<ProfileListKey, KinopoiskFilm[]>;
+  }, [listFilms, sharedPlanIds, userLists]);
+  const profileListTotalPages = profileList
+    ? Math.max(1, Math.ceil(profileListFilms[profileList].length / PROFILE_LIST_PAGE_SIZE))
+    : 1;
+  const currentProfileListPage = Math.min(profileListPage, profileListTotalPages);
   const backLabel = getBackLabel(navHistoryRef.current.at(-1));
   const imdbShelfTitle =
     catalogMode === "serials" ? IMDB_SERIALS_SHELF_TITLE : IMDB_FILMS_SHELF_TITLE;
@@ -433,7 +456,8 @@ export function App() {
       searchQuery: catalogMode === "search" ? query : "",
       browseMedia,
       catalogFilter: catalogMode === "filtered" ? catalogFilter : null,
-      page,
+      profileList: view === "profile" ? profileList : null,
+      page: view === "profile" && profileList ? profileListPage : page,
       scrollY: window.scrollY
     };
   }, [
@@ -443,6 +467,8 @@ export function App() {
     catalogMode,
     collectionId,
     page,
+    profileList,
+    profileListPage,
     query,
     selectedFilm,
     view
@@ -554,6 +580,8 @@ export function App() {
         setDetailsStatus("idle");
       } else if (snapshot.view === "profile") {
         setView("profile");
+        setProfileList(snapshot.profileList ?? null);
+        setProfileListPage(snapshot.profileList ? (snapshot.page ?? 1) : 1);
         setSelectedFilm(null);
         setDetailsStatus("idle");
         if (authUser) {
@@ -695,6 +723,7 @@ export function App() {
     catalogFilter,
     browseMedia,
     query,
+    profileList,
     flushHistoryCommit
   ]);
 
@@ -711,6 +740,18 @@ export function App() {
     // Keep ?page= in sync without creating extra history entries.
     replaceAppHistory(snapshot, historySessionRef.current);
   }, [page, view, catalogMode]);
+
+  useEffect(() => {
+    if (isHistoryNavigationRef.current || !bootstrappedRef.current) {
+      return;
+    }
+
+    if (view !== "profile" || !profileList) {
+      return;
+    }
+
+    replaceAppHistory(captureSnapshotRef.current(), historySessionRef.current);
+  }, [profileListPage, profileList, view]);
 
   useEffect(() => {
     const onPopState = (event: PopStateEvent) => {
@@ -1014,6 +1055,20 @@ export function App() {
     }
   }
 
+  function openProfileList(key: ProfileListKey) {
+    beginHistoryEntry(true);
+    setView("profile");
+    setProfileList(key);
+    setProfileListPage(1);
+    requestHistoryCommit(true);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function changeProfileListPage(nextPage: number) {
+    setProfileListPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function handleMenuClick(item: MenuItem, options?: { pushHistory?: boolean }) {
     const pushHistory = options?.pushHistory !== false;
     beginHistoryEntry(pushHistory);
@@ -1027,6 +1082,8 @@ export function App() {
 
     if (item === "Профиль") {
       setView("profile");
+      setProfileList(null);
+      setProfileListPage(1);
       requestHistoryCommit(pushHistory);
       if (authUser) {
         await refreshUserLists();
@@ -1450,35 +1507,63 @@ export function App() {
         </section>
       ) : null}
 
-      {view === "profile" ? (
+      {view === "profile" && profileList ? (
+        <section className="profile-list-view" id="main">
+          <BackButton label="В кабинет" onClick={() => void handleMenuClick("Профиль")} />
+          <div className="section-heading">
+            <h1>{getProfileListTitle(profileList)}</h1>
+            <p>
+              {formatFilmCount(profileListFilms[profileList].length)}
+              {profileListTotalPages > 1
+                ? ` · страница ${currentProfileListPage} из ${profileListTotalPages}`
+                : null}
+            </p>
+          </div>
+          {profileListFilms[profileList].length > 0 ? (
+            <FilmGrid
+              key={`${profileList}-${currentProfileListPage}`}
+              films={profileListFilms[profileList].slice(
+                (currentProfileListPage - 1) * PROFILE_LIST_PAGE_SIZE,
+                currentProfileListPage * PROFILE_LIST_PAGE_SIZE
+              )}
+            />
+          ) : (
+            <div className="empty-state">
+              <strong>В этом списке пока пусто.</strong>
+            </div>
+          )}
+          <Pagination
+            page={currentProfileListPage}
+            totalPages={profileListTotalPages}
+            onPageChange={changeProfileListPage}
+          />
+        </section>
+      ) : null}
+
+      {view === "profile" && !profileList ? (
         <section className="profile-view" id="main">
           <div className="profile-shelves">
             {(["watching", "shared", "plan", "watched"] as const).map((shelfKey) => {
-              if (shelfKey === "shared") {
-                return sharedPlanIds ? (
-                  <FilmShelf
-                    key={shelfKey}
-                    title="Общий список"
-                    subtitle="Всё, что мы вдвоём отметили «Буду смотреть»"
-                    films={sharedPlanIds
-                      .map((kinopoiskId) => listFilms[kinopoiskId])
-                      .filter((film): film is KinopoiskFilm => Boolean(film))}
-                  />
-                ) : null;
+              if (shelfKey === "shared" && !sharedPlanIds) {
+                return null;
               }
 
-              const films = userLists
-                .filter((item) => item.lists.includes(shelfKey))
-                .map((item) => listFilms[item.kinopoiskId])
-                .filter((film): film is KinopoiskFilm => Boolean(film));
+              const films = profileListFilms[shelfKey];
               const showProgress = shelfKey === "watching" || shelfKey === "watched";
+              const hasMore = films.length > PROFILE_SHELF_PREVIEW;
 
               return (
                 <FilmShelf
                   key={shelfKey}
-                  title={watchStatusLabels[shelfKey]}
-                  films={films}
+                  title={getProfileListTitle(shelfKey)}
+                  subtitle={
+                    shelfKey === "shared" ? "Всё, что мы вдвоём отметили «Буду смотреть»" : undefined
+                  }
+                  films={films.slice(0, PROFILE_SHELF_PREVIEW)}
+                  totalCount={films.length}
                   progressByFilm={showProgress ? progressByFilm : undefined}
+                  onShowMore={hasMore ? () => openProfileList(shelfKey) : undefined}
+                  showMoreLabel={`Все ${films.length}`}
                 />
               );
             })}
@@ -1678,6 +1763,25 @@ async function fetchCatalogPage(
   }
 
   return client.getRecentFilms(nextPage, "TV_SERIES");
+}
+
+const PROFILE_SHELF_PREVIEW = 20;
+const PROFILE_LIST_PAGE_SIZE = 24;
+
+function getProfileListTitle(key: ProfileListKey): string {
+  return key === "shared" ? "Общий список" : watchStatusLabels[key];
+}
+
+function formatFilmCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? "фильм"
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? "фильма"
+        : "фильмов";
+  return `${count} ${word}`;
 }
 
 function resolvePlaybackStatus(lists: WatchStatus[]): WatchStatus | null {

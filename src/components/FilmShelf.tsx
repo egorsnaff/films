@@ -16,6 +16,7 @@ type FilmShelfProps = {
   onShowMore?: () => void;
   showMoreLabel?: string;
   showCount?: boolean;
+  totalCount?: number;
 };
 
 export function FilmShelf({
@@ -26,7 +27,8 @@ export function FilmShelf({
   onTitleClick,
   onShowMore,
   showMoreLabel = "Показать ещё",
-  showCount = true
+  showCount = true,
+  totalCount
 }: FilmShelfProps) {
   const titleNode = onTitleClick ? (
     <button type="button" className="film-shelf__title-link" onClick={onTitleClick}>
@@ -57,7 +59,9 @@ export function FilmShelf({
           {titleNode}
           {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
         </div>
-        {showCount ? <span className="film-shelf__count">{films.length}</span> : null}
+        {showCount ? (
+          <span className="film-shelf__count">{totalCount ?? films.length}</span>
+        ) : null}
       </div>
       <div className="film-shelf__track" role="list">
         {films.map((film) => {

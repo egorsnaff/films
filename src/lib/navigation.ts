@@ -6,6 +6,13 @@ export type MenuItem = "Фильмы" | "Сериалы" | "Каталог" | "�
 
 export type LegacyMenuItem = MenuItem | "Главная";
 
+export const PROFILE_LIST_KEYS = ["watching", "shared", "plan", "watched"] as const;
+export type ProfileListKey = (typeof PROFILE_LIST_KEYS)[number];
+
+export function isProfileListKey(value: string | undefined): value is ProfileListKey {
+  return PROFILE_LIST_KEYS.includes(value as ProfileListKey);
+}
+
 export type NavigationSnapshot = {
   view: ViewState;
   activeMenu: LegacyMenuItem;
@@ -15,7 +22,9 @@ export type NavigationSnapshot = {
   searchQuery?: string;
   browseMedia?: BrowseMedia;
   catalogFilter?: CatalogFilter | null;
-  /** Last loaded catalog page (synced to ?page=). */
+  /** Opened profile list page (`/profile/<key>`); null on the profile overview. */
+  profileList?: ProfileListKey | null;
+  /** Last loaded catalog page or current profile list page (synced to ?page=). */
   page?: number;
   scrollY: number;
 };
@@ -33,7 +42,7 @@ export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
     case "collections":
       return "К подборкам";
     case "profile":
-      return "В кабинет";
+      return snapshot.profileList ? "К списку" : "В кабинет";
     case "browse":
       if (snapshot.activeMenu === "Каталог") {
         return "Назад";

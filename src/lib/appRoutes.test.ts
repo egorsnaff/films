@@ -12,6 +12,25 @@ import { createCatalogFilter } from "./catalogFilter";
 const BASE = "/films/";
 
 describe("appRoutes", () => {
+  it("builds and parses profile list pages", () => {
+    const snapshot = {
+      ...createHomeSnapshot(),
+      view: "profile" as const,
+      activeMenu: "Профиль" as const,
+      profileList: "shared" as const,
+      page: 3
+    };
+
+    expect(buildAppUrl(snapshot, BASE)).toBe("/films/profile/shared?page=3");
+    expect(
+      parseLocationToSnapshot({ pathname: "/films/profile/shared", search: "?page=3" }, BASE)
+    ).toMatchObject({ view: "profile", profileList: "shared", page: 3 });
+    expect(
+      parseLocationToSnapshot({ pathname: "/films/profile/unknown", search: "?page=3" }, BASE)
+    ).toMatchObject({ view: "profile", profileList: null, page: 1 });
+    expect(buildAppUrl({ ...snapshot, profileList: null }, BASE)).toBe("/films/profile");
+  });
+
   it("builds watch, serials, search and filter paths under base", () => {
     expect(
       buildAppUrl(
