@@ -664,7 +664,7 @@ describe("App", () => {
 
     await screen.findByRole("link", { name: /Фильм Ксении/ });
     const titles = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
-    expect(titles).toEqual(["Общий список", "Смотрю сейчас", "Буду смотреть", "Просмотренное"]);
+    expect(titles).toEqual(["Смотрю сейчас", "Общий список", "Буду смотреть", "Просмотренное"]);
     expect(screen.queryByRole("link", { name: /Любимый фильм/ })).not.toBeInTheDocument();
   });
 

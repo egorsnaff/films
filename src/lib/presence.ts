@@ -53,31 +53,6 @@ export function resolveLocalActivity({
   return { kind: "catalog" };
 }
 
-const COLLAPSED_STORAGE_KEY = "films:presence-collapsed";
-
-export function readPresenceCollapsed(): boolean {
-  try {
-    const stored = window.localStorage.getItem(COLLAPSED_STORAGE_KEY);
-    if (stored !== null) {
-      return stored === "1";
-    }
-  } catch {
-    // localStorage может быть недоступен (приватный режим).
-  }
-
-  return typeof window.matchMedia === "function"
-    ? window.matchMedia("(max-width: 720px)").matches
-    : false;
-}
-
-export function writePresenceCollapsed(collapsed: boolean): void {
-  try {
-    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
-  } catch {
-    // Состояние панели просто не запомнится.
-  }
-}
-
 const statusLabels: Record<Exclude<PresenceStatus["kind"], "watching">, string> = {
   choosing: "выбирает фильм",
   searching: "ищет фильм",
