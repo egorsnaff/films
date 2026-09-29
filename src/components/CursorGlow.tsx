@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { prefersReducedMotion } from "../lib/motion";
 
@@ -6,6 +6,9 @@ type CursorGlowProps = {
   /** Hide the custom cursor (e.g. on the watch page / over a player). */
   disabled?: boolean;
 };
+
+const SPOTLIGHT_SELECTOR =
+  ".topbar, .film-card, .film-shelf__card, .collection-card, .watch-hero, .load-more-button, .interactive-surface";
 
 function isDocumentFullscreen(): boolean {
   const doc = document as Document & {
@@ -15,7 +18,12 @@ function isDocumentFullscreen(): boolean {
   return Boolean(document.fullscreenElement ?? doc.webkitFullscreenElement);
 }
 
+// Позиция пишется в transform слоёв и в переменные только наведённого элемента:
+// переменные на <html> заставляли браузер пересчитывать стили всей страницы на каждом кадре.
 export function CursorGlow({ disabled = false }: CursorGlowProps) {
+  const ambientRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const root = document.documentElement;
 
@@ -32,21 +40,41 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
     }
 
     let frameId = 0;
-    let targetX = 50;
-    let targetY = 42;
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight * 0.42;
     let currentX = targetX;
     let currentY = targetY;
+    let pointerX = targetX;
+    let pointerY = targetY;
+    let spotlight: HTMLElement | null = null;
+
+    const moveLayers = () => {
+      const transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      if (ambientRef.current) {
+        ambientRef.current.style.transform = transform;
+      }
+      if (coreRef.current) {
+        coreRef.current.style.transform = transform;
+      }
+    };
+
+    const updateSpotlight = () => {
+      if (!spotlight) {
+        return;
+      }
+
+      const rect = spotlight.getBoundingClientRect();
+      spotlight.style.setProperty("--spot-x", `${pointerX - rect.left}px`);
+      spotlight.style.setProperty("--spot-y", `${pointerY - rect.top}px`);
+    };
 
     const tick = () => {
       currentX += (targetX - currentX) * 0.14;
       currentY += (targetY - currentY) * 0.14;
+      moveLayers();
+      updateSpotlight();
 
-      root.style.setProperty("--cursor-x", `${currentX}%`);
-      root.style.setProperty("--cursor-y", `${currentY}%`);
-      root.style.setProperty("--cursor-x-px", `${(currentX / 100) * window.innerWidth}px`);
-      root.style.setProperty("--cursor-y-px", `${(currentY / 100) * window.innerHeight}px`);
-
-      if (Math.abs(targetX - currentX) > 0.04 || Math.abs(targetY - currentY) > 0.04) {
+      if (Math.abs(targetX - currentX) > 0.5 || Math.abs(targetY - currentY) > 0.5) {
         frameId = window.requestAnimationFrame(tick);
       } else {
         frameId = 0;
@@ -66,8 +94,21 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
         return;
       }
 
-      targetX = (event.clientX / window.innerWidth) * 100;
-      targetY = (event.clientY / window.innerHeight) * 100;
+      targetX = event.clientX;
+      targetY = event.clientY;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+
+      const nextSpotlight =
+        event.target instanceof Element
+          ? event.target.closest<HTMLElement>(SPOTLIGHT_SELECTOR)
+          : null;
+      if (nextSpotlight !== spotlight) {
+        spotlight?.style.removeProperty("--spot-x");
+        spotlight?.style.removeProperty("--spot-y");
+        spotlight = nextSpotlight;
+      }
+
       root.classList.add("cursor-active");
       queueTick();
     };
@@ -76,8 +117,7 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
       root.classList.remove("cursor-active");
     };
 
-    root.style.setProperty("--cursor-x", `${currentX}%`);
-    root.style.setProperty("--cursor-y", `${currentY}%`);
+    moveLayers();
 
     window.addEventListener("mousemove", handleMove, { passive: true });
     window.addEventListener("mouseleave", handleLeave);
@@ -88,6 +128,8 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
       if (frameId) {
         window.cancelAnimationFrame(frameId);
       }
+      spotlight?.style.removeProperty("--spot-x");
+      spotlight?.style.removeProperty("--spot-y");
       root.classList.remove("cursor-active");
     };
   }, [disabled]);
@@ -98,8 +140,8 @@ export function CursorGlow({ disabled = false }: CursorGlowProps) {
 
   return (
     <>
-      <div className="cursor-glow cursor-glow--ambient" aria-hidden="true" />
-      <div className="cursor-glow cursor-glow--core" aria-hidden="true" />
+      <div ref={ambientRef} className="cursor-glow cursor-glow--ambient" aria-hidden="true" />
+      <div ref={coreRef} className="cursor-glow cursor-glow--core" aria-hidden="true" />
     </>
   );
 }
