@@ -4,13 +4,14 @@ import type { SharedListMember } from "./sharedList.js";
 
 export type BotFilm = CachedFilm & { isSeries?: boolean };
 
-type TelegramChat = { id: number };
-type TelegramUser = { id: number };
+type TelegramChat = { id: number; type?: string };
+type TelegramUser = { id: number; is_bot?: boolean };
 
 export type TelegramUpdate = {
   update_id: number;
   message?: {
     message_id: number;
+    message_thread_id?: number;
     chat: TelegramChat;
     from?: TelegramUser;
     text?: string;
@@ -19,8 +20,19 @@ export type TelegramUpdate = {
     id: string;
     from: TelegramUser;
     data?: string;
-    message?: { message_id: number; chat: TelegramChat };
+    message?: { message_id: number; message_thread_id?: number; chat: TelegramChat };
   };
+};
+
+// Куда отвечать: чат и, для групп с темами, ветка.
+type Place = { chatId: number; threadId?: number };
+
+export type TelegramGroup = {
+  chatId: number;
+  // Если задано, бот слушает только эту ветку группы.
+  threadId?: number;
+  // Логин на сайте для участников группы, которых нет в telegramUsers.
+  defaultUsername?: string;
 };
 
 export type TelegramApi = {
@@ -35,6 +47,7 @@ export type TelegramBotDeps = {
   members: SharedListMember[];
   // Telegram user id → логин на сайте.
   telegramUsers: Map<number, string>;
+  group?: TelegramGroup;
   siteUrl: string;
   searchFilms(query: string): Promise<CachedFilm[]>;
   getFilm(kinopoiskId: number): Promise<BotFilm>;
@@ -61,6 +74,24 @@ export function parseTelegramUsers(raw: string | undefined): Map<number, string>
   }
 
   return users;
+}
+
+export function parseTelegramGroup(env: {
+  chatId?: string;
+  threadId?: string;
+  defaultUsername?: string;
+}): TelegramGroup | undefined {
+  const chatId = Number(env.chatId);
+  if (!env.chatId?.trim() || !Number.isSafeInteger(chatId) || chatId >= 0) {
+    return undefined;
+  }
+
+  const threadId = Number(env.threadId);
+  return {
+    chatId,
+    threadId: env.threadId?.trim() && Number.isSafeInteger(threadId) && threadId > 0 ? threadId : undefined,
+    defaultUsername: env.defaultUsername?.trim() || undefined
+  };
 }
 
 export function escapeHtml(value: string): string {
@@ -156,26 +187,19 @@ export function formatFilmCaption(
   return body ? `${headText}\n\n${body}\n\n${link}` : `${headText}\n\n${link}`;
 }
 
+// Кнопки с именами, а не «Мне»: в группе карточку может нажать любой участник.
 export function buildFilmKeyboard(
   kinopoiskId: number,
-  senderUsername: string,
   members: SharedListMember[],
   hasAlternatives: boolean
 ): InlineKeyboard {
-  const personal: InlineButton[] = [
-    { text: "➕ Мне", callback_data: `add:${kinopoiskId}:${senderUsername}` },
-    ...members
-      .filter((member) => member.username !== senderUsername)
-      .map((member) => ({
-        text: `➕ ${member.dative}`,
-        callback_data: `add:${kinopoiskId}:${member.username}`
-      }))
+  const rows: InlineButton[][] = [
+    members.map((member) => ({
+      text: `➕ ${member.dative}`,
+      callback_data: `add:${kinopoiskId}:${member.username}`
+    })),
+    [{ text: "➕ В общий список", callback_data: `add:${kinopoiskId}:${SHARED_TARGET}` }]
   ];
-
-  const rows: InlineButton[][] = [personal];
-  if (members.some((member) => member.username === senderUsername)) {
-    rows.push([{ text: "➕ В общий список", callback_data: `add:${kinopoiskId}:${SHARED_TARGET}` }]);
-  }
   if (hasAlternatives) {
     rows.push([{ text: "Не тот? Другие варианты", callback_data: "alts" }]);
   }
@@ -210,18 +234,39 @@ export function parseCallbackData(data: string | undefined): BotCallback | null 
 function helpText(): string {
   return [
     "Пришли название фильма или сериала — покажу карточку с описанием, жанром, наградами и ссылкой.",
-    "Под карточкой кнопки: добавить в «Буду смотреть» тебе, другому или в общий список.",
+    "Под карточкой кнопки: добавить в «Буду смотреть» Егору, Ксении или в общий список.",
     "Если нашлось не то, нажми «Другие варианты» или добавь к названию год."
   ].join("\n\n");
 }
 
 export function createTelegramBot(deps: TelegramBotDeps) {
-  const { api, members, telegramUsers, siteUrl } = deps;
-  const lastResults = new Map<number, CachedFilm[]>();
+  const { api, members, telegramUsers, group, siteUrl } = deps;
+  const lastResults = new Map<string, CachedFilm[]>();
 
-  function send(chatId: number, text: string, replyMarkup?: InlineKeyboard) {
+  const placeKey = (place: Place) => `${place.chatId}:${place.threadId ?? ""}`;
+
+  function isAllowedPlace(chat: TelegramChat, threadId: number | undefined): boolean {
+    if (chat.type === "private" || chat.id > 0) {
+      return true;
+    }
+    if (!group || chat.id !== group.chatId) {
+      return false;
+    }
+    return group.threadId === undefined || threadId === group.threadId;
+  }
+
+  function resolveUsername(telegramId: number, chatId: number): string | undefined {
+    const known = telegramUsers.get(telegramId);
+    if (known) {
+      return known;
+    }
+    return group && chatId === group.chatId ? group.defaultUsername : undefined;
+  }
+
+  function send(place: Place, text: string, replyMarkup?: InlineKeyboard) {
     return api.call("sendMessage", {
-      chat_id: chatId,
+      chat_id: place.chatId,
+      ...(place.threadId !== undefined ? { message_thread_id: place.threadId } : {}),
       text,
       parse_mode: "HTML",
       link_preview_options: { is_disabled: true },
@@ -229,23 +274,24 @@ export function createTelegramBot(deps: TelegramBotDeps) {
     });
   }
 
-  async function sendFilmCard(chatId: number, kinopoiskId: number, senderUsername: string) {
+  async function sendFilmCard(place: Place, kinopoiskId: number) {
     let film: BotFilm;
     try {
       film = await deps.getFilm(kinopoiskId);
     } catch {
-      await send(chatId, "Не получилось загрузить карточку фильма, попробуй ещё раз чуть позже.");
+      await send(place, "Не получилось загрузить карточку фильма, попробуй ещё раз чуть позже.");
       return;
     }
 
     const awards = await deps.getAwards(kinopoiskId).catch(() => []);
-    const hasAlternatives = (lastResults.get(chatId)?.length ?? 0) > 1;
-    const keyboard = buildFilmKeyboard(kinopoiskId, senderUsername, members, hasAlternatives);
+    const hasAlternatives = (lastResults.get(placeKey(place))?.length ?? 0) > 1;
+    const keyboard = buildFilmKeyboard(kinopoiskId, members, hasAlternatives);
 
     if (film.posterUrl) {
       try {
         await api.call("sendPhoto", {
-          chat_id: chatId,
+          chat_id: place.chatId,
+          ...(place.threadId !== undefined ? { message_thread_id: place.threadId } : {}),
           photo: film.posterUrl,
           caption: formatFilmCaption(film, awards, siteUrl, PHOTO_CAPTION_LIMIT),
           parse_mode: "HTML",
@@ -257,46 +303,50 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       }
     }
 
-    await send(chatId, formatFilmCaption(film, awards, siteUrl, MESSAGE_LIMIT), keyboard);
+    await send(place, formatFilmCaption(film, awards, siteUrl, MESSAGE_LIMIT), keyboard);
   }
 
-  async function handleText(chatId: number, username: string, text: string) {
+  async function handleText(place: Place, text: string) {
     if (text.startsWith("/")) {
-      await send(chatId, helpText());
+      await send(place, helpText());
       return;
     }
 
     const query = text.slice(0, QUERY_MAX_LENGTH);
-    await api.call("sendChatAction", { chat_id: chatId, action: "typing" }).catch(() => undefined);
+    await api
+      .call("sendChatAction", {
+        chat_id: place.chatId,
+        ...(place.threadId !== undefined ? { message_thread_id: place.threadId } : {}),
+        action: "typing"
+      })
+      .catch(() => undefined);
 
     let films: CachedFilm[];
     try {
       films = await deps.searchFilms(query);
     } catch {
-      await send(chatId, "Поиск сейчас не отвечает, попробуй ещё раз чуть позже.");
+      await send(place, "Поиск сейчас не отвечает, попробуй ещё раз чуть позже.");
       return;
     }
 
     if (films.length === 0) {
-      await send(chatId, `Ничего не нашёл по запросу «${escapeHtml(query)}». Попробуй иначе или добавь год.`);
+      await send(place, `Ничего не нашёл по запросу «${escapeHtml(query)}». Попробуй иначе или добавь год.`);
       return;
     }
 
-    lastResults.set(chatId, films.slice(0, ALTERNATIVES_LIMIT));
-    await sendFilmCard(chatId, films[0].kinopoiskId, username);
+    lastResults.set(placeKey(place), films.slice(0, ALTERNATIVES_LIMIT));
+    await sendFilmCard(place, films[0].kinopoiskId);
   }
 
-  function describeTarget(target: string, senderUsername: string): string {
+  function describeTarget(target: string): string {
     if (target === SHARED_TARGET) {
       return "в общий список";
-    }
-    if (target === senderUsername) {
-      return "тебе в «Буду смотреть»";
     }
     const member = members.find((entry) => entry.username === target);
     return `${member?.dative ?? target} в «Буду смотреть»`;
   }
 
+  // Уведомление в личку — только если добавили из лички; в группе оба и так всё видят.
   async function notifyOthers(
     usernames: string[],
     senderUsername: string,
@@ -312,22 +362,20 @@ export function createTelegramBot(deps: TelegramBotDeps) {
 
     for (const [telegramId, username] of telegramUsers) {
       if (username !== senderUsername && usernames.includes(username)) {
-        await send(telegramId, text).catch(() => undefined);
+        await send({ chatId: telegramId }, text).catch(() => undefined);
       }
     }
   }
 
   async function handleAdd(
-    chatId: number,
+    place: Place,
     callbackId: string,
     senderUsername: string,
     kinopoiskId: number,
     target: string
   ) {
     const isShared = target === SHARED_TARGET;
-    const isMember = members.some((member) => member.username === target);
-    if ((isShared && !members.some((member) => member.username === senderUsername)) ||
-      (!isShared && target !== senderUsername && !isMember)) {
+    if (!isShared && !members.some((member) => member.username === target)) {
       await api.call("answerCallbackQuery", { callback_query_id: callbackId, text: "Так нельзя" });
       return;
     }
@@ -342,25 +390,27 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       return;
     }
 
-    const where = describeTarget(target, senderUsername);
+    const where = describeTarget(target);
     await api.call("answerCallbackQuery", { callback_query_id: callbackId, text: `Добавил ${where}` });
 
     const film = await deps.getFilm(kinopoiskId).catch(() => null);
     const title = film ? `«${escapeHtml(film.title)}»` : "Фильм";
-    await send(chatId, `✅ ${title} — добавил ${where}`);
-    await notifyOthers(added, senderUsername, film, kinopoiskId, isShared);
+    await send(place, `✅ ${title} — добавил ${where}`);
+    if (place.chatId > 0) {
+      await notifyOthers(added, senderUsername, film, kinopoiskId, isShared);
+    }
   }
 
-  async function handleAlternatives(chatId: number, callbackId: string) {
-    const films = lastResults.get(chatId) ?? [];
+  async function handleAlternatives(place: Place, callbackId: string) {
+    const films = lastResults.get(placeKey(place)) ?? [];
     await api.call("answerCallbackQuery", { callback_query_id: callbackId });
 
     if (films.length < 2) {
-      await send(chatId, "Других вариантов нет. Пришли название ещё раз, можно с годом.");
+      await send(place, "Других вариантов нет. Пришли название ещё раз, можно с годом.");
       return;
     }
 
-    await send(chatId, "Другие варианты:", {
+    await send(place, "Другие варианты:", {
       inline_keyboard: films.slice(1).map((film) => [
         {
           text: film.year ? `${film.title} (${film.year})` : film.title,
@@ -372,17 +422,21 @@ export function createTelegramBot(deps: TelegramBotDeps) {
 
   async function handleUpdate(update: TelegramUpdate) {
     const message = update.message;
-    if (message?.text && message.from) {
-      const username = telegramUsers.get(message.from.id);
-      if (!username) {
+    if (message?.text && message.from && !message.from.is_bot) {
+      if (!isAllowedPlace(message.chat, message.message_thread_id)) {
+        return;
+      }
+
+      const place = { chatId: message.chat.id, threadId: message.message_thread_id };
+      if (!resolveUsername(message.from.id, message.chat.id)) {
         await send(
-          message.chat.id,
+          place,
           `Это личный бот. Твой Telegram ID: <code>${message.from.id}</code> — передай его владельцу, чтобы он тебя добавил.`
         );
         return;
       }
 
-      await handleText(message.chat.id, username, message.text.trim());
+      await handleText(place, message.text.trim());
       return;
     }
 
@@ -391,21 +445,22 @@ export function createTelegramBot(deps: TelegramBotDeps) {
       return;
     }
 
-    const username = telegramUsers.get(callback.from.id);
-    const chatId = callback.message?.chat.id;
+    const source = callback.message;
     const action = parseCallbackData(callback.data);
-    if (!username || chatId === undefined || !action) {
+    const username = source ? resolveUsername(callback.from.id, source.chat.id) : undefined;
+    if (!source || !action || !username || !isAllowedPlace(source.chat, source.message_thread_id)) {
       await api.call("answerCallbackQuery", { callback_query_id: callback.id, text: "Нет доступа" });
       return;
     }
 
+    const place = { chatId: source.chat.id, threadId: source.message_thread_id };
     if (action.kind === "add") {
-      await handleAdd(chatId, callback.id, username, action.kinopoiskId, action.target);
+      await handleAdd(place, callback.id, username, action.kinopoiskId, action.target);
     } else if (action.kind === "alts") {
-      await handleAlternatives(chatId, callback.id);
+      await handleAlternatives(place, callback.id);
     } else {
       await api.call("answerCallbackQuery", { callback_query_id: callback.id });
-      await sendFilmCard(chatId, action.kinopoiskId, username);
+      await sendFilmCard(place, action.kinopoiskId);
     }
   }
 
@@ -467,7 +522,10 @@ export function startTelegramBot(token: string, deps: Omit<TelegramBotDeps, "api
     }
   })();
 
-  console.log(`telegram bot started for ${deps.telegramUsers.size} user(s)`);
+  const groupInfo = deps.group
+    ? `, group ${deps.group.chatId}${deps.group.threadId ? ` thread ${deps.group.threadId}` : ""}`
+    : "";
+  console.log(`telegram bot started for ${deps.telegramUsers.size} user(s)${groupInfo}`);
   return () => {
     stopped = true;
   };
