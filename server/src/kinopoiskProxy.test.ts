@@ -3,10 +3,21 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bufferCatalogPage,
   isFilmDetailsCacheComplete,
+  isSeriesPayload,
   mapFilmDetails,
   resolveCatalogTotalPages,
   sortFilmsByImdbRating
 } from "./kinopoiskProxy.js";
+
+describe("isSeriesPayload", () => {
+  it("detects series by Kinopoisk type or serial flag", () => {
+    expect(isSeriesPayload({ type: "TV_SERIES" })).toBe(true);
+    expect(isSeriesPayload({ type: "MINI_SERIES" })).toBe(true);
+    expect(isSeriesPayload({ type: "FILM", serial: true })).toBe(true);
+    expect(isSeriesPayload({ type: "FILM" })).toBe(false);
+    expect(isSeriesPayload(null)).toBe(false);
+  });
+});
 
 describe("bufferCatalogPage", () => {
   it("aggregates multiple source pages until the minimum displayable count is reached", async () => {

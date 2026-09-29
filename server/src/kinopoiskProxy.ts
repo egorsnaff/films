@@ -203,6 +203,32 @@ export async function getFilmDetails(kinopoiskId: number): Promise<{ film: Cache
 export const BUFFERED_CATALOG_MIN_FILMS = 24;
 export const BUFFERED_CATALOG_MAX_FETCHES = 10;
 
+const SERIES_TYPES = new Set(["TV_SERIES", "MINI_SERIES", "TV_SHOW"]);
+
+export function isSeriesPayload(raw: Record<string, unknown> | null | undefined): boolean {
+  if (!raw) {
+    return false;
+  }
+
+  return raw.serial === true || (typeof raw.type === "string" && SERIES_TYPES.has(raw.type));
+}
+
+export async function isSeriesFilm(kinopoiskId: number): Promise<boolean> {
+  const cacheKey = `film:${kinopoiskId}`;
+  const cached = readCacheStale<Record<string, unknown>>(cacheKey);
+  if (cached) {
+    return isSeriesPayload(cached);
+  }
+
+  try {
+    const raw = await requestKinopoisk<Record<string, unknown>>(`/v2.2/films/${kinopoiskId}`);
+    writeCache(cacheKey, raw);
+    return isSeriesPayload(raw);
+  } catch {
+    return false;
+  }
+}
+
 export function hasDisplayablePoster(film: CachedFilm): boolean {
   return Boolean(film.posterUrl?.trim());
 }
