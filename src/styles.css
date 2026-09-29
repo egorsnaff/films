@@ -2704,10 +2704,32 @@ h1 em {
   transition: color 160ms ease;
 }
 
+.film-shelf__title-link::after {
+  content: "›";
+  display: inline-block;
+  margin-left: 0.3em;
+  color: var(--muted);
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
 .film-shelf__title-link:hover,
 .film-shelf__title-link:focus-visible {
   color: #f0b75b;
   outline: none;
+}
+
+.film-shelf__title-link:hover::after,
+.film-shelf__title-link:focus-visible::after {
+  color: #f0b75b;
+  transform: translateX(3px);
+}
+
+.film-shelf__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .film-shelf__subtitle {

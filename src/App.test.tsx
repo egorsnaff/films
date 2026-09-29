@@ -666,6 +666,14 @@ describe("App", () => {
     const titles = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
     expect(titles).toEqual(["Смотрю сейчас", "Общий список", "Буду смотреть", "Просмотренное"]);
     expect(screen.queryByRole("link", { name: /Любимый фильм/ })).not.toBeInTheDocument();
+
+    const sharedTitle = screen.getByRole("button", { name: "Общий список" });
+    expect(sharedTitle.closest(".film-shelf__title-row")).toHaveTextContent("Общий список1");
+
+    await user.click(sharedTitle);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Общий список" })).toBeInTheDocument();
+    expect(window.location.pathname).toMatch(/\/profile\/shared\/?$/);
   });
 
   it("opens a paginated page for a long profile shelf", async () => {

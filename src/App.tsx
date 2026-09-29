@@ -1562,6 +1562,7 @@ export function App() {
                   films={films.slice(0, PROFILE_SHELF_PREVIEW)}
                   totalCount={films.length}
                   progressByFilm={showProgress ? progressByFilm : undefined}
+                  onTitleClick={films.length > 0 ? () => openProfileList(shelfKey) : undefined}
                   onShowMore={hasMore ? () => openProfileList(shelfKey) : undefined}
                   showMoreLabel={`Все ${films.length}`}
                 />

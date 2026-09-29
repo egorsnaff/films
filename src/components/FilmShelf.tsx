@@ -30,23 +30,32 @@ export function FilmShelf({
   showCount = true,
   totalCount
 }: FilmShelfProps) {
-  const titleNode = onTitleClick ? (
-    <button type="button" className="film-shelf__title-link" onClick={onTitleClick}>
-      {title}
-    </button>
-  ) : (
-    <h2>{title}</h2>
+  const head = (
+    <div className="film-shelf__head">
+      <div>
+        <div className="film-shelf__title-row">
+          <h2>
+            {onTitleClick ? (
+              <button type="button" className="film-shelf__title-link" onClick={onTitleClick}>
+                {title}
+              </button>
+            ) : (
+              title
+            )}
+          </h2>
+          {showCount && films.length > 0 ? (
+            <span className="film-shelf__count">{totalCount ?? films.length}</span>
+          ) : null}
+        </div>
+        {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
+      </div>
+    </div>
   );
 
   if (films.length === 0) {
     return (
       <section className="film-shelf film-shelf--empty">
-        <div className="film-shelf__head">
-          <div>
-            {titleNode}
-            {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
-          </div>
-        </div>
+        {head}
         <p className="hint">Пока пусто — начните смотреть фильм, и он появится здесь.</p>
       </section>
     );
@@ -54,15 +63,7 @@ export function FilmShelf({
 
   return (
     <section className="film-shelf">
-      <div className="film-shelf__head">
-        <div>
-          {titleNode}
-          {subtitle ? <p className="film-shelf__subtitle">{subtitle}</p> : null}
-        </div>
-        {showCount ? (
-          <span className="film-shelf__count">{totalCount ?? films.length}</span>
-        ) : null}
-      </div>
+      {head}
       <div className="film-shelf__track" role="list">
         {films.map((film) => {
           const progress = progressByFilm?.[film.kinopoiskId];
