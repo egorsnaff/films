@@ -66,6 +66,8 @@ export function getBackLabel(snapshot: NavigationSnapshot | undefined): string {
         return "К сериалам";
       }
       return "К фильмам";
+    case "admin":
+      return "В админку";
     default:
       return "Назад";
   }
