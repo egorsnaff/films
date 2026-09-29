@@ -95,6 +95,10 @@ export function buildAppPathname(
     );
   }
 
+  if (snapshot.view === "admin") {
+    return joinAppPath(basePath, "admin");
+  }
+
   if (snapshot.view === "catalog") {
     if (snapshot.catalogMode === "serials") {
       return joinAppPath(basePath, "serials");
@@ -265,6 +269,16 @@ export function parseLocationToSnapshot(
       catalogMode: "premieres",
       profileList,
       page: profileList ? page : 1
+    };
+  }
+
+  if (segments[0] === "admin") {
+    return {
+      ...createHomeSnapshot(),
+      view: "admin",
+      activeMenu: "Профиль",
+      catalogMode: "premieres",
+      page: 1
     };
   }
 

@@ -12,6 +12,16 @@ import { createCatalogFilter } from "./catalogFilter";
 const BASE = "/films/";
 
 describe("appRoutes", () => {
+  it("builds and parses the admin page", () => {
+    const snapshot = { ...createHomeSnapshot(), view: "admin" as const, activeMenu: "Профиль" as const };
+
+    expect(buildAppUrl(snapshot, BASE)).toBe("/films/admin");
+    expect(parseLocationToSnapshot({ pathname: "/films/admin", search: "" }, BASE)).toMatchObject({
+      view: "admin",
+      activeMenu: "Профиль"
+    });
+  });
+
   it("builds and parses profile list pages", () => {
     const snapshot = {
       ...createHomeSnapshot(),
