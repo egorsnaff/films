@@ -295,6 +295,13 @@ export function findUserById(id: number): DbUser | undefined {
     .get(id) as DbUser | undefined;
 }
 
+export function listUsers(): Array<{ id: number; username: string }> {
+  return db.prepare("SELECT id, username FROM users ORDER BY username").all() as Array<{
+    id: number;
+    username: string;
+  }>;
+}
+
 export function listUserFilmsAggregated(userId: number): DbUserFilmAggregate[] {
   const ids = db
     .prepare(

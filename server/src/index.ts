@@ -11,6 +11,7 @@ import {
   findUserByUsername,
   listSharedPlanFilmIds,
   listUserFilmsAggregated,
+  listUsers,
   removeUserFilmFromList,
   updateUserFilmProgress,
   type WatchStatus
@@ -30,6 +31,7 @@ import {
   probeKinopoisk,
   searchCatalog
 } from "./kinopoiskProxy.js";
+import { createPresenceStore, parsePresenceActivity } from "./presence.js";
 import { getRecommendations, getSerialRecommendations } from "./recommendations.js";
 
 const app = express();
@@ -44,6 +46,8 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,https:
 
 // «Общий список» в профиле: объединённый «Буду смотреть» этих пользователей.
 const SHARED_LIST_USERNAMES = ["egor", "ksenia"];
+
+const presence = createPresenceStore();
 
 type SessionPayload = {
   sub: number;
@@ -369,6 +373,31 @@ app.get("/recommendations/serials", requireUser, async (req, res) => {
       error instanceof Error ? error.message : "Не удалось собрать рекомендации сериалов";
     res.status(502).json({ error: message });
   }
+});
+
+app.post("/presence", requireUser, (req, res) => {
+  const user = res.locals.user as { id: number };
+  const tabId = typeof req.body?.tabId === "string" ? req.body.tabId.slice(0, 64) : "";
+
+  if (!tabId) {
+    res.status(400).json({ error: "Некорректные данные присутствия" });
+    return;
+  }
+
+  if (req.body?.leaving === true) {
+    presence.leave(user.id, tabId);
+    res.status(204).send();
+    return;
+  }
+
+  const activity = parsePresenceActivity(req.body?.activity);
+  if (!activity) {
+    res.status(400).json({ error: "Некорректные данные присутствия" });
+    return;
+  }
+
+  presence.update(user.id, tabId, activity, req.body?.visible !== false);
+  res.json({ users: presence.list(listUsers(), user.id) });
 });
 
 app.get("/lists", requireUser, async (req, res) => {

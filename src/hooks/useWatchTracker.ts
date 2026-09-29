@@ -274,5 +274,5 @@ export function useWatchTracker({
     };
   }, [enabled, kinopoiskId, playbackStarted, syncProgress]);
 
-  return { markPlaybackStarted, reportPosition };
+  return { markPlaybackStarted, reportPosition, playbackStarted };
 }
