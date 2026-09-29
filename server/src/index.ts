@@ -34,7 +34,7 @@ import {
 import { createPresenceStore, parsePresenceActivity } from "./presence.js";
 import { getRecommendations, getSerialRecommendations } from "./recommendations.js";
 import { SHARED_LIST_MEMBERS, SHARED_LIST_USERNAMES } from "./sharedList.js";
-import { parseTelegramUsers, startTelegramBot } from "./telegramBot.js";
+import { parseTelegramGroup, parseTelegramUsers, startTelegramBot } from "./telegramBot.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -538,6 +538,11 @@ if (telegramBotToken) {
   startTelegramBot(telegramBotToken, {
     members: SHARED_LIST_MEMBERS,
     telegramUsers: parseTelegramUsers(process.env.TELEGRAM_USERS),
+    group: parseTelegramGroup({
+      chatId: process.env.TELEGRAM_CHAT_ID,
+      threadId: process.env.TELEGRAM_THREAD_ID,
+      defaultUsername: process.env.TELEGRAM_CHAT_DEFAULT_USER
+    }),
     siteUrl: process.env.SITE_URL ?? "https://films.qzz.io",
     searchFilms: async (query) => (await searchCatalog(query, 1)).page.films,
     getFilm: async (kinopoiskId) => {

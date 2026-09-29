@@ -6,6 +6,7 @@ import {
   createTelegramBot,
   formatFilmCaption,
   parseCallbackData,
+  parseTelegramGroup,
   parseTelegramUsers,
   pluralize,
   type BotFilm,
@@ -72,6 +73,33 @@ function callbackUpdate(fromId: number, data: string) {
   };
 }
 
+const GROUP_ID = -1004333415561;
+
+function groupTextUpdate(fromId: number, threadId: number, text: string) {
+  return {
+    update_id: 1,
+    message: {
+      message_id: 1,
+      message_thread_id: threadId,
+      chat: { id: GROUP_ID, type: "supergroup" },
+      from: { id: fromId },
+      text
+    }
+  };
+}
+
+function groupCallbackUpdate(fromId: number, threadId: number, data: string) {
+  return {
+    update_id: 2,
+    callback_query: {
+      id: "cb",
+      from: { id: fromId },
+      data,
+      message: { message_id: 5, message_thread_id: threadId, chat: { id: GROUP_ID, type: "supergroup" } }
+    }
+  };
+}
+
 describe("parseTelegramUsers", () => {
   it("maps telegram ids to site usernames and skips junk", () => {
     const users = parseTelegramUsers(" egor:1001, kseniya:1002 ,bad, leha:abc");
@@ -125,14 +153,27 @@ describe("pluralize", () => {
 });
 
 describe("buildFilmKeyboard", () => {
-  it("offers me, the other member, the shared list and alternatives", () => {
-    const keyboard = buildFilmKeyboard(111543, "kseniya", members, true);
+  it("offers each member by name, the shared list and alternatives", () => {
+    const keyboard = buildFilmKeyboard(111543, members, true);
     expect(keyboard.inline_keyboard.map((row) => row.map((button) => button.text))).toEqual([
-      ["➕ Мне", "➕ Егору"],
+      ["➕ Егору", "➕ Ксении"],
       ["➕ В общий список"],
       ["Не тот? Другие варианты"]
     ]);
-    expect(keyboard.inline_keyboard[0][0].callback_data).toBe("add:111543:kseniya");
+    expect(keyboard.inline_keyboard[0][1].callback_data).toBe("add:111543:kseniya");
+  });
+});
+
+describe("parseTelegramGroup", () => {
+  it("reads a supergroup id with optional thread and default user", () => {
+    expect(parseTelegramGroup({ chatId: "-1004333415561", defaultUsername: "kseniya" })).toEqual({
+      chatId: -1004333415561,
+      threadId: undefined,
+      defaultUsername: "kseniya"
+    });
+    expect(parseTelegramGroup({ chatId: "-1004333415561", threadId: "12" })?.threadId).toBe(12);
+    expect(parseTelegramGroup({ chatId: "" })).toBeUndefined();
+    expect(parseTelegramGroup({ chatId: "175167597" })).toBeUndefined();
   });
 });
 
@@ -214,6 +255,36 @@ describe("telegram bot flow", () => {
       ["egor", 111543],
       ["kseniya", 111543]
     ]);
+  });
+
+  it("replies inside the group topic and treats other members as the default user", async () => {
+    const { bot, calls, addToPlan } = createHarness({
+      telegramUsers: new Map([[EGOR_TG, "egor"]]),
+      group: { chatId: GROUP_ID, defaultUsername: "kseniya" }
+    });
+
+    await bot.handleUpdate(groupTextUpdate(555, 7, "темный рыцарь"));
+    const photo = calls.find((call) => call.method === "sendPhoto");
+    expect(photo?.payload).toMatchObject({ chat_id: GROUP_ID, message_thread_id: 7 });
+
+    calls.length = 0;
+    await bot.handleUpdate(groupCallbackUpdate(555, 7, "add:111543:kseniya"));
+    expect(addToPlan).toHaveBeenCalledWith("kseniya", 111543);
+    const confirmation = calls.find((call) => call.method === "sendMessage");
+    expect(confirmation?.payload).toMatchObject({ chat_id: GROUP_ID, message_thread_id: 7 });
+    expect(calls.filter((call) => call.method === "sendMessage")).toHaveLength(1);
+  });
+
+  it("ignores other groups and other topics when a thread is configured", async () => {
+    const { bot, calls } = createHarness({ group: { chatId: GROUP_ID, threadId: 7, defaultUsername: "kseniya" } });
+
+    await bot.handleUpdate(groupTextUpdate(555, 8, "темный рыцарь"));
+    await bot.handleUpdate({
+      update_id: 3,
+      message: { message_id: 1, chat: { id: -100999, type: "supergroup" }, from: { id: EGOR_TG }, text: "Матрица" }
+    });
+
+    expect(calls).toHaveLength(0);
   });
 
   it("rejects adding to someone outside the shared list", async () => {
