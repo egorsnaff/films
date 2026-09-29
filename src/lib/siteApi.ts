@@ -1,3 +1,5 @@
+import type { PresenceActivity, PresenceEntry } from "./presence";
+
 export type WatchStatus = "watching" | "plan" | "waiting" | "watched" | "favorite";
 
 export type AuthUser = {
@@ -146,6 +148,20 @@ export const siteApi = {
 
     const data = (await response.json()) as { item: UserFilmEntry };
     return data.item;
+  },
+
+  async updatePresence(
+    input:
+      | { tabId: string; activity: PresenceActivity; visible: boolean }
+      | { tabId: string; leaving: true },
+    options?: { keepalive?: boolean }
+  ): Promise<PresenceEntry[] | null> {
+    const data = await request<{ users: PresenceEntry[] } | undefined>("/presence", {
+      method: "POST",
+      body: JSON.stringify(input),
+      keepalive: options?.keepalive
+    });
+    return data?.users ?? null;
   },
 
   async getRecommendations(): Promise<RecommendationResponse> {
