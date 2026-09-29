@@ -366,6 +366,18 @@ describe("signup requests", () => {
     });
   });
 
+  it("refuses decisions from group members mapped only via the default user", async () => {
+    const { bot, calls, decideSignup } = createHarness({ group: { chatId: GROUP_ID, defaultUsername: "egor" } });
+
+    await bot.handleUpdate(groupCallbackUpdate(5555, 7, "signup:approve:7"));
+
+    expect(decideSignup).not.toHaveBeenCalled();
+    expect(calls).toContainEqual({
+      method: "answerCallbackQuery",
+      payload: { callback_query_id: "cb", text: "Нет доступа" }
+    });
+  });
+
   it("applies the decision and replaces the buttons with the verdict", async () => {
     const { bot, calls, decideSignup } = createHarness();
 
