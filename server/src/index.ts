@@ -26,6 +26,7 @@ import {
   getSimilarFilms,
   getThemeList,
   getTopList,
+  isSeriesFilm,
   probeKinopoisk,
   searchCatalog
 } from "./kinopoiskProxy.js";
@@ -426,7 +427,7 @@ app.put("/lists", requireUser, (req, res) => {
   });
 });
 
-app.patch("/lists/progress", requireUser, (req, res) => {
+app.patch("/lists/progress", requireUser, async (req, res) => {
   const user = res.locals.user as { id: number };
   const kinopoiskId = Number(req.body?.kinopoiskId);
   const watchSeconds = Number(req.body?.watchSeconds ?? 0);
@@ -444,12 +445,16 @@ app.patch("/lists/progress", requireUser, (req, res) => {
     return;
   }
 
+  const wouldMarkWatched = forceStatus === "watched" || progressPercent >= 90;
+  const isSeries = wouldMarkWatched ? await isSeriesFilm(kinopoiskId) : false;
+
   const item = updateUserFilmProgress(
     user.id,
     kinopoiskId,
     Math.max(0, Math.floor(watchSeconds)),
     Math.min(100, Math.max(0, progressPercent)),
-    forceStatus
+    forceStatus,
+    { isSeries }
   );
 
   if (!item) {

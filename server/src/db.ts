@@ -381,8 +381,19 @@ export function resolveAutoListMemberships(
   currentLists: WatchStatus[],
   watchSeconds: number,
   progressPercent: number,
-  forceStatus?: WatchStatus
+  forceStatus?: WatchStatus,
+  options?: { isSeries?: boolean }
 ): WatchStatus[] {
+  // Прогресс у сериала — это одна серия, поэтому «Просмотренное» для сериалов ставится только вручную.
+  if (options?.isSeries) {
+    if (forceStatus === "watched") {
+      forceStatus = "watching";
+    }
+    if (progressPercent >= 90) {
+      progressPercent = 0;
+    }
+  }
+
   if (progressPercent >= 90 || forceStatus === "watched") {
     return currentLists.includes("watched") ? [] : ["watched"];
   }
@@ -403,7 +414,8 @@ export function updateUserFilmProgress(
   kinopoiskId: number,
   watchSeconds: number,
   progressPercent: number,
-  forceStatus?: WatchStatus
+  forceStatus?: WatchStatus,
+  options?: { isSeries?: boolean }
 ): DbUserFilm | null {
   const updatedAt = new Date().toISOString();
   const currentLists = listMembershipKeys(userId, kinopoiskId);
@@ -411,7 +423,8 @@ export function updateUserFilmProgress(
     currentLists,
     watchSeconds,
     progressPercent,
-    forceStatus
+    forceStatus,
+    options
   );
 
   if (

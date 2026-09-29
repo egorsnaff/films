@@ -103,4 +103,16 @@ describe("resolveAutoListMemberships", () => {
     expect(resolveAutoListMemberships(["plan", "watching"], 300, 2)).toEqual([]);
     expect(resolveAutoListMemberships(["plan"], 10, 95)).toEqual(["watched"]);
   });
+
+  it("never auto-marks series as watched", () => {
+    expect(resolveAutoListMemberships([], 3000, 95, "watched", { isSeries: true })).toEqual([
+      "watching"
+    ]);
+    expect(resolveAutoListMemberships(["watching"], 3000, 100, "watched", { isSeries: true })).toEqual(
+      []
+    );
+    expect(resolveAutoListMemberships(["watched"], 3000, 95, undefined, { isSeries: true })).toEqual(
+      []
+    );
+  });
 });
