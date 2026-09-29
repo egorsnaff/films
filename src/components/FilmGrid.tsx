@@ -32,6 +32,9 @@ export function FilmGrid({ films, animate = true, loadingSkeletonCount = 0 }: Fi
               <span className="poster-placeholder">Нет постера</span>
             )}
             <FilmRatingBadge rating={film.rating} />
+            {film.awardChips && film.awardChips.length > 0 ? (
+              <FilmCardAwards chips={film.awardChips} />
+            ) : null}
           </span>
           <span className="film-card__body">
             <strong>{film.title}</strong>
@@ -40,9 +43,6 @@ export function FilmGrid({ films, animate = true, loadingSkeletonCount = 0 }: Fi
                 .filter(Boolean)
                 .join(" · ")}
             </small>
-            {film.awardChips && film.awardChips.length > 0 ? (
-              <FilmCardAwards chips={film.awardChips} />
-            ) : null}
           </span>
         </a>
       ))}

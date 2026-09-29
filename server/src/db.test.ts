@@ -1,6 +1,43 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveAutoListMemberships, resolveProgressStatus } from "./db.js";
+import {
+  addUserFilmToList,
+  db,
+  resolveAutoListMemberships,
+  resolveProgressStatus
+} from "./db.js";
+
+describe("addUserFilmToList", () => {
+  const userId = 990_001;
+  const kinopoiskId = 990_101;
+
+  const cleanup = () => {
+    db.prepare("DELETE FROM user_film_memberships WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_film_progress WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+  };
+
+  it("keeps watching and watched mutually exclusive", () => {
+    cleanup();
+    db.prepare(
+      "INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, '', ?)"
+    ).run(userId, `test-user-${userId}`, new Date().toISOString());
+    try {
+      addUserFilmToList(userId, kinopoiskId, "favorite");
+      addUserFilmToList(userId, kinopoiskId, "watching");
+      expect(addUserFilmToList(userId, kinopoiskId, "watched").lists.sort()).toEqual([
+        "favorite",
+        "watched"
+      ]);
+      expect(addUserFilmToList(userId, kinopoiskId, "watching").lists.sort()).toEqual([
+        "favorite",
+        "watching"
+      ]);
+    } finally {
+      cleanup();
+    }
+  });
+});
 
 describe("resolveProgressStatus", () => {
   const existingPlan = {
