@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS signup_requests (
 
 ## Логика заявок (`server/src/signup.ts`)
 
-Модуль без Express, принимает `db`; экспортирует:
+Модуль без Express, работает с общим `db` из `db.ts` (как остальные функции БД); экспортирует:
 
 - `createSignupRequest(email, password)` → `{ ok: true, request }` или ошибка с кодом:
   - `invalid_email` — не похоже на email (простая проверка `x@y.z`, не длиннее 254 символов);
@@ -43,10 +43,12 @@ CREATE TABLE IF NOT EXISTS signup_requests (
   Пароль хэшируется `bcrypt` так же, как в `create-user`.
 - `findSignupRequestByEmail(email)`.
 - `listSignupRequests(status: "pending" | "decided")` — `pending` по возрастанию даты, обработанные (`approved` + `rejected`) по убыванию `decided_at`.
-- `approveSignupRequest(id, adminId)` — в одной транзакции создаёт `users` (username = email, тот же `password_hash`, `is_admin = 0`) и ставит `status = 'approved'`, `decided_at`, `decided_by`. Ошибки: `not_found`, `already_decided`.
-- `rejectSignupRequest(id, adminId)` — то же без создания пользователя.
+- `decideSignupRequest(id, decision: "approve" | "reject", adminId)` — одна транзакция. `approve` создаёт `users` (username = email, тот же `password_hash`, `is_admin = 0`; если такой логин уже есть — пользователя не создаёт) и ставит `status = 'approved'`; `reject` — только `status = 'rejected'`. В обоих случаях пишет `decided_at`, `decided_by`. Ошибки: `not_found`, `already_decided`.
+- `loginBlockedMessage(login)` — текст 403 для логина с ожидающей / отклонённой заявкой, иначе `null`.
 
-## API (`server/src/index.ts`)
+## API (`server/src/signupRoutes.ts` + `server/src/index.ts`)
+
+`/auth/signup` и `/admin/*` живут в `createSignupRouter(...)` (отдельный модуль, чтобы тестировать без запуска всего сервера: `index.ts` при импорте поднимает `listen`). Логин и `/auth/me` остаются в `index.ts`.
 
 | Метод | Путь | Доступ | Ответ |
 |-------|------|--------|-------|
@@ -65,9 +67,9 @@ CREATE TABLE IF NOT EXISTS signup_requests (
 
 ## Telegram (`server/src/telegramBot.ts`)
 
-- В `TelegramBotDeps` добавляются: `isAdmin(username): boolean`, `approveSignup(id, adminUsername)`, `rejectSignup(id, adminUsername)` (обёртки над `signup.ts`, возвращают тот же результат).
+- В `TelegramBotDeps` добавляются: `isAdmin(username): boolean`, `decideSignup(id, decision, adminUsername)` (обёртка над `decideSignupRequest`, возвращает тот же результат).
 - `notifySignupRequest(request)`: для каждого `[telegramId, username]` из `TELEGRAM_USERS`, где `isAdmin(username)`, шлёт в личку:
-  «Новая заявка на регистрацию: `<email>`» + дата, клавиатура `✅ Одобрить` (`signup:approve:<id>`) и `❌ Отклонить` (`signup:reject:<id>`). В группу не шлёт.
+  «Новая заявка на регистрацию: `<email>`» (время видно у самого сообщения), клавиатура `✅ Одобрить` (`signup:approve:<id>`) и `❌ Отклонить` (`signup:reject:<id>`). В группу не шлёт.
 - `parseCallbackData` понимает `signup:approve:<id>` / `signup:reject:<id>` → `{ kind: "signup", action, requestId }`.
 - Обработка нажатия: username нажавшего берётся только из `TELEGRAM_USERS` (не `TELEGRAM_CHAT_DEFAULT_USER`); если его нет или `!isAdmin` — `answerCallbackQuery` «Нет доступа». Иначе вызывается approve/reject; при успехе — `editMessageText` с исходным текстом + «✅ Одобрено» / «❌ Отклонено» без клавиатуры; при `already_decided` — ответ «Уже обработано» и снятие клавиатуры.
 - Если `TELEGRAM_BOT_TOKEN` не задан, бот не стартует и уведомлений нет; регистрация работает, заявки видны на админ-странице.
@@ -78,14 +80,14 @@ CREATE TABLE IF NOT EXISTS signup_requests (
 - Тип пользователя на фронте получает `isAdmin`.
 - Маршрут: новый `view: "admin"` в `src/lib/appRoutes.ts`, путь `/admin`.
 - `src/components/AdminPage.tsx`: вкладки «Ожидают» / «Обработанные»; строка — email, дата, статус (для обработанных) и кнопки «Одобрить» / «Отклонить» (для ожидающих). Во время запроса кнопки строки заблокированы, после успеха строка уходит из «Ожидают». Ошибка показывается над списком. Не-админ видит «Нет доступа».
-- `src/lib/adminApi.ts`: `fetchSignupRequests`, `approveSignupRequest`, `rejectSignupRequest` через существующий способ вызова `/api/*`.
+- `src/lib/siteApi.ts`: `signup`, `getSignupRequests`, `decideSignupRequest` рядом с остальными вызовами (общий хелпер `request`).
 - `UserMenu.tsx`: пункт «Админка» только при `isAdmin`.
 
 ## Тесты
 
 - `server/src/signup.test.ts`: валидация, уникальность против `users` и `signup_requests` (регистр email не важен), лимит 20, approve создаёт пользователя с тем же хэшем, повторный approve/reject → `already_decided`.
 - `server/src/db.test.ts`: миграция `is_admin` и выставление для `egor`.
-- API-тесты по образцу существующих: `/auth/signup`, 403 при логине с заявкой, `requireAdmin` (401 / 403 / 200), `isAdmin` в `/auth/me`.
+- `server/src/signupRoutes.test.ts`: express-приложение с роутером на случайном порту + `fetch`: `/auth/signup`, `requireAdmin` (401 / 403 / 200), approve/reject. Текст ошибки логина для заявки проверяется через `loginBlockedMessage` в `signup.test.ts`.
 - `server/src/telegramBot.test.ts`: парсинг `signup:*`, уведомление уходит только админам, «Нет доступа» не-админу, редактирование сообщения, «Уже обработано».
 - Фронт: переключение вход/регистрация, экран «Заявка отправлена», несовпадение паролей, `AdminPage` с замоканным fetch, пункт «Админка» в `UserMenu` только для админа.
 
