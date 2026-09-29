@@ -29,6 +29,7 @@ export function usePresence({ enabled, activity }: UsePresenceOptions): Presence
   const lastSentAtRef = useRef(0);
   const timerRef = useRef<number | undefined>(undefined);
   const activeRef = useRef(false);
+  const usersKeyRef = useRef("[]");
   const activityKey = JSON.stringify(activity);
 
   activityRef.current = activity;
@@ -49,7 +50,11 @@ export function usePresence({ enabled, activity }: UsePresenceOptions): Presence
         visible
       });
       if (result && visible && activeRef.current) {
-        setUsers(result);
+        const nextKey = JSON.stringify(result);
+        if (nextKey !== usersKeyRef.current) {
+          usersKeyRef.current = nextKey;
+          setUsers(result);
+        }
       }
     } catch {
       // Панель присутствия второстепенна: следующая попытка будет по таймеру.
@@ -89,6 +94,7 @@ export function usePresence({ enabled, activity }: UsePresenceOptions): Presence
       window.removeEventListener("pagehide", leave);
       window.removeEventListener("pageshow", handleVisibilityChange);
       leave();
+      usersKeyRef.current = "[]";
       setUsers([]);
     };
   }, [enabled, send]);
