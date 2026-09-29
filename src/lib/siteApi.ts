@@ -117,10 +117,11 @@ export const siteApi = {
     watchSeconds: number;
     progressPercent: number;
     forceStatus?: WatchStatus;
-  }): Promise<UserFilmEntry | null> {
+  }, options?: { keepalive?: boolean }): Promise<UserFilmEntry | null> {
     const response = await fetch(`${API_BASE}/lists/progress`, {
       method: "PATCH",
       credentials: "include",
+      keepalive: options?.keepalive,
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json"

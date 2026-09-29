@@ -78,6 +78,9 @@ export function FilmShelf({
                   <span className="poster-placeholder">Нет постера</span>
                 )}
                 <FilmRatingBadge rating={film.rating} />
+                {film.awardChips && film.awardChips.length > 0 ? (
+                  <FilmCardAwards chips={film.awardChips} className="film-shelf__awards" />
+                ) : null}
                 {typeof progress === "number" && progress > 0 ? (
                   <span
                     className="film-shelf__progress"
@@ -90,9 +93,6 @@ export function FilmShelf({
                 <small>
                   {[film.year, film.rating && `КП ${film.rating}`].filter(Boolean).join(" · ")}
                 </small>
-                {film.awardChips && film.awardChips.length > 0 ? (
-                  <FilmCardAwards chips={film.awardChips} className="film-shelf__awards" />
-                ) : null}
               </span>
             </a>
           );

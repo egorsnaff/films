@@ -147,6 +147,33 @@ function migrateListsV2(): void {
 
 migrateListsV2();
 
+function migrateExclusiveWatchLists(): void {
+  const migrated = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'lists_exclusive_watch'")
+    .get() as { value: string } | undefined;
+
+  if (migrated?.value === "1") {
+    return;
+  }
+
+  db.prepare(
+    `DELETE FROM user_film_memberships
+     WHERE list_key = 'watching'
+       AND EXISTS (
+         SELECT 1 FROM user_film_memberships watched
+         WHERE watched.user_id = user_film_memberships.user_id
+           AND watched.kinopoisk_id = user_film_memberships.kinopoisk_id
+           AND watched.list_key = 'watched'
+       )`
+  ).run();
+
+  db.prepare(
+    "INSERT OR REPLACE INTO app_meta (key, value) VALUES ('lists_exclusive_watch', '1')"
+  ).run();
+}
+
+migrateExclusiveWatchLists();
+
 function isWatchStatus(value: string): value is WatchStatus {
   return LIST_KEYS.includes(value as WatchStatus);
 }
@@ -273,12 +300,12 @@ export function addUserFilmToList(
        updated_at = excluded.updated_at`
   ).run(userId, kinopoiskId, status, updatedAt);
 
-  // «Просмотренное» вытесняет «Смотрю сейчас».
-  if (status === "watched") {
+  // «Просмотренное» и «Смотрю сейчас» взаимоисключающие: побеждает последний выбор.
+  if (status === "watched" || status === "watching") {
     db.prepare(
       `DELETE FROM user_film_memberships
-       WHERE user_id = ? AND kinopoisk_id = ? AND list_key = 'watching'`
-    ).run(userId, kinopoiskId);
+       WHERE user_id = ? AND kinopoisk_id = ? AND list_key = ?`
+    ).run(userId, kinopoiskId, status === "watched" ? "watching" : "watched");
   }
 
   return toAggregate(userId, kinopoiskId)!;

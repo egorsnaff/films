@@ -70,10 +70,14 @@ export function useWatchTracker({
 }: UseWatchTrackerOptions) {
   const watchSecondsRef = useRef(0);
   const durationSecondsRef = useRef(Math.max((filmLengthMinutes ?? 90) * 60, 60));
+  const playerDurationKnownRef = useRef(false);
+  const lastReportedTimeRef = useRef<number | null>(null);
   const onStatusChangeRef = useRef(onStatusChange);
   const currentStatusRef = useRef(currentStatus);
   const lastSyncedAtRef = useRef(0);
   const lastSyncedPercentRef = useRef(0);
+  const lastSyncedSecondsRef = useRef(0);
+  const lastForcedStatusRef = useRef<WatchStatus | null>(null);
   const playbackStartedRef = useRef(false);
   const [playbackStarted, setPlaybackStarted] = useState(false);
 
@@ -87,11 +91,21 @@ export function useWatchTracker({
 
   useEffect(() => {
     watchSecondsRef.current = 0;
-    durationSecondsRef.current = Math.max((filmLengthMinutes ?? 90) * 60, 60);
+    playerDurationKnownRef.current = false;
+    lastReportedTimeRef.current = null;
     lastSyncedAtRef.current = 0;
     lastSyncedPercentRef.current = 0;
+    lastSyncedSecondsRef.current = 0;
+    lastForcedStatusRef.current = null;
     playbackStartedRef.current = false;
     setPlaybackStarted(false);
+  }, [kinopoiskId]);
+
+  // Длительность из карточки приходит позже, чем стартует плеер: обновляем её, не сбрасывая прогресс.
+  useEffect(() => {
+    if (!playerDurationKnownRef.current) {
+      durationSecondsRef.current = Math.max((filmLengthMinutes ?? 90) * 60, 60);
+    }
   }, [filmLengthMinutes, kinopoiskId]);
 
   const getProgressPercent = useCallback(() => {
@@ -100,7 +114,7 @@ export function useWatchTracker({
   }, []);
 
   const syncProgress = useCallback(
-    async (forceStatus?: WatchStatus) => {
+    async (forceStatus?: WatchStatus, options?: { keepalive?: boolean }) => {
       if (!kinopoiskId || !playbackStartedRef.current) {
         return;
       }
@@ -112,6 +126,14 @@ export function useWatchTracker({
         return;
       }
 
+      if (
+        options?.keepalive &&
+        forceStatus === undefined &&
+        watchSeconds <= lastSyncedSecondsRef.current
+      ) {
+        return;
+      }
+
       const resolvedForceStatus = resolveWatchForceStatus(
         watchSeconds,
         progressPercent,
@@ -119,14 +141,19 @@ export function useWatchTracker({
         currentStatusRef.current
       );
 
-      const item = await siteApi.updateWatchProgress({
-        kinopoiskId,
-        watchSeconds,
-        progressPercent,
-        forceStatus: resolvedForceStatus
-      });
       lastSyncedAtRef.current = Date.now();
       lastSyncedPercentRef.current = progressPercent;
+      lastSyncedSecondsRef.current = watchSeconds;
+
+      const item = await siteApi.updateWatchProgress(
+        {
+          kinopoiskId,
+          watchSeconds,
+          progressPercent,
+          forceStatus: resolvedForceStatus
+        },
+        { keepalive: options?.keepalive }
+      );
 
       if (item) {
         const nextStatus =
@@ -168,14 +195,28 @@ export function useWatchTracker({
 
   const reportPosition = useCallback(
     ({ currentTime, duration, ended }: ReportPositionInput) => {
-      if (!enabled || !kinopoiskId || !playbackStartedRef.current || currentTime < 0) {
+      if (!enabled || !kinopoiskId || currentTime < 0) {
         return;
+      }
+
+      const previousTime = lastReportedTimeRef.current;
+      lastReportedTimeRef.current = currentTime;
+
+      // Не все плееры шлют «play»: идущее вперёд время тоже означает, что фильм смотрят.
+      if (!playbackStartedRef.current) {
+        if (ended || (previousTime !== null && currentTime > previousTime)) {
+          playbackStartedRef.current = true;
+          setPlaybackStarted(true);
+        } else {
+          return;
+        }
       }
 
       watchSecondsRef.current = Math.max(watchSecondsRef.current, currentTime);
 
       if (duration && duration > 0) {
         durationSecondsRef.current = duration;
+        playerDurationKnownRef.current = true;
       }
 
       const watchSeconds = Math.floor(watchSecondsRef.current);
@@ -186,8 +227,16 @@ export function useWatchTracker({
           : watchSeconds >= MIN_WATCH_SECONDS && currentStatusRef.current !== "watched"
             ? "watching"
             : undefined;
+      const statusChanged =
+        nextStatus !== undefined &&
+        nextStatus !== currentStatusRef.current &&
+        nextStatus !== lastForcedStatusRef.current;
 
-      maybeSyncProgress(nextStatus);
+      if (statusChanged) {
+        lastForcedStatusRef.current = nextStatus;
+      }
+
+      maybeSyncProgress(statusChanged ? nextStatus : undefined);
     },
     [enabled, getProgressPercent, kinopoiskId, maybeSyncProgress]
   );
@@ -206,8 +255,22 @@ export function useWatchTracker({
       return;
     }
 
+    const flush = () => {
+      void syncProgress(undefined, { keepalive: true }).catch(() => undefined);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        flush();
+      }
+    };
+
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
-      void syncProgress();
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      flush();
     };
   }, [enabled, kinopoiskId, playbackStarted, syncProgress]);
 
