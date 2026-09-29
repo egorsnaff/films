@@ -11,7 +11,7 @@ import { FilmGrid } from "./components/FilmGrid";
 import { FilmShelf } from "./components/FilmShelf";
 import { MoviePlayers } from "./components/MoviePlayers";
 import { PosterImage } from "./components/PosterImage";
-import { PresencePanel } from "./components/PresencePanel";
+import { PresenceDock } from "./components/PresenceDock";
 import { WatchDetailsPreloader } from "./components/WatchDetailsPreloader";
 import {
   WatchAwardChips,
@@ -24,13 +24,8 @@ import { UserMenu } from "./components/UserMenu";
 import { WatchListControls } from "./components/WatchListControls";
 import { useDocumentFullscreenClass } from "./hooks/useDocumentFullscreenClass";
 import { useWindowCatalogScroll } from "./hooks/useWindowCatalogScroll";
-import { usePresence } from "./hooks/usePresence";
 import { useWatchTracker } from "./hooks/useWatchTracker";
-import {
-  readPresenceCollapsed,
-  resolveLocalActivity,
-  writePresenceCollapsed
-} from "./lib/presence";
+import { resolveLocalActivity } from "./lib/presence";
 import { buildBrowseSections } from "./data/browseSections";
 import { filmCollections, getCollectionById } from "./data/collections";
 import {
@@ -422,25 +417,6 @@ export function App() {
     currentStatus: playbackStatus,
     onStatusChange: handleWatchTrackerStatusChange
   });
-
-  const presenceUsers = usePresence({
-    enabled: Boolean(authUser),
-    activity: resolveLocalActivity({
-      view,
-      catalogMode,
-      film: selectedFilm,
-      playbackStarted
-    })
-  });
-  const [presenceCollapsed, setPresenceCollapsed] = useState(readPresenceCollapsed);
-
-  const togglePresencePanel = useCallback(() => {
-    setPresenceCollapsed((current) => {
-      const next = !current;
-      writePresenceCollapsed(next);
-      return next;
-    });
-  }, []);
 
   const captureSnapshotRef = useRef<() => NavigationSnapshot>(() => createHomeSnapshot());
 
@@ -1228,10 +1204,13 @@ export function App() {
     <>
       <CursorGlow disabled={view === "watch"} />
       {authUser ? (
-        <PresencePanel
-          users={presenceUsers}
-          collapsed={presenceCollapsed}
-          onToggle={togglePresencePanel}
+        <PresenceDock
+          activity={resolveLocalActivity({
+            view,
+            catalogMode,
+            film: selectedFilm,
+            playbackStarted
+          })}
         />
       ) : null}
       <main className="app-shell">

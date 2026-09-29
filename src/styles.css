@@ -669,8 +669,7 @@ h1 em {
   z-index: 1;
   border: 1px solid rgb(255 255 255 / 16%);
   border-radius: 999px;
-  background: rgb(8 10 14 / 78%);
-  backdrop-filter: blur(8px);
+  background: rgb(8 10 14 / 86%);
   color: var(--gold);
   font-size: 0.78rem;
   font-weight: 700;
@@ -928,8 +927,7 @@ h1 em {
   max-width: 100%;
   border: 1px solid rgb(240 183 91 / 30%);
   border-radius: 999px;
-  background: rgb(8 10 14 / 78%);
-  backdrop-filter: blur(8px);
+  background: rgb(8 10 14 / 86%);
   color: var(--ink);
   font-size: 0.68rem;
   font-weight: 700;
@@ -3329,7 +3327,6 @@ h1 em {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--panel-strong);
-  backdrop-filter: blur(16px);
   box-shadow: var(--shadow);
   padding: 12px;
   transition: width 200ms ease, padding 200ms ease;
