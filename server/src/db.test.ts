@@ -39,6 +39,20 @@ describe("addUserFilmToList", () => {
       cleanup();
     }
   });
+
+  it("keeps plan and watched mutually exclusive", () => {
+    cleanup();
+    db.prepare(
+      "INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, '', ?)"
+    ).run(userId, `test-user-${userId}`, new Date().toISOString());
+    try {
+      addUserFilmToList(userId, kinopoiskId, "plan");
+      expect(addUserFilmToList(userId, kinopoiskId, "watched").lists).toEqual(["watched"]);
+      expect(addUserFilmToList(userId, kinopoiskId, "plan").lists).toEqual(["plan"]);
+    } finally {
+      cleanup();
+    }
+  });
 });
 
 describe("listSharedPlanFilmIds", () => {

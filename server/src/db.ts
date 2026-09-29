@@ -174,6 +174,45 @@ function migrateExclusiveWatchLists(): void {
 
 migrateExclusiveWatchLists();
 
+function migrateExclusivePlanWatched(): void {
+  const migrated = db
+    .prepare("SELECT value FROM app_meta WHERE key = 'lists_exclusive_plan'")
+    .get() as { value: string } | undefined;
+
+  if (migrated?.value === "1") {
+    return;
+  }
+
+  // Оставляем более свежую из отметок «Буду смотреть» / «Просмотренное».
+  db.prepare(
+    `DELETE FROM user_film_memberships
+     WHERE list_key IN ('plan', 'watched')
+       AND EXISTS (
+         SELECT 1 FROM user_film_memberships other
+         WHERE other.user_id = user_film_memberships.user_id
+           AND other.kinopoisk_id = user_film_memberships.kinopoisk_id
+           AND other.list_key IN ('plan', 'watched')
+           AND other.list_key <> user_film_memberships.list_key
+           AND (
+             other.updated_at > user_film_memberships.updated_at
+             OR (other.updated_at = user_film_memberships.updated_at AND other.list_key = 'watched')
+           )
+       )`
+  ).run();
+
+  db.prepare(
+    "INSERT OR REPLACE INTO app_meta (key, value) VALUES ('lists_exclusive_plan', '1')"
+  ).run();
+}
+
+migrateExclusivePlanWatched();
+
+const CONFLICTING_LISTS: Partial<Record<WatchStatus, WatchStatus[]>> = {
+  watched: ["watching", "plan"],
+  watching: ["watched"],
+  plan: ["watched"]
+};
+
 function isWatchStatus(value: string): value is WatchStatus {
   return LIST_KEYS.includes(value as WatchStatus);
 }
@@ -320,12 +359,12 @@ export function addUserFilmToList(
        updated_at = excluded.updated_at`
   ).run(userId, kinopoiskId, status, updatedAt);
 
-  // «Просмотренное» и «Смотрю сейчас» взаимоисключающие: побеждает последний выбор.
-  if (status === "watched" || status === "watching") {
+  // Взаимоисключающие списки: побеждает последний выбор.
+  for (const conflicting of CONFLICTING_LISTS[status] ?? []) {
     db.prepare(
       `DELETE FROM user_film_memberships
        WHERE user_id = ? AND kinopoisk_id = ? AND list_key = ?`
-    ).run(userId, kinopoiskId, status === "watched" ? "watching" : "watched");
+    ).run(userId, kinopoiskId, conflicting);
   }
 
   return toAggregate(userId, kinopoiskId)!;
