@@ -4,6 +4,8 @@ import {
   addUserFilmToList,
   createUser,
   db,
+  ensureInitialAdmins,
+  findUserById,
   listSharedPlanFilmIds,
   resolveAutoListMemberships,
   resolveProgressStatus
@@ -128,5 +130,41 @@ describe("resolveAutoListMemberships", () => {
     expect(resolveAutoListMemberships(["watched"], 3000, 95, undefined, { isSeries: true })).toEqual(
       []
     );
+  });
+});
+
+describe("ensureInitialAdmins", () => {
+  const username = "initial-admin-test";
+  const cleanup = () => db.prepare("DELETE FROM users WHERE username = ?").run(username);
+
+  it("promotes only the listed users", () => {
+    cleanup();
+    try {
+      const user = createUser(username, "");
+      expect(user.is_admin).toBe(0);
+
+      ensureInitialAdmins(["someone-else"]);
+      expect(findUserById(user.id)?.is_admin).toBe(0);
+
+      ensureInitialAdmins([username]);
+      expect(findUserById(user.id)?.is_admin).toBe(1);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe("signup_requests table", () => {
+  it("has the expected columns", () => {
+    const columns = db.prepare("PRAGMA table_info(signup_requests)").all() as Array<{ name: string }>;
+    expect(columns.map((column) => column.name)).toEqual([
+      "id",
+      "email",
+      "password_hash",
+      "status",
+      "created_at",
+      "decided_at",
+      "decided_by"
+    ]);
   });
 });

@@ -10,6 +10,7 @@ export type DbUser = {
   username: string;
   password_hash: string;
   created_at: string;
+  is_admin: number;
 };
 
 export type DbUserFilm = {
@@ -80,6 +81,16 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS signup_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
 `);
 
 function ensureColumn(table: string, column: string, definition: string) {
@@ -91,6 +102,18 @@ function ensureColumn(table: string, column: string, definition: string) {
 
 ensureColumn("user_films", "watch_seconds", "INTEGER NOT NULL DEFAULT 0");
 ensureColumn("user_films", "progress_percent", "REAL NOT NULL DEFAULT 0");
+ensureColumn("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
+
+export const INITIAL_ADMINS = ["egor"];
+
+export function ensureInitialAdmins(usernames: string[] = INITIAL_ADMINS): void {
+  const promote = db.prepare("UPDATE users SET is_admin = 1 WHERE username = ?");
+  for (const username of usernames) {
+    promote.run(username);
+  }
+}
+
+ensureInitialAdmins();
 
 function migrateListsV2(): void {
   const migrated = db
@@ -279,19 +302,19 @@ export function createUser(username: string, passwordHash: string): DbUser {
     .run(username, passwordHash, createdAt);
 
   return db
-    .prepare("SELECT id, username, password_hash, created_at FROM users WHERE id = ?")
+    .prepare("SELECT id, username, password_hash, created_at, is_admin FROM users WHERE id = ?")
     .get(result.lastInsertRowid) as DbUser;
 }
 
 export function findUserByUsername(username: string): DbUser | undefined {
   return db
-    .prepare("SELECT id, username, password_hash, created_at FROM users WHERE username = ?")
+    .prepare("SELECT id, username, password_hash, created_at, is_admin FROM users WHERE username = ?")
     .get(username) as DbUser | undefined;
 }
 
 export function findUserById(id: number): DbUser | undefined {
   return db
-    .prepare("SELECT id, username, password_hash, created_at FROM users WHERE id = ?")
+    .prepare("SELECT id, username, password_hash, created_at, is_admin FROM users WHERE id = ?")
     .get(id) as DbUser | undefined;
 }
 
