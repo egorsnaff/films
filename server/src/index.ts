@@ -9,6 +9,7 @@ import {
   deleteUserFilm,
   findUserById,
   findUserByUsername,
+  listSharedPlanFilmIds,
   listUserFilmsAggregated,
   removeUserFilmFromList,
   updateUserFilmProgress,
@@ -39,6 +40,9 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,https:
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+// «Общий список» в профиле: объединённый «Буду смотреть» этих пользователей.
+const SHARED_LIST_USERNAMES = ["egor", "ksenia"];
 
 type SessionPayload = {
   sub: number;
@@ -367,7 +371,7 @@ app.get("/recommendations/serials", requireUser, async (req, res) => {
 });
 
 app.get("/lists", requireUser, async (req, res) => {
-  const user = res.locals.user as { id: number };
+  const user = res.locals.user as { id: number; username: string };
   const items = listUserFilmsAggregated(user.id).map((item) => ({
     kinopoiskId: item.kinopoisk_id,
     lists: item.lists,
@@ -375,13 +379,18 @@ app.get("/lists", requireUser, async (req, res) => {
     progressPercent: item.progress_percent,
     updatedAt: item.updated_at
   }));
+  const sharedPlan = SHARED_LIST_USERNAMES.includes(user.username)
+    ? listSharedPlanFilmIds(SHARED_LIST_USERNAMES)
+    : undefined;
 
   try {
-    const kinopoiskIds = items.map((item) => item.kinopoiskId);
+    const kinopoiskIds = [
+      ...new Set([...items.map((item) => item.kinopoiskId), ...(sharedPlan ?? [])])
+    ];
     const films = await ensureFilmsCached(kinopoiskIds, 8);
-    res.json({ items, films });
+    res.json({ items, films, sharedPlan });
   } catch (error) {
-    res.json({ items, films: {} });
+    res.json({ items, films: {}, sharedPlan });
   }
 });
 

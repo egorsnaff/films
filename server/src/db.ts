@@ -274,6 +274,26 @@ export function listUserFilmsAggregated(userId: number): DbUserFilmAggregate[] {
     .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
 }
 
+export function listSharedPlanFilmIds(usernames: string[]): number[] {
+  if (usernames.length === 0) {
+    return [];
+  }
+
+  const placeholders = usernames.map(() => "?").join(", ");
+  const rows = db
+    .prepare(
+      `SELECT memberships.kinopoisk_id, MAX(memberships.updated_at) AS updated_at
+       FROM user_film_memberships memberships
+       JOIN users ON users.id = memberships.user_id
+       WHERE memberships.list_key = 'plan' AND users.username IN (${placeholders})
+       GROUP BY memberships.kinopoisk_id
+       ORDER BY updated_at DESC`
+    )
+    .all(...usernames) as Array<{ kinopoisk_id: number }>;
+
+  return rows.map((row) => row.kinopoisk_id);
+}
+
 export function listUserFilms(userId: number): DbUserFilm[] {
   return listUserFilmsAggregated(userId).flatMap((aggregate) =>
     aggregate.lists.map((status) => ({

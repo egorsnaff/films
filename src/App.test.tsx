@@ -604,7 +604,7 @@ describe("App", () => {
     expect(window.location.pathname).not.toMatch(/\/watch\//);
   });
 
-  it("shows watching shelf before favorites on the profile page", async () => {
+  it("shows the shared list and only watching, plan and watched shelves on the profile page", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -614,7 +614,7 @@ describe("App", () => {
         if (url.includes("/api/auth/me")) {
           return Promise.resolve({
             ok: true,
-            json: async () => ({ user: { id: 1, username: "viewer" } })
+            json: async () => ({ user: { id: 1, username: "egor" } })
           });
         }
 
@@ -626,6 +626,7 @@ describe("App", () => {
                 { kinopoiskId: 1, lists: ["favorite"] },
                 { kinopoiskId: 2, lists: ["watching"] }
               ],
+              sharedPlan: [3],
               films: {
                 1: {
                   kinopoiskId: 1,
@@ -638,6 +639,12 @@ describe("App", () => {
                   title: "Смотрю фильм",
                   year: "2000",
                   posterUrl: "https://example.test/watch.jpg"
+                },
+                3: {
+                  kinopoiskId: 3,
+                  title: "Фильм Ксении",
+                  year: "2001",
+                  posterUrl: "https://example.test/shared.jpg"
                 }
               }
             })
@@ -655,11 +662,10 @@ describe("App", () => {
     render(<App />);
     await user.click(screen.getByRole("button", { name: "Профиль" }));
 
-    const shelves = await screen.findAllByRole("heading", {
-      name: /Смотрю сейчас|Любимое|Буду смотреть|Жду продолжения|Просмотренное/
-    });
-    const titles = shelves.map((node) => node.textContent);
-    expect(titles.indexOf("Смотрю сейчас")).toBeLessThan(titles.indexOf("Любимое"));
+    await screen.findByRole("link", { name: /Фильм Ксении/ });
+    const titles = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
+    expect(titles).toEqual(["Общий список", "Смотрю сейчас", "Буду смотреть", "Просмотренное"]);
+    expect(screen.queryByRole("link", { name: /Любимый фильм/ })).not.toBeInTheDocument();
   });
 
   it("opens profile shelf films in a new tab", async () => {

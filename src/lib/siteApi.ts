@@ -77,11 +77,17 @@ export const siteApi = {
     await request<void>("/auth/logout", { method: "POST" });
   },
 
-  async getLists(): Promise<{ items: UserFilmEntry[]; films: Record<number, CachedListFilm> }> {
-    const data = await request<{ items: UserFilmEntry[]; films?: Record<number, CachedListFilm> }>(
-      "/lists"
-    );
-    return { items: data.items, films: data.films ?? {} };
+  async getLists(): Promise<{
+    items: UserFilmEntry[];
+    films: Record<number, CachedListFilm>;
+    sharedPlan: number[] | null;
+  }> {
+    const data = await request<{
+      items: UserFilmEntry[];
+      films?: Record<number, CachedListFilm>;
+      sharedPlan?: number[];
+    }>("/lists");
+    return { items: data.items, films: data.films ?? {}, sharedPlan: data.sharedPlan ?? null };
   },
 
   async toggleFilmList(

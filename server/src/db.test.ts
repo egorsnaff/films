@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   addUserFilmToList,
+  createUser,
   db,
+  listSharedPlanFilmIds,
   resolveAutoListMemberships,
   resolveProgressStatus
 } from "./db.js";
@@ -32,6 +34,36 @@ describe("addUserFilmToList", () => {
       expect(addUserFilmToList(userId, kinopoiskId, "watching").lists.sort()).toEqual([
         "favorite",
         "watching"
+      ]);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe("listSharedPlanFilmIds", () => {
+  const usernames = ["shared-test-a", "shared-test-b", "shared-test-c"];
+
+  const cleanup = () => {
+    db.prepare(
+      `DELETE FROM user_film_memberships
+       WHERE user_id IN (SELECT id FROM users WHERE username IN (?, ?, ?))`
+    ).run(...usernames);
+    db.prepare("DELETE FROM users WHERE username IN (?, ?, ?)").run(...usernames);
+  };
+
+  it("merges plan lists of the given users without duplicates", () => {
+    cleanup();
+    try {
+      const [first, second, outsider] = usernames.map((name) => createUser(name, "hash"));
+      addUserFilmToList(first.id, 980_001, "plan");
+      addUserFilmToList(second.id, 980_002, "plan");
+      addUserFilmToList(second.id, 980_001, "plan");
+      addUserFilmToList(second.id, 980_003, "watched");
+      addUserFilmToList(outsider.id, 980_004, "plan");
+
+      expect(listSharedPlanFilmIds([first.username, second.username]).sort()).toEqual([
+        980_001, 980_002
       ]);
     } finally {
       cleanup();

@@ -20,7 +20,6 @@ import {
   useWatchAwardsReveal
 } from "./components/WatchAwards";
 import { UserMenu } from "./components/UserMenu";
-import { FavoriteToggle } from "./components/FavoriteToggle";
 import { WatchListControls } from "./components/WatchListControls";
 import { useDocumentFullscreenClass } from "./hooks/useDocumentFullscreenClass";
 import { useWindowCatalogScroll } from "./hooks/useWindowCatalogScroll";
@@ -156,6 +155,7 @@ export function App() {
   const [userLists, setUserLists] = useState<UserFilmEntry[]>([]);
   const [listFilms, setListFilms] = useState<Record<number, KinopoiskFilm>>({});
   const [selectedLists, setSelectedLists] = useState<WatchStatus[]>([]);
+  const [sharedPlanIds, setSharedPlanIds] = useState<number[] | null>(null);
   const [imdbShelfFilms, setImdbShelfFilms] = useState<KinopoiskFilm[]>([]);
   const [imdbShelfStatus, setImdbShelfStatus] = useState<LoadState>("idle");
   const [similarFilms, setSimilarFilms] = useState<KinopoiskFilm[]>([]);
@@ -221,9 +221,6 @@ export function App() {
     [catalogMode, films]
   );
   const activeCollection = collectionId ? getCollectionById(collectionId) : undefined;
-  const selectedListEntry = selectedFilm
-    ? userLists.find((item) => item.kinopoiskId === selectedFilm.kinopoiskId)
-    : undefined;
   const progressByFilm = useMemo(() => {
     const map: Record<number, number> = {};
     for (const item of userLists) {
@@ -268,8 +265,9 @@ export function App() {
   }, [page]);
 
   const refreshUserLists = useCallback(async () => {
-    const { items, films } = await siteApi.getLists();
+    const { items, films, sharedPlan } = await siteApi.getLists();
     setUserLists(items);
+    setSharedPlanIds(sharedPlan);
     setListFilms((current) => ({ ...current, ...films }));
   }, []);
 
@@ -1149,6 +1147,7 @@ export function App() {
     setUserLists([]);
     setListFilms({});
     setSelectedLists([]);
+    setSharedPlanIds(null);
     setError(null);
     if (authGateEnabled) {
       setView("catalog");
@@ -1442,7 +1441,16 @@ export function App() {
       {view === "profile" ? (
         <section className="profile-view" id="main">
           <div className="profile-shelves">
-            {(["watching", "favorite", "plan", "waiting", "watched"] as WatchStatus[]).map(
+            {sharedPlanIds ? (
+              <FilmShelf
+                title="Общий список"
+                subtitle="Всё, что мы вдвоём отметили «Буду смотреть»"
+                films={sharedPlanIds
+                  .map((kinopoiskId) => listFilms[kinopoiskId])
+                  .filter((film): film is KinopoiskFilm => Boolean(film))}
+              />
+            ) : null}
+            {(["watching", "plan", "watched"] as WatchStatus[]).map(
               (statusKey) => {
                 const items = userLists.filter((item) => item.lists.includes(statusKey));
                 const films = items
@@ -1472,7 +1480,6 @@ export function App() {
               <WatchListControls
                 kinopoiskId={selectedFilm.kinopoiskId}
                 activeLists={selectedLists}
-                progressPercent={selectedListEntry?.progressPercent}
                 isAuthenticated={Boolean(authUser)}
                 onListsChange={(lists) => {
                   setSelectedLists(lists);
@@ -1506,23 +1513,6 @@ export function App() {
                   <p className="watch-hero__eyebrow">Сейчас смотрите</p>
                   <h1 className="watch-hero__title">
                     <span>{selectedFilm.title}</span>
-                    <FavoriteToggle
-                      kinopoiskId={selectedFilm.kinopoiskId}
-                      isFavorite={selectedLists.includes("favorite")}
-                      isAuthenticated={Boolean(authUser)}
-                      onChange={(isFavorite) => {
-                        setSelectedLists((current) => {
-                          if (isFavorite) {
-                            return current.includes("favorite") ? current : [...current, "favorite"];
-                          }
-
-                          return current.filter((status) => status !== "favorite");
-                        });
-                        if (authUser) {
-                          void refreshUserLists();
-                        }
-                      }}
-                    />
                   </h1>
                   <p className="watch-hero__facts">
                     {[
