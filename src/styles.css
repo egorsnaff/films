@@ -2622,6 +2622,21 @@ h1 em {
   text-align: center;
 }
 
+.auth-gate__switch {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.auth-gate__switch:hover,
+.auth-gate__switch:focus-visible {
+  text-decoration: underline;
+}
+
 .auth-gate-boot {
   position: relative;
   display: grid;

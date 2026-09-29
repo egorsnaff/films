@@ -5,6 +5,17 @@ export type WatchStatus = "watching" | "plan" | "waiting" | "watched" | "favorit
 export type AuthUser = {
   id: number;
   username: string;
+  isAdmin?: boolean;
+};
+
+export type SignupRequestStatus = "pending" | "approved" | "rejected";
+
+export type SignupRequestEntry = {
+  id: number;
+  email: string;
+  status: SignupRequestStatus;
+  createdAt: string;
+  decidedAt: string | null;
 };
 
 export type UserFilmEntry = {
@@ -77,6 +88,31 @@ export const siteApi = {
 
   async logout(): Promise<void> {
     await request<void>("/auth/logout", { method: "POST" });
+  },
+
+  async signup(email: string, password: string): Promise<void> {
+    await request<{ ok: true }>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+  },
+
+  async getSignupRequests(status: "pending" | "decided"): Promise<SignupRequestEntry[]> {
+    const data = await request<{ requests: SignupRequestEntry[] }>(
+      `/admin/signup-requests?status=${status}`
+    );
+    return data.requests;
+  },
+
+  async decideSignupRequest(
+    id: number,
+    decision: "approve" | "reject"
+  ): Promise<SignupRequestEntry> {
+    const data = await request<{ request: SignupRequestEntry }>(
+      `/admin/signup-requests/${id}/${decision}`,
+      { method: "POST" }
+    );
+    return data.request;
   },
 
   async getLists(): Promise<{
