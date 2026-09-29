@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-import { createUser, db, findUserByUsername } from "./db.js";
+import { createUser, db } from "./db.js";
 
 export type SignupRequestStatus = "pending" | "approved" | "rejected";
 
@@ -67,6 +67,12 @@ function findRowByEmail(email: string): DbSignupRequest | undefined {
     .get(normalizeEmail(email)) as DbSignupRequest | undefined;
 }
 
+function usernameTaken(email: string): boolean {
+  return Boolean(
+    db.prepare("SELECT 1 FROM users WHERE lower(username) = ? LIMIT 1").get(normalizeEmail(email))
+  );
+}
+
 function findRowById(id: number): DbSignupRequest | undefined {
   return db.prepare(`SELECT ${COLUMNS} FROM signup_requests WHERE id = ?`).get(id) as
     | DbSignupRequest
@@ -87,7 +93,7 @@ export function createSignupRequest(rawEmail: string, password: string): SignupR
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { ok: false, error: "weak_password" };
   }
-  if (findUserByUsername(email)) {
+  if (usernameTaken(email)) {
     return { ok: false, error: "already_registered" };
   }
 
@@ -148,7 +154,7 @@ const decideInTransaction = db.transaction(
       return { ok: false, error: "already_decided" };
     }
 
-    if (decision === "approve" && !findUserByUsername(row.email)) {
+    if (decision === "approve" && !usernameTaken(row.email)) {
       createUser(row.email, row.password_hash);
     }
 

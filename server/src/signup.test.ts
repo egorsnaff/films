@@ -71,6 +71,19 @@ describe("createSignupRequest", () => {
     });
   });
 
+  it("treats existing usernames case-insensitively", () => {
+    db.prepare(
+      "INSERT INTO users (username, password_hash, created_at) VALUES (?, '', ?)"
+    ).run("Signup-Test-Upper@Example.com", new Date().toISOString());
+
+    expect(createSignupRequest(`${PREFIX}upper@example.com`, "password123")).toEqual({
+      ok: false,
+      error: "already_registered"
+    });
+    cleanup();
+    expect(findUserByUsername("Signup-Test-Upper@Example.com")).toBeUndefined();
+  });
+
   it("stops accepting requests when the queue is full", () => {
     const { count } = db
       .prepare("SELECT COUNT(*) AS count FROM signup_requests WHERE status = 'pending'")
